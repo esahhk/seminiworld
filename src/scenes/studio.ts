@@ -1,0 +1,299 @@
+import type { SceneContext } from './sceneContext';
+import type { SceneInitResult } from '../types/game';
+
+export function buildStudioScene(ctx: SceneContext): SceneInitResult {
+  const {
+    T,
+    scene,
+    state,
+    tex,
+    sfx,
+    V,
+    track,
+    mkMesh,
+    addMesh,
+    addBox,
+    addCylinder,
+    addSign,
+    createMaterial,
+    addInteract,
+    addCollectible,
+    updaters,
+    sceneIdxById,
+    loadScene,
+    showWhisper,
+    openBook,
+    setBounds,
+    setSurfaceFn,
+  } = ctx;
+
+  scene.background = new T.Color(0xcfd4d8);
+  scene.fog = new T.Fog(0xcfd4d8, 18, 52);
+  scene.add(new T.HemisphereLight(0xfcfaf2, 0x857869, 1.0));
+  const sky = new T.DirectionalLight(0xfffdf5, 0.95);
+  sky.position.set(-4, 10, 4);
+  sky.castShadow = true;
+  scene.add(sky);
+  const subLight = new T.PointLight(0xdcebf7, 0.95, 24);
+  subLight.position.set(11, 2.5, 0);
+  scene.add(subLight);
+
+  addBox(
+    9,
+    0.2,
+    9,
+    createMaterial({
+      map: tex.wood('#9c7853', '#705134', 'stu_f'),
+      roughness: 0.75,
+    }),
+    0,
+    -0.1,
+    0,
+    true,
+    false,
+    true,
+  );
+  addBox(9, 3.8, 0.2, createMaterial({ color: 0xebe5d8, roughness: 0.95 }), 0, 1.9, -4.5, true);
+  addBox(0.2, 3.8, 9, createMaterial({ color: 0xe3dcd0, roughness: 0.95 }), -4.5, 1.9, 0, true);
+  addBox(9, 3.8, 0.2, createMaterial({ color: 0xe3dcd0, roughness: 0.95 }), 0, 1.9, 4.5, true);
+  addBox(9, 0.2, 9, createMaterial({ color: 0xebe5d8 }), 0, 3.8, 0, false);
+  addBox(0.2, 0.85, 9, createMaterial({ color: 0xe8e2d6 }), 4.5, 0.425, 0, true);
+  addBox(0.2, 0.7, 9, createMaterial({ color: 0xe8e2d6 }), 4.5, 3.45, 0, true);
+  addBox(0.2, 2.4, 1.5, createMaterial({ color: 0xe8e2d6 }), 4.5, 2.0, -3.75, true);
+  addBox(0.2, 2.4, 2.0, createMaterial({ color: 0xe8e2d6 }), 4.5, 2.0, 3.5, true);
+  addBox(
+    0.06,
+    2.4,
+    5.5,
+    createMaterial({ color: 0x9ec3d6, transparent: true, opacity: 0.24 }),
+    4.5,
+    2.0,
+    -0.25,
+    true,
+  );
+  addBox(
+    0.95,
+    2.6,
+    0.14,
+    createMaterial({ color: 0x739ab0, transparent: true, opacity: 0.42 }),
+    4.42,
+    1.3,
+    3.3,
+    false,
+  );
+  addSign(
+    1.4,
+    0.65,
+    tex.sign('下楼 → 地铁站', '#1f3c5c', '#f0f2f4', '1/4/7号线站台'),
+    4.32,
+    2.9,
+    3.3,
+    -Math.PI / 2,
+  );
+
+  addBox(
+    15,
+    0.3,
+    44,
+    createMaterial({ map: tex.tiles('#b8bcbf', '#adb2b5', '#8c9194', 6, 'sub_p') }),
+    12.5,
+    -1.6,
+    0,
+    false,
+    false,
+    true,
+  );
+  addBox(0.2, 0.04, 44, createMaterial({ color: 0xd9b334 }), 8.2, -1.42, 0, false);
+  addBox(0.2, 0.04, 44, createMaterial({ color: 0xd9b334 }), 16.8, -1.42, 0, false);
+  addBox(20, 0.4, 44, createMaterial({ color: 0x262b30 }), 13.5, 3.6, 0, false);
+  for (const pz of [-10, -2, 6]) {
+    addBox(0.65, 5.0, 0.65, createMaterial({ color: 0xd8ddd8 }), 11.2, 1.0, pz, false);
+  }
+
+  function makeViewTrain(col: number, tx: number) {
+    const g = new T.Group();
+    const b = mkMesh(
+      new T.BoxGeometry(2.4, 2.6, 15),
+      createMaterial({ color: 0xd8dce0 }),
+      0,
+      1.3,
+      0,
+    );
+    const s = mkMesh(
+      new T.BoxGeometry(2.45, 0.4, 15.02),
+      createMaterial({ color: col }),
+      0,
+      1.25,
+      0,
+    );
+    const w = mkMesh(
+      new T.BoxGeometry(2.44, 0.7, 13),
+      createMaterial({
+        color: 0x2c3f4f,
+        emissive: 0x7ba4bd,
+        emissiveIntensity: 0.4,
+      }),
+      0,
+      1.85,
+      0,
+    );
+    g.add(b, s, w);
+    g.position.set(tx, -1.6, 0);
+    scene.add(g);
+    return g;
+  }
+
+  const vt1 = makeViewTrain(0xc94238, 6.6);
+  const vt2 = makeViewTrain(0x2f78b8, 18.4);
+  updaters.push((_dt, t) => {
+    vt1.position.z = ((t * 6.5) % 56) - 28;
+    vt2.position.z = 28 - ((t * 5.8 + 14) % 56);
+  });
+
+  addBox(
+    0.12,
+    1.6,
+    0.12,
+    createMaterial({ map: tex.wood('#785233', '#52351e') }),
+    0,
+    0.8,
+    -1.8,
+    true,
+  );
+  const paintCanvas = document.createElement('canvas');
+  paintCanvas.width = 256;
+  paintCanvas.height = 256;
+  const pg = paintCanvas.getContext('2d');
+  if (pg) {
+    pg.fillStyle = '#f5f0e4';
+    pg.fillRect(0, 0, 256, 256);
+    pg.fillStyle = '#c9c2b2';
+    pg.fillRect(20, 160, 216, 76);
+    pg.fillStyle = '#5d7e91';
+    pg.beginPath();
+    pg.arc(110, 120, 48, 0, Math.PI * 2);
+    pg.fill();
+  }
+  const paintTex = track(new T.CanvasTexture(paintCanvas));
+  paintTex.colorSpace = T.SRGBColorSpace;
+  if (state.studioImg && pg) {
+    const img = new Image();
+    img.onload = () => {
+      pg.drawImage(img, 0, 0);
+      paintTex.needsUpdate = true;
+    };
+    img.src = state.studioImg;
+  }
+
+  addMesh(
+    new T.BoxGeometry(1.1, 1.3, 0.06),
+    createMaterial({ map: paintTex, roughness: 0.8 }),
+    0,
+    1.45,
+    -1.68,
+  ).rotation.x = -0.12;
+  addBox(
+    1.8,
+    0.72,
+    0.85,
+    createMaterial({ map: tex.wood('#876342', '#614328') }),
+    -2.8,
+    0.36,
+    -2.5,
+    true,
+  );
+  const paletteCols = ['#c94c38', '#386b9c', '#e0ae3a', '#4d804c', '#2d2a28'];
+  let colIdx = 0;
+  paletteCols.forEach((c, i) => {
+    addCylinder(
+      0.03,
+      0.03,
+      0.16,
+      8,
+      createMaterial({ color: c }),
+      -3.3 + i * 0.18,
+      0.8,
+      -2.4,
+    ).rotation.z = Math.PI / 2;
+  });
+  addCylinder(
+    0.08,
+    0.08,
+    0.18,
+    10,
+    createMaterial({ color: 0xdde6ea, transparent: true, opacity: 0.65 }),
+    -2.2,
+    0.82,
+    -2.6,
+  );
+  addBox(0.36, 0.05, 0.48, createMaterial({ color: 0xf4efe2, roughness: 0.9 }), -2.2, 0.75, -2.18, false);
+  addBox(0.9, 1.1, 0.08, createMaterial({ color: 0xd8ccb8 }), 3.8, 0.55, -3.6, true);
+  addBox(1.1, 1.3, 0.08, createMaterial({ color: 0xc9d3d6 }), 3.6, 0.65, -3.4, true);
+  addCylinder(
+    0.22,
+    0.22,
+    0.46,
+    10,
+    createMaterial({ map: tex.wood('#785233', '#52351e') }),
+    0.9,
+    0.23,
+    -0.6,
+  );
+
+  addInteract('stu_easel', V(0, 1.4, -1.6), '往画架画布上添一笔颜料', '叠加色块与笔触', () => {
+    if (pg) {
+      pg.fillStyle = paletteCols[colIdx];
+      pg.globalAlpha = 0.78;
+      pg.beginPath();
+      pg.ellipse(
+        40 + Math.random() * 176,
+        40 + Math.random() * 176,
+        14 + Math.random() * 28,
+        8 + Math.random() * 18,
+        Math.random() * 3,
+        0,
+        Math.PI * 2,
+      );
+      pg.fill();
+      pg.globalAlpha = 1;
+      paintTex.needsUpdate = true;
+      state.studioImg = paintCanvas.toDataURL();
+    }
+    sfx.play('paint');
+    showWhisper(
+      '刮刀抹上去一笔厚实的' +
+        ['朱红', '群青', '藤黄', '橄榄绿', '煤黑'][colIdx] +
+        '，窗外刚好一列地铁滑过去。',
+    );
+  });
+  addInteract(
+    'stu_paper',
+    V(-2.2, 0.85, -2.18),
+    '翻看桌上自印小论文',
+    '《南方梅雨季廉价丙烯的起皮动力学》（长文六节）',
+    () => openBook('studio'),
+  );
+  addInteract('stu_table', V(-3.0, 0.9, -2.5), '换一种桌面颜料管颜色', '切换下一管颜料', () => {
+    colIdx = (colIdx + 1) % paletteCols.length;
+    sfx.play('switch');
+    showWhisper('挑出了一管' + ['朱红', '群青', '藤黄', '橄榄绿', '煤黑'][colIdx] + '颜料。');
+  });
+  addInteract('stu_subway', V(4.1, 1.4, 3.3), '推门下楼去地铁站', '回到多线地铁站台', () => {
+    const mi = sceneIdxById('subway');
+    if (mi !== -1) {
+      sfx.play('door');
+      loadScene(mi);
+      showWhisper('顺着画室旁边的楼梯走下了地铁站台。');
+    }
+  });
+
+  addCollectible('studio', -2.3, 0.85, -2.4, 0x3f6fa3);
+  setBounds({ minX: -3.8, maxX: 3.9, minZ: -3.8, maxZ: 3.8 });
+  setSurfaceFn(() => 'wood');
+
+  return {
+    pos: V(0, 1.65, 2.8),
+    yaw: 0,
+    whisper: '画室东边一整面玻璃外就是地铁站台，时不时有彩色列车从窗底下穿过。',
+  };
+}
