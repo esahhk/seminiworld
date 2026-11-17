@@ -241,54 +241,286 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
     false,
   );
 
+  // Gate card-reader pedestal right beside the 03 boarding sliding glass doors
+  addBox(0.24, 1.12, 0.24, frameMat, 2.15, 0.56, -8.42, true);
+  addBox(
+    0.16,
+    0.18,
+    0.04,
+    createMaterial({ color: 0x3ec47d, emissive: 0x1d7a47, emissiveIntensity: 0.9 }),
+    2.15,
+    1.05,
+    -8.29,
+    false,
+  );
+
+  const aircraft = new T.Group();
+  aircraft.position.set(0, 0, -24.5);
+  scene.add(aircraft);
+
   const bodyMat = createMaterial({ color: 0xf4f6f8, roughness: 0.28, metalness: 0.32 });
   const wingMat = createMaterial({ color: 0xd9dfe5, roughness: 0.25, metalness: 0.45 });
   const darkMetal = createMaterial({ color: 0x2b323a, metalness: 0.6, roughness: 0.35 });
-  const liveryBlue = createMaterial({ color: 0x2b5f8c, roughness: 0.35 });
+  const liveryBlue = createMaterial({ color: 0x245682, roughness: 0.35 });
+  const liveryRed = createMaterial({ color: 0xc24938, roughness: 0.38 });
+  const cockpitGlassMat = createMaterial({
+    color: 0x182b3b,
+    transparent: true,
+    opacity: 0.62,
+    roughness: 0.1,
+    metalness: 0.65,
+  });
 
-  addCylinder(1.9, 1.9, 14.5, 22, bodyMat, 0, 3.25, -24.5).rotation.x = Math.PI / 2;
-  addCylinder(0.95, 1.9, 3.2, 22, bodyMat, 0, 3.05, -15.65).rotation.x = Math.PI / 2;
-  addMesh(new T.SphereGeometry(0.95, 16, 12), bodyMat, 0, 2.95, -14.1);
-  const tailCone = addCylinder(0.45, 1.9, 4.5, 20, bodyMat, 0, 3.45, -34.0);
-  tailCone.rotation.x = Math.PI / 2 - 0.08;
-  addBox(0.14, 0.32, 13.8, liveryBlue, 1.88, 3.05, -24.5, false);
-  addBox(0.14, 0.32, 13.8, liveryBlue, -1.88, 3.05, -24.5, false);
+  function addLocal(mesh: InstanceType<typeof T.Mesh>, x: number, y: number, z: number, cast = true) {
+    mesh.position.set(x, y, z);
+    mesh.castShadow = cast;
+    mesh.receiveShadow = true;
+    aircraft.add(mesh);
+    return mesh;
+  }
+
+  // Main cabin cylinder (local z: -7.25 .. +7.25)
+  const cabin = new T.Mesh(new T.CylinderGeometry(1.9, 1.9, 14.5, 24), bodyMat);
+  cabin.rotation.x = Math.PI / 2;
+  addLocal(cabin, 0, 3.25, 0);
+
+  // Seamless forward fuselage taper & radome (flush r=1.9 at z=+7.25 -> r=1.02 at z=+10.0)
+  const noseCone = new T.Mesh(new T.CylinderGeometry(1.02, 1.9, 2.75, 24), bodyMat);
+  noseCone.rotation.x = Math.PI / 2;
+  addLocal(noseCone, 0, 3.25, 8.625);
+
+  const radome = new T.Mesh(new T.SphereGeometry(1.02, 22, 14), bodyMat);
+  radome.scale.set(1, 0.96, 1.45);
+  addLocal(radome, 0, 3.25, 10.0);
+
+  // Correct tapered tailcone: wide r=1.9 forward (+Z at z=-7.25), narrow r=0.4 aft (-Z at z=-12.1)
+  const tailCone = new T.Mesh(new T.CylinderGeometry(1.9, 0.4, 4.9, 24), bodyMat);
+  tailCone.rotation.x = Math.PI / 2 + 0.055;
+  addLocal(tailCone, 0, 3.385, -9.68);
+  const apuCap = new T.Mesh(new T.SphereGeometry(0.4, 16, 12), bodyMat);
+  addLocal(apuCap, 0, 3.52, -12.1);
+  const apuNozzle = new T.Mesh(new T.CylinderGeometry(0.18, 0.24, 0.35, 12), darkMetal);
+  apuNozzle.rotation.x = Math.PI / 2;
+  addLocal(apuNozzle, 0, 3.52, -12.42, false);
+
+  // Flight deck windshield flush across upper nose slope with visible lit interior
+  addLocal(
+    new T.Mesh(new T.BoxGeometry(1.24, 0.36, 0.78), createMaterial({ color: 0x262e36 })),
+    0,
+    4.32,
+    7.9,
+    false,
+  );
+  addLocal(
+    new T.Mesh(
+      new T.BoxGeometry(1.06, 0.08, 0.12),
+      createMaterial({ color: 0x62d68d, emissive: 0x3da867, emissiveIntensity: 0.9 }),
+    ),
+    0,
+    4.34,
+    8.24,
+    false,
+  );
+  addLocal(new T.Mesh(new T.BoxGeometry(0.24, 0.28, 0.12), darkMetal), -0.32, 4.46, 7.72, false);
+  addLocal(new T.Mesh(new T.BoxGeometry(0.24, 0.28, 0.12), darkMetal), 0.32, 4.46, 7.72, false);
+
+  for (const [wx, wy, wz, ry, rx, w] of [
+    [-0.36, 4.46, 8.26, -0.22, -0.58, 0.62],
+    [0.36, 4.46, 8.26, 0.22, -0.58, 0.62],
+    [-0.86, 4.3, 7.88, -0.8, -0.36, 0.58],
+    [0.86, 4.3, 7.88, 0.8, -0.36, 0.58],
+  ] as [number, number, number, number, number, number][]) {
+    const frame = new T.Mesh(new T.BoxGeometry(w + 0.06, 0.42, 0.08), bodyMat);
+    frame.position.set(wx, wy, wz);
+    frame.rotation.set(rx, ry, 0, 'YXZ');
+    aircraft.add(frame);
+    const pane = new T.Mesh(new T.BoxGeometry(w, 0.35, 0.1), cockpitGlassMat);
+    pane.position.set(wx, wy, wz);
+    pane.rotation.set(rx, ry, 0, 'YXZ');
+    aircraft.add(pane);
+  }
+  const centerPost = new T.Mesh(new T.BoxGeometry(0.07, 0.44, 0.11), bodyMat);
+  centerPost.position.set(0, 4.47, 8.3);
+  centerPost.rotation.x = -0.58;
+  aircraft.add(centerPost);
+
+  // Livery stripes & cabin windows
+  addLocal(new T.Mesh(new T.BoxGeometry(0.14, 0.32, 13.8), liveryBlue), 1.88, 3.05, 0, false);
+  addLocal(new T.Mesh(new T.BoxGeometry(0.14, 0.32, 13.8), liveryBlue), -1.88, 3.05, 0, false);
   for (let w = 0; w < 14; w++) {
-    const wz = -18.5 - w * 0.9;
-    addBox(0.06, 0.26, 0.32, darkMetal, 1.9, 3.45, wz, false);
-    addBox(0.06, 0.26, 0.32, darkMetal, -1.9, 3.45, wz, false);
+    const wz = 6.0 - w * 0.9;
+    addLocal(new T.Mesh(new T.BoxGeometry(0.06, 0.26, 0.32), darkMetal), 1.9, 3.45, wz, false);
+    addLocal(new T.Mesh(new T.BoxGeometry(0.06, 0.26, 0.32), darkMetal), -1.9, 3.45, wz, false);
   }
-  addBox(0.08, 1.5, 0.85, createMaterial({ color: 0xd4dade }), 1.9, 3.3, -17.4, false);
-  addBox(0.08, 1.5, 0.85, createMaterial({ color: 0xd4dade }), -1.9, 3.3, -17.4, false);
-  addBox(0.85, 0.55, 0.55, darkMetal, -0.52, 3.58, -15.6, false).rotation.set(0.28, -0.35, 0);
-  addBox(0.85, 0.55, 0.55, darkMetal, 0.52, 3.58, -15.6, false).rotation.set(0.28, 0.35, 0);
-  addBox(0.7, 0.55, 0.4, darkMetal, 0, 3.6, -15.5, false).rotation.x = 0.28;
+  addLocal(
+    new T.Mesh(new T.BoxGeometry(0.08, 1.5, 0.85), createMaterial({ color: 0xd4dade })),
+    1.9,
+    3.3,
+    7.1,
+    false,
+  );
+  addLocal(
+    new T.Mesh(new T.BoxGeometry(0.08, 1.5, 0.85), createMaterial({ color: 0xd4dade })),
+    -1.9,
+    3.3,
+    7.1,
+    false,
+  );
 
-  const wingL = addBox(12.5, 0.22, 3.2, wingMat, -7.2, 2.55, -24.8, true);
-  wingL.rotation.set(0, 0.36, -0.06);
-  const wingR = addBox(12.5, 0.22, 3.2, wingMat, 7.2, 2.55, -24.8, true);
-  wingR.rotation.set(0, -0.36, 0.06);
-  addBox(0.14, 1.25, 0.75, liveryBlue, -13.0, 3.45, -27.3, false).rotation.z = 0.24;
-  addBox(0.14, 1.25, 0.75, liveryBlue, 13.0, 3.45, -27.3, false).rotation.z = -0.24;
+  // Aft-swept tapered wings with seamlessly attached blended winglets
+  for (const side of [-1, 1] as const) {
+    const wingGrp = new T.Group();
+    wingGrp.position.set(side * 1.5, 2.58, 0.4);
+    wingGrp.rotation.z = side * 0.065;
 
-  addBox(0.26, 4.6, 3.1, liveryBlue, 0, 6.2, -33.2, false).rotation.x = -0.45;
-  addBox(8.4, 0.16, 1.8, wingMat, 0, 3.85, -34.2, false);
+    const wingShape = new T.Shape();
+    wingShape.moveTo(0, -1.75);
+    wingShape.lineTo(0, 1.65);
+    wingShape.lineTo(side * 11.4, -2.35);
+    wingShape.lineTo(side * 11.4, -3.55);
+    wingShape.closePath();
 
-  for (const ex of [-5.4, 5.4]) {
-    addCylinder(0.82, 0.78, 2.7, 16, wingMat, ex, 1.72, -21.8).rotation.x = Math.PI / 2;
-    addCylinder(0.68, 0.68, 0.14, 14, darkMetal, ex, 1.72, -20.42).rotation.x = Math.PI / 2;
-    addCylinder(0.55, 0.7, 0.65, 12, darkMetal, ex, 1.72, -23.3).rotation.x = Math.PI / 2;
-    addBox(0.22, 0.85, 1.6, wingMat, ex, 2.35, -22.2, false);
+    const wingGeo = track(
+      new T.ExtrudeGeometry(wingShape, {
+        depth: 0.2,
+        bevelEnabled: true,
+        bevelThickness: 0.04,
+        bevelSize: 0.04,
+        bevelSegments: 2,
+      }),
+    );
+    const wingMesh = new T.Mesh(wingGeo, wingMat);
+    // Shape Y maps to -Z so nose-forward (+Y shape) becomes aft (-Y shape) -> rotate X = +PI/2 maps +Y to +Z
+    wingMesh.rotation.x = -Math.PI / 2;
+    wingMesh.position.y = -0.1;
+    wingMesh.castShadow = true;
+    wingMesh.receiveShadow = true;
+    wingGrp.add(wingMesh);
+
+    // Blended winglet anchored at exact local tip chord (x = side*11.4, z = -3.55 .. -2.35)
+    const wlShape = new T.Shape();
+    wlShape.moveTo(0, 0);
+    wlShape.lineTo(1.2, 0);
+    wlShape.lineTo(1.85, 1.38);
+    wlShape.lineTo(1.22, 1.38);
+    wlShape.closePath();
+    const wlGeo = track(
+      new T.ExtrudeGeometry(wlShape, {
+        depth: 0.09,
+        bevelEnabled: true,
+        bevelThickness: 0.02,
+        bevelSize: 0.02,
+        bevelSegments: 1,
+      }),
+    );
+    const wlMesh = new T.Mesh(wlGeo, liveryBlue);
+    wlMesh.rotation.y = Math.PI / 2;
+    wlMesh.rotation.x = side * -0.22;
+    wlMesh.position.set(side * 11.35, 0.02, -2.35);
+    wlMesh.castShadow = true;
+    wingGrp.add(wlMesh);
+
+    aircraft.add(wingGrp);
   }
 
-  addCylinder(0.11, 0.11, 1.8, 8, darkMetal, 0, 0.9, -15.4);
-  addCylinder(0.32, 0.32, 0.18, 12, darkMetal, -0.22, 0.22, -15.4).rotation.z = Math.PI / 2;
-  addCylinder(0.32, 0.32, 0.18, 12, darkMetal, 0.22, 0.22, -15.4).rotation.z = Math.PI / 2;
-  addBox(0.65, 0.18, 0.55, createMaterial({ color: 0xe3b12c }), 0, 0.0, -15.4, false);
+  // Tapered swept vertical stabilizer + dorsal fillet
+  const finShape = new T.Shape();
+  finShape.moveTo(0, 4.75);
+  finShape.lineTo(1.5, 5.15);
+  finShape.lineTo(4.35, 9.45);
+  finShape.lineTo(5.7, 9.45);
+  finShape.lineTo(4.85, 3.45);
+  finShape.lineTo(1.1, 4.2);
+  finShape.closePath();
+  const finGeo = track(
+    new T.ExtrudeGeometry(finShape, {
+      depth: 0.22,
+      bevelEnabled: true,
+      bevelThickness: 0.04,
+      bevelSize: 0.03,
+      bevelSegments: 2,
+    }),
+  );
+  const vTail = new T.Mesh(finGeo, liveryBlue);
+  vTail.rotation.y = Math.PI / 2;
+  vTail.position.set(-0.11, 0, -6.1);
+  vTail.castShadow = true;
+  aircraft.add(vTail);
+
+  // Subtle red accent trim stripe along top of vertical fin
+  const finStripe = new T.Shape();
+  finStripe.moveTo(3.4, 8.0);
+  finStripe.lineTo(4.15, 9.15);
+  finStripe.lineTo(5.62, 9.15);
+  finStripe.lineTo(5.4, 8.0);
+  finStripe.closePath();
+  const stripeGeo = track(new T.ExtrudeGeometry(finStripe, { depth: 0.25, bevelEnabled: false }));
+  const stripeMesh = new T.Mesh(stripeGeo, liveryRed);
+  stripeMesh.rotation.y = Math.PI / 2;
+  stripeMesh.position.set(-0.125, 0, -6.1);
+  aircraft.add(stripeMesh);
+
+  // Swept horizontal stabilizers embedded cleanly into tapered tailcone
+  for (const side of [-1, 1] as const) {
+    const hShape = new T.Shape();
+    hShape.moveTo(0, -1.05);
+    hShape.lineTo(0, 0.85);
+    hShape.lineTo(side * 4.35, -0.9);
+    hShape.lineTo(side * 4.35, -1.65);
+    hShape.closePath();
+    const hGeo = track(
+      new T.ExtrudeGeometry(hShape, {
+        depth: 0.14,
+        bevelEnabled: true,
+        bevelThickness: 0.025,
+        bevelSize: 0.025,
+        bevelSegments: 1,
+      }),
+    );
+    const hMesh = new T.Mesh(hGeo, wingMat);
+    hMesh.rotation.x = -Math.PI / 2;
+    hMesh.rotation.z = side * 0.07;
+    hMesh.position.set(side * 0.45, 3.55, -10.2);
+    hMesh.castShadow = true;
+    aircraft.add(hMesh);
+  }
+
+  // Under-wing turbofan engines & swept pylons attached into aft-swept wing undersides
+  for (const ex of [-5.1, 5.1]) {
+    const engZ = 0.05;
+    const cowl = new T.Mesh(new T.CylinderGeometry(0.82, 0.78, 2.7, 18), wingMat);
+    cowl.rotation.x = Math.PI / 2;
+    addLocal(cowl, ex, 1.72, engZ + 0.6);
+    const intake = new T.Mesh(new T.CylinderGeometry(0.68, 0.68, 0.14, 16), darkMetal);
+    intake.rotation.x = Math.PI / 2;
+    addLocal(intake, ex, 1.72, engZ + 1.98, false);
+    const exhaust = new T.Mesh(new T.CylinderGeometry(0.68, 0.54, 0.65, 14), darkMetal);
+    exhaust.rotation.x = Math.PI / 2;
+    addLocal(exhaust, ex, 1.72, engZ - 0.9, false);
+    addLocal(new T.Mesh(new T.BoxGeometry(0.22, 1.0, 1.7), wingMat), ex, 2.38, engZ + 0.1, false);
+  }
+
+  // Nose landing gear + main landing gear + yellow wheel chocks
+  addLocal(new T.Mesh(new T.CylinderGeometry(0.11, 0.11, 2.0, 8), darkMetal), 0, 1.0, 8.9);
+  for (const wx of [-0.22, 0.22]) {
+    const nw = new T.Mesh(new T.CylinderGeometry(0.32, 0.32, 0.18, 12), darkMetal);
+    nw.rotation.z = Math.PI / 2;
+    addLocal(nw, wx, 0.22, 8.9);
+  }
+  addLocal(
+    new T.Mesh(new T.BoxGeometry(0.65, 0.18, 0.55), createMaterial({ color: 0xe3b12c })),
+    0,
+    0.0,
+    8.9,
+    false,
+  );
   for (const gx of [-2.4, 2.4]) {
-    addCylinder(0.13, 0.13, 2.1, 8, darkMetal, gx, 0.95, -24.5);
-    addCylinder(0.45, 0.45, 0.22, 12, darkMetal, gx - 0.24, 0.35, -24.5).rotation.z = Math.PI / 2;
-    addCylinder(0.45, 0.45, 0.22, 12, darkMetal, gx + 0.24, 0.35, -24.5).rotation.z = Math.PI / 2;
+    addLocal(new T.Mesh(new T.CylinderGeometry(0.13, 0.13, 2.1, 8), darkMetal), gx, 1.0, 0);
+    for (const off of [-0.24, 0.24]) {
+      const mw = new T.Mesh(new T.CylinderGeometry(0.45, 0.45, 0.22, 12), darkMetal);
+      mw.rotation.z = Math.PI / 2;
+      addLocal(mw, gx + off, 0.35, 0);
+    }
   }
   addBox(3.8, 3.4, 16, createMaterial({ visible: false }), 0, 1.7, -23.0, true, false, false);
 
@@ -305,18 +537,25 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
     }
   });
 
-  addInteract('air_desk', V(-4.2, 1.1, -5.0), '打开飞机前玻璃登机门', '滑开两侧玻璃出去看看机头', () => {
-    gateOpen = !gateOpen;
+  addInteract(
+    'air_desk',
+    V(0.8, 1.25, -8.3),
+    '打开飞机前玻璃登机门',
+    '滑开03号登机口玻璃门出去看看机头',
+    () => {
+      gateOpen = !gateOpen;
+      sfx.play('chime');
+      showWhisper(
+        gateOpen
+          ? '玻璃感应门向两侧滑开，可以走到机坪上看机头和驾驶舱了。'
+          : '玻璃门闭合，高高的钢架吊顶下重归凉爽。',
+      );
+    },
+    { radius: 3.4 },
+  );
+  addInteract('air_board', V(-4.2, 1.4, -5.2), '看一眼登机显示屏', '查看实时更新的登机时间', () => {
     sfx.play('chime');
-    showWhisper(
-      gateOpen
-        ? '玻璃感应门向两侧滑开，可以走到机坪上看机头了。'
-        : '玻璃门闭合，高高的钢架吊顶下重归凉爽。',
-    );
-  });
-  addInteract('air_board', V(-4.2, 1.6, -5.4), '看一眼登机显示屏', '查看实时更新的登机时间', () => {
-    sfx.play('chime');
-    showWhisper('屏幕上那行登机时间还在往后跳，像是催人又不像催人。');
+    showWhisper('屏幕上那行登机时间还在往后跳，台面上散着两张盖过红章的登机牌存根。');
   });
   addInteract(
     'air_nose',

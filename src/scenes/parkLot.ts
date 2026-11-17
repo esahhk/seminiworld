@@ -154,9 +154,11 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
     hd.scale.set(bs, bs * 0.75, bs);
   }
 
-  const tireGeo = track(new T.TorusGeometry(0.28, 0.04, 8, 16));
-  const barGeo = track(new T.CylinderGeometry(0.022, 0.022, 0.68, 6));
+  const tireGeo = track(new T.TorusGeometry(0.275, 0.035, 8, 18));
+  const rimGeo = track(new T.TorusGeometry(0.24, 0.012, 6, 18));
+  const spokeGeo = track(new T.CylinderGeometry(0.006, 0.006, 0.48, 4));
   const tireMat = createMaterial({ color: 0x22252a, roughness: 0.85 });
+  const chromeMat = createMaterial({ color: 0xc2c9cf, metalness: 0.72, roughness: 0.25 });
 
   interface BikeOpts {
     bagSeat?: boolean;
@@ -164,106 +166,263 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
     rack?: boolean;
     lock?: boolean;
     lean?: number;
+    kickstand?: boolean;
+    dusty?: boolean;
+    crate?: boolean;
+  }
+
+  function addTube(
+    parent: InstanceType<typeof T.Group>,
+    p1: [number, number, number],
+    p2: [number, number, number],
+    radius: number,
+    mat: ReturnType<typeof createMaterial>,
+    castShadow = true,
+  ) {
+    const dx = p2[0] - p1[0];
+    const dy = p2[1] - p1[1];
+    const dz = p2[2] - p1[2];
+    const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (len < 0.001) {
+      return;
+    }
+    const mesh = new T.Mesh(new T.CylinderGeometry(radius, radius, len, 6), mat);
+    mesh.position.set((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2, (p1[2] + p2[2]) / 2);
+    mesh.quaternion.setFromUnitVectors(
+      new T.Vector3(0, 1, 0),
+      new T.Vector3(dx / len, dy / len, dz / len),
+    );
+    mesh.castShadow = castShadow;
+    parent.add(mesh);
+    return mesh;
+  }
+
+  function addWheel(
+    parent: InstanceType<typeof T.Group>,
+    wx: number,
+    wy: number,
+    mat: ReturnType<typeof createMaterial>,
+  ) {
+    const tire = mkMesh(tireGeo, tireMat, wx, wy, 0, true, false);
+    const rim = mkMesh(rimGeo, mat, wx, wy, 0, false, false);
+    parent.add(tire, rim);
+    for (let s = 0; s < 3; s++) {
+      const sp = mkMesh(spokeGeo, mat, wx, wy, 0, false, false);
+      sp.rotation.z = (s * Math.PI) / 3;
+      parent.add(sp);
+    }
+    const hub = mkMesh(
+      new T.CylinderGeometry(0.025, 0.025, 0.08, 8),
+      mat,
+      wx,
+      wy,
+      0,
+      false,
+      false,
+    );
+    hub.rotation.x = Math.PI / 2;
+    parent.add(hub);
   }
 
   function addBike(bx: number, bz: number, ry: number, frameCol: number, opts: BikeOpts = {}) {
     const g = new T.Group();
-    const fMat = createMaterial({ color: frameCol, roughness: 0.45, metalness: 0.45 });
-    const w1 = mkMesh(tireGeo, tireMat, -0.48, 0.32, 0, true, false);
-    const w2 = mkMesh(tireGeo, tireMat, 0.48, 0.32, 0, true, false);
-    const f1 = mkMesh(barGeo, fMat, -0.1, 0.56, 0, true, false);
-    f1.rotation.z = 1.25;
-    const f2 = mkMesh(barGeo, fMat, 0.16, 0.52, 0, true, false);
-    f2.rotation.z = -0.35;
-    const f3 = mkMesh(barGeo, fMat, -0.34, 0.54, 0, true, false);
-    f3.rotation.z = 0.2;
+    const pivot = new T.Group();
+    const fMat = createMaterial({
+      color: frameCol,
+      roughness: opts.dusty ? 0.78 : 0.3,
+      metalness: opts.dusty ? 0.2 : 0.55,
+    });
+    const trimMat = opts.dusty
+      ? createMaterial({ color: 0x8e9396, metalness: 0.35, roughness: 0.7 })
+      : chromeMat;
+
+    const wheelY = 0.31;
+    const rx = -0.49;
+    const fx = 0.49;
+    addWheel(pivot, rx, wheelY, trimMat);
+    addWheel(pivot, fx, wheelY, trimMat);
+
+    // Connected diamond bicycle frame
+    const bb: [number, number, number] = [-0.07, 0.29, 0];
+    const sc: [number, number, number] = [-0.21, 0.71, 0];
+    const hb: [number, number, number] = [0.33, 0.61, 0];
+    const ht: [number, number, number] = [0.29, 0.76, 0];
+    const stemTop: [number, number, number] = [0.26, 0.91, 0];
+    const saddlePos: [number, number, number] = [-0.23, 0.82, 0];
+
+    addTube(pivot, [rx, wheelY, -0.032], [bb[0], bb[1], -0.025], 0.015, fMat);
+    addTube(pivot, [rx, wheelY, 0.032], [bb[0], bb[1], 0.025], 0.015, fMat);
+    addTube(pivot, [rx, wheelY, -0.032], [sc[0], sc[1], -0.02], 0.014, fMat);
+    addTube(pivot, [rx, wheelY, 0.032], [sc[0], sc[1], 0.02], 0.014, fMat);
+    addTube(pivot, bb, sc, 0.02, fMat);
+    addTube(pivot, bb, hb, 0.022, fMat);
+    addTube(pivot, sc, ht, 0.02, fMat);
+    addTube(pivot, hb, ht, 0.024, fMat);
+    addTube(pivot, ht, stemTop, 0.017, trimMat);
+    addTube(pivot, sc, saddlePos, 0.015, trimMat);
+    addTube(pivot, [hb[0], hb[1], -0.038], [fx, wheelY, -0.038], 0.015, fMat);
+    addTube(pivot, [hb[0], hb[1], 0.038], [fx, wheelY, 0.038], 0.015, fMat);
+
+    const crank = mkMesh(
+      new T.CylinderGeometry(0.065, 0.065, 0.02, 12),
+      trimMat,
+      bb[0],
+      bb[1],
+      0.04,
+      false,
+      false,
+    );
+    crank.rotation.x = Math.PI / 2;
+    pivot.add(crank);
+
     const seat = mkMesh(
-      new T.BoxGeometry(0.22, 0.06, 0.14),
-      createMaterial({ color: opts.bagSeat ? 0xd9e0e6 : 0x2e2a27 }),
-      -0.22,
-      0.86,
+      new T.BoxGeometry(0.22, 0.055, 0.13),
+      createMaterial({
+        color: opts.bagSeat ? 0xd9e0e6 : 0x2a2623,
+        roughness: opts.bagSeat ? 0.5 : 0.75,
+      }),
+      saddlePos[0] - 0.01,
+      saddlePos[1] + 0.025,
       0,
       false,
       false,
     );
     const handle = mkMesh(
-      new T.CylinderGeometry(0.018, 0.018, 0.46, 6),
-      createMaterial({ color: 0xbac2c7, metalness: 0.7 }),
-      0.38,
-      0.92,
+      new T.CylinderGeometry(0.015, 0.015, 0.48, 8),
+      trimMat,
+      stemTop[0] - 0.01,
+      stemTop[1] + 0.01,
       0,
       false,
       false,
     );
     handle.rotation.x = Math.PI / 2;
-    g.add(w1, w2, f1, f2, f3, seat, handle);
+    const gripMat = createMaterial({ color: 0x242629, roughness: 0.9 });
+    const gripL = mkMesh(
+      new T.CylinderGeometry(0.02, 0.02, 0.11, 8),
+      gripMat,
+      stemTop[0] - 0.01,
+      stemTop[1] + 0.01,
+      -0.2,
+      false,
+      false,
+    );
+    gripL.rotation.x = Math.PI / 2;
+    const gripR = mkMesh(
+      new T.CylinderGeometry(0.02, 0.02, 0.11, 8),
+      gripMat,
+      stemTop[0] - 0.01,
+      stemTop[1] + 0.01,
+      0.2,
+      false,
+      false,
+    );
+    gripR.rotation.x = Math.PI / 2;
+    pivot.add(seat, handle, gripL, gripR);
+
     if (opts.basket) {
+      addTube(pivot, [hb[0], hb[1], 0], [0.49, 0.72, 0], 0.012, trimMat, false);
       const bsk = mkMesh(
-        new T.BoxGeometry(0.26, 0.22, 0.3),
-        createMaterial({ color: 0x454c54, metalness: 0.4 }),
-        0.52,
-        0.76,
+        new T.BoxGeometry(0.25, 0.2, 0.3),
+        createMaterial({ color: 0x3b424a, metalness: 0.5, roughness: 0.45 }),
+        0.46,
+        0.8,
         0,
         true,
         false,
       );
       const btl = mkMesh(
-        new T.CylinderGeometry(0.035, 0.035, 0.16, 8),
-        createMaterial({ color: 0x9cd1e6, transparent: true, opacity: 0.7 }),
-        0.52,
-        0.88,
+        new T.CylinderGeometry(0.032, 0.032, 0.16, 8),
+        createMaterial({ color: 0x9cd1e6, transparent: true, opacity: 0.78 }),
+        0.46,
+        0.92,
         -0.05,
         false,
         false,
       );
-      g.add(bsk, btl);
+      pivot.add(bsk, btl);
     }
     if (opts.rack) {
       const rk = mkMesh(
-        new T.BoxGeometry(0.36, 0.04, 0.2),
-        createMaterial({ color: 0x3b4046 }),
-        -0.52,
-        0.64,
+        new T.BoxGeometry(0.36, 0.035, 0.18),
+        createMaterial({ color: 0x2e3339, metalness: 0.5 }),
+        -0.46,
+        0.66,
         0,
         false,
         false,
       );
-      g.add(rk);
+      addTube(pivot, [rx, wheelY, -0.05], [-0.56, 0.65, -0.06], 0.01, trimMat, false);
+      addTube(pivot, [rx, wheelY, 0.05], [-0.56, 0.65, 0.06], 0.01, trimMat, false);
+      pivot.add(rk);
+    }
+    if (opts.crate) {
+      const box = mkMesh(
+        new T.BoxGeometry(0.3, 0.16, 0.24),
+        createMaterial({ color: 0x3d5c85, roughness: 0.7 }),
+        -0.46,
+        0.75,
+        0,
+        true,
+        false,
+      );
+      pivot.add(box);
     }
     if (opts.lock) {
       const lk = mkMesh(
-        new T.TorusGeometry(0.14, 0.02, 6, 12),
-        createMaterial({ color: 0xb34332 }),
-        -0.62,
-        0.42,
-        0.14,
+        new T.TorusGeometry(0.14, 0.02, 6, 14),
+        createMaterial({ color: 0xb34332, roughness: 0.65 }),
+        -0.54,
+        0.38,
+        0.1,
         false,
         false,
       );
-      g.add(lk);
+      lk.rotation.y = 0.4;
+      pivot.add(lk);
     }
-    g.position.set(bx, 0.04, bz);
+    if (opts.kickstand) {
+      const leanAngle = opts.lean ?? 0.08;
+      // Kickstand pivots from bottom-bracket height down cleanly onto ground line (y = 0)
+      const footZ = Math.tan(leanAngle) * 0.3 + 0.16;
+      addTube(pivot, [-0.14, 0.27, 0.04], [-0.18, 0.015, footZ], 0.012, trimMat, true);
+      pivot.rotation.x = leanAngle;
+    } else if (opts.lean) {
+      // Lean rotates around X axis passing through the wheel ground contact patch (y = 0, z = 0)
+      pivot.rotation.x = opts.lean;
+    }
+
+    const groundY = Math.abs(bx) <= 7 && Math.abs(bz) <= 10 ? 0.06 : 0;
+    g.add(pivot);
+    g.position.set(bx, groundY, bz);
     g.rotation.y = ry;
-    if (opts.lean) {
-      g.rotation.x = opts.lean;
-    }
     scene.add(g);
     colliders.push({
-      minX: bx - 0.65,
-      maxX: bx + 0.65,
-      minZ: bz - 0.5,
-      maxZ: bz + 0.5,
-      minY: 0,
-      maxY: 1.2,
+      minX: bx - 0.62,
+      maxX: bx + 0.62,
+      minZ: bz - 0.48,
+      maxZ: bz + 0.48,
+      minY: groundY,
+      maxY: groundY + 1.2,
       active: true,
     });
     return g;
   }
 
-  addBike(-6.2, 1.8, 0.35, 0x3d5c78, { basket: true, bagSeat: true });
-  addBike(5.6, 2.2, -0.5, 0xc96244, { rack: true });
-  addBike(-8.1, 7.6, 1.1, 0xe09b34, { lock: true, lean: 0.14 });
-  addBike(6.6, -6.5, 2.4, 0x5c7560, { lean: 0.48 });
+  // Frequently-ridden commuter bikes parked upright cleanly on paved lot kickstands
+  addBike(-6.1, 1.8, 0.35, 0x2d698f, { basket: true, kickstand: true, lean: 0.07 });
+  addBike(5.6, 2.2, -0.45, 0xc95438, { rack: true, crate: true, kickstand: true, lean: 0.07 });
+  addBike(5.75, -1.6, -0.18, 0x3b8064, { basket: true, kickstand: true, lean: 0.06 });
+
+  // Cluster of old, seldom-ridden bikes locked to a camphor tree and gathered along a weathered rack
+  addBox(0.42, 0.06, 2.4, chromeMat, 6.2, 0.09, -6.45, false);
+  for (const rz of [-7.25, -6.45, -5.65]) {
+    addBox(0.32, 0.34, 0.04, chromeMat, 6.2, 0.26, rz, false);
+  }
+  addBike(-8.45, 7.6, 1.05, 0xc98b32, { lock: true, dusty: true, bagSeat: true, lean: -0.22 });
+  addBike(6.3, -7.25, 2.85, 0x5c7560, { dusty: true, bagSeat: true, rack: true, lean: 0.2 });
+  addBike(6.25, -6.45, 2.95, 0x706c75, { dusty: true, lock: true, lean: 0.16 });
+  addBike(6.18, -5.65, 2.7, 0x875c4a, { dusty: true, bagSeat: true, lean: 0.25 });
 
   addBox(
     3.6,
@@ -396,22 +555,32 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
 
   addInteract(
     'park_bike_lock',
-    V(-8.1, 0.8, 7.6),
+    V(-8.45, 0.8, 7.6),
     '看一眼锁在树上的旧单车',
     '车轮上挂着一把红漆链条锁',
     () => {
       sfx.play('chime');
-      showWhisper('后轮拿红锁死死锁在香樟树干上，链条掉了一半挂在牙盘外头。');
+      showWhisper('后轮拿红锁死死锁在香樟树干上，车座套着褪色防雨袋，看着好久没动过了。');
     },
   );
   addInteract(
     'park_bike_basket',
-    V(-6.2, 0.8, 1.8),
-    '拨一拨旧单车车筐里的东西',
-    '车座上还套着塑料防雨袋',
+    V(-6.1, 0.8, 1.8),
+    '看看刚停稳的通勤单车',
+    '车脚撑支得稳稳的，主人在附近住，天天骑着出门',
     () => {
       sfx.play('paper');
-      showWhisper('车筐里躺着半瓶喝剩的矿泉水、一张揉皱的买菜小票和几片香樟叶。');
+      showWhisper('车铃和链条擦得发亮，车筐里放着半瓶水、一张刚买菜的小票和几片新落的香樟叶。');
+    },
+  );
+  addInteract(
+    'park_bike_pile',
+    V(6.2, 0.8, -6.45),
+    '看看铁架边堆着的几辆闲置单车',
+    '斜靠成一排，车座蒙了防雨袋和灰',
+    () => {
+      sfx.play('chime');
+      showWhisper('几辆老式单车挤在生锈的铁架边互相倚着，旁边的蓝车倒是天天在骑。');
     },
   );
   addInteract('park_bench', V(4.5, 0.6, 6.5), '坐在树荫木椅上听风', '让树冠再晃一会儿', () => {

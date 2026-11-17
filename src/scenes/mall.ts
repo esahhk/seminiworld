@@ -31,10 +31,16 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
   scene.background = new T.Color(0xe6dfd3);
   scene.fog = new T.Fog(0xe6dfd3, 20, 65);
   scene.add(new T.HemisphereLight(0xfffaf0, 0x998c7a, 0.9));
-  const warmSpot = new T.PointLight(0xffcb85, 1.3, 18);
+  const warmSpot = new T.PointLight(0xffcb85, 1.5, 20);
   warmSpot.position.set(0, 3.8, -5);
   scene.add(warmSpot);
-  const stairLight = new T.PointLight(0xdcebf7, 0.85, 12);
+  const counterBackLightL = new T.PointLight(0xffe1b0, 1.15, 14);
+  counterBackLightL.position.set(-3.2, 3.8, -6.8);
+  scene.add(counterBackLightL);
+  const counterBackLightR = new T.PointLight(0xffe1b0, 1.15, 14);
+  counterBackLightR.position.set(3.2, 3.8, -6.8);
+  scene.add(counterBackLightR);
+  const stairLight = new T.PointLight(0xdcebf7, 0.95, 14);
   stairLight.position.set(10.7, 6.2, -3.5);
   scene.add(stairLight);
 
@@ -64,97 +70,77 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
   );
 
   const upperConc = createMaterial({
-    map: tex.concrete('#96989b', 0.14, 'mall_up'),
+    map: tex.concrete('#9ea2a6', 0.14, 'mall_up'),
   });
-  addBox(21.6, 0.25, 8.5, upperConc, -2.1, 4.9, -7.75, false, true, true);
-  addBox(
-    21.6,
-    1.0,
-    0.12,
-    createMaterial({ color: 0x88a8b5, transparent: true, opacity: 0.42 }),
-    -2.1,
-    5.5,
-    -3.55,
-    false,
-  );
-  addBox(3.8, 0.25, 4.0, upperConc, 10.7, 4.88, -3.85, false, true, true);
-  addBox(1.8, 0.25, 7.1, upperConc, 9.9, 2.38, 1.5, false);
-  addBox(3.6, 0.25, 2.4, upperConc, 10.8, 2.38, 4.05, false, true, true);
-  addBox(
-    0.16,
-    5.4,
-    8.2,
-    createMaterial({ color: 0xd0cec8 }),
-    12.6,
-    2.7,
-    0.6,
-    true,
-  );
-  addBox(
-    0.16,
-    5.4,
-    7.5,
-    createMaterial({ color: 0xd0cec8 }),
-    9.0,
-    2.7,
-    1.45,
-    true,
-  );
-  addBox(
-    0.16,
-    2.7,
-    5.2,
-    createMaterial({ color: 0x7b8085 }),
-    10.75,
-    1.35,
-    0.3,
-    true,
-  );
+  const glassRailMat = createMaterial({
+    color: 0x88a8b5,
+    transparent: true,
+    opacity: 0.44,
+    roughness: 0.15,
+  });
+  const railMetalMat = createMaterial({
+    color: 0x5c636b,
+    metalness: 0.6,
+    roughness: 0.35,
+  });
+
+  // Main upper mezzanine floor + full glass railing with top metal rail over plants & atrium
+  addBox(21.7, 0.28, 8.5, upperConc, -2.05, 4.88, -7.75, false, true, true);
+  addBox(21.7, 1.05, 0.1, glassRailMat, -2.05, 5.52, -3.55, true);
+  addBox(21.7, 0.06, 0.12, railMetalMat, -2.05, 6.06, -3.55, false);
+
+  // Upper stairwell landing + side/front railings (leaving x=10.75..12.6 open for the upper stair flight)
+  addBox(3.8, 0.28, 4.0, upperConc, 10.7, 4.88, -3.85, false, true, true);
+  addBox(0.1, 1.05, 1.75, glassRailMat, 8.85, 5.52, -2.72, true);
+  addBox(0.12, 0.06, 1.75, railMetalMat, 8.85, 6.06, -2.72, false);
+  addBox(1.9, 1.05, 0.1, glassRailMat, 9.8, 5.52, -1.85, true);
+  addBox(1.9, 0.06, 0.12, railMetalMat, 9.8, 6.06, -1.85, false);
+
+  // Mid landing ONLY at z=2.85..5.25 (clear of lower flight!) + solid support base + mid-landing guardrail & collider
+  addBox(3.6, 0.32, 2.4, upperConc, 10.8, 2.34, 4.05, false, true, true);
+  addBox(3.6, 2.2, 0.45, createMaterial({ color: 0xbec2c6, roughness: 0.9 }), 10.8, 1.1, 5.05, true);
+  addBox(3.6, 1.05, 0.14, glassRailMat, 10.8, 3.02, 5.2, true);
+  addBox(3.6, 0.07, 0.16, railMetalMat, 10.8, 3.56, 5.2, false);
+
+  // Stairwell outer walls & thick central spine wall
+  addBox(0.22, 6.0, 11.2, createMaterial({ color: 0xd0cec8 }), 12.6, 3.0, -0.3, true);
+  addBox(0.22, 4.9, 7.3, createMaterial({ color: 0xd0cec8 }), 9.0, 2.45, 1.75, true);
+  addBox(0.22, 5.4, 5.1, createMaterial({ color: 0x868b91 }), 10.75, 2.7, 0.4, true);
+
+  // Substantial stepped stair flights with solid under-step risers/carriages
   for (let i = 0; i < 10; i++) {
+    const lh = 0.25 + i * 0.25;
     addBox(
-      1.55,
-      0.24,
+      1.6,
+      lh,
       0.52,
       upperConc,
-      9.95,
-      0.12 + i * 0.25,
+      9.92,
+      lh / 2,
       -1.6 + i * 0.5,
       false,
       true,
       true,
     );
+    const uh = 0.38;
     addBox(
-      1.55,
-      0.24,
-      0.52,
+      1.65,
+      uh,
+      0.56,
       upperConc,
-      11.65,
-      2.62 + i * 0.25,
+      11.68,
+      2.62 + i * 0.25 - 0.07,
       2.65 - i * 0.5,
       false,
       true,
       true,
     );
   }
-  addBox(
-    3.8,
-    0.9,
-    0.1,
-    createMaterial({ color: 0x88a8b5, transparent: true, opacity: 0.45 }),
-    10.7,
-    5.45,
-    -1.85,
-    false,
-  );
-  colliders.push({
-    minX: 8.8,
-    maxX: 10.75,
-    minZ: -1.95,
-    maxZ: -1.75,
-    minY: 5.0,
-    maxY: 6.2,
-    active: true,
-  });
+  // Sloped handrails along lower & upper flights
+  const railLower = addBox(0.06, 0.08, 5.2, railMetalMat, 10.64, 2.15, 0.65, false);
+  railLower.rotation.x = -0.46;
+  const railUpper = addBox(0.06, 0.08, 5.2, railMetalMat, 10.88, 4.65, 0.4, false);
+  railUpper.rotation.x = 0.46;
   addBox(
     3.8,
     3.2,
@@ -234,15 +220,27 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
     -5.5,
     false,
   );
+  const shopWallTex = tex.tiles('#e2d9cb', '#d8cebe', '#bfb3a0', 4, 'mall_bw');
+  shopWallTex.repeat.set(4, 2);
   addBox(
     8.5,
     4.2,
     0.3,
-    createMaterial({ color: 0x362a24, roughness: 0.8 }),
+    createMaterial({ map: shopWallTex, roughness: 0.65 }),
     0,
     2.1,
     -8.2,
     true,
+  );
+  addBox(
+    8.5,
+    1.05,
+    0.34,
+    createMaterial({ map: tex.wood('#8c5d3a', '#664023', 'mall_wain'), roughness: 0.7 }),
+    0,
+    0.525,
+    -8.18,
+    false,
   );
   addSign(
     5.2,

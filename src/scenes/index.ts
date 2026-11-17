@@ -16,6 +16,7 @@ import { buildConvenienceScene } from './convenience';
 import { buildSubwayScene } from './subway';
 import { buildStudioScene } from './studio';
 import { buildCaveScene } from './cave';
+import { buildBackyardScene } from './backyard';
 
 export const SCENE_BUILDERS: Record<SceneId, SceneBuilder> = {
   platform: buildPlatformScene,
@@ -34,4 +35,5 @@ export const SCENE_BUILDERS: Record<SceneId, SceneBuilder> = {
   subway: buildSubwayScene,
   studio: buildStudioScene,
   cave: buildCaveScene,
+  backyard: buildBackyardScene,
 };

@@ -57,36 +57,43 @@ export function buildStudioScene(ctx: SceneContext): SceneInitResult {
   addBox(0.2, 3.8, 9, createMaterial({ color: 0xe3dcd0, roughness: 0.95 }), -4.5, 1.9, 0, true);
   addBox(9, 3.8, 0.2, createMaterial({ color: 0xe3dcd0, roughness: 0.95 }), 0, 1.9, 4.5, true);
   addBox(9, 0.2, 9, createMaterial({ color: 0xebe5d8 }), 0, 3.8, 0, false);
-  addBox(0.2, 0.85, 9, createMaterial({ color: 0xe8e2d6 }), 4.5, 0.425, 0, true);
-  addBox(0.2, 0.7, 9, createMaterial({ color: 0xe8e2d6 }), 4.5, 3.45, 0, true);
+  addBox(0.2, 0.85, 7.1, createMaterial({ color: 0xe8e2d6 }), 4.5, 0.425, -0.95, true);
+  addBox(0.2, 3.8, 0.5, createMaterial({ color: 0xe8e2d6 }), 4.5, 1.9, 4.25, true);
+  addBox(0.2, 1.25, 1.4, createMaterial({ color: 0xe8e2d6 }), 4.5, 3.175, 3.3, true);
+  addBox(0.2, 0.7, 7.1, createMaterial({ color: 0xe8e2d6 }), 4.5, 3.45, -0.95, true);
   addBox(0.2, 2.4, 1.5, createMaterial({ color: 0xe8e2d6 }), 4.5, 2.0, -3.75, true);
-  addBox(0.2, 2.4, 2.0, createMaterial({ color: 0xe8e2d6 }), 4.5, 2.0, 3.5, true);
+  addBox(0.2, 2.4, 0.3, createMaterial({ color: 0xe8e2d6 }), 4.5, 2.0, 2.45, true);
   addBox(
     0.06,
     2.4,
-    5.5,
+    5.3,
     createMaterial({ color: 0x9ec3d6, transparent: true, opacity: 0.24 }),
     4.5,
     2.0,
-    -0.25,
+    -0.35,
     true,
   );
+  const doorFrameMat = createMaterial({ color: 0x5c646c, metalness: 0.55, roughness: 0.4 });
+  addBox(0.24, 2.56, 0.08, doorFrameMat, 4.5, 1.28, 2.6, true);
+  addBox(0.24, 2.56, 0.08, doorFrameMat, 4.5, 1.28, 4.0, true);
+  addBox(0.24, 0.08, 1.48, doorFrameMat, 4.5, 2.56, 3.3, false);
   addBox(
-    0.95,
-    2.6,
-    0.14,
-    createMaterial({ color: 0x739ab0, transparent: true, opacity: 0.42 }),
-    4.42,
-    1.3,
+    0.08,
+    2.5,
+    1.32,
+    createMaterial({ color: 0x7aa4ba, transparent: true, opacity: 0.45, roughness: 0.15 }),
+    4.5,
+    1.25,
     3.3,
-    false,
+    true,
   );
+  addBox(0.05, 0.18, 0.36, createMaterial({ color: 0xc9b484, metalness: 0.75 }), 4.43, 1.15, 2.85, false);
   addSign(
     1.4,
     0.65,
     tex.sign('下楼 → 地铁站', '#1f3c5c', '#f0f2f4', '1/4/7号线站台'),
-    4.32,
-    2.9,
+    4.38,
+    3.05,
     3.3,
     -Math.PI / 2,
   );

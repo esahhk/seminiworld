@@ -106,6 +106,7 @@ export class SoundFX {
           subway: [210, 0.075],
           studio: [380, 0.018],
           cave: [130, 0.055],
+          backyard: [640, 0.03],
         } as Record<SceneId, [number, number]>
       )[sceneId] || [300, 0.03];
     this.ambFilter.frequency.setTargetAtTime(cfg[0], now, 0.4);

@@ -49,30 +49,36 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   addBox(5.2, 0.2, 7.6, flMat, 0, -0.1, 7.4, true, false, true);
   addBox(14.0, 0.2, 3.6, flMat, 0, -0.1, 2.8, true, false, true);
   addBox(5.0, 0.2, 13.0, flMat, -4.5, -0.1, -5.0, true, false, true);
-  addBox(3.4, 0.2, 12.0, flMat, 4.7, -0.1, -4.5, true, false, true);
-  addBox(16.0, 0.2, 24.0, ceilMat, 0, 4.2, 0, false);
+  addBox(3.4, 0.2, 16.0, flMat, 4.7, -0.1, -6.5, true, false, true);
+  addBox(5.4, 0.2, 15.0, flMat, 0.5, -0.1, -5.0, false, false, true);
+  addBox(16.0, 0.2, 28.0, ceilMat, 0, 4.2, -1.5, false);
 
   addBox(5.2, 4.2, 0.2, wMat, 0, 2.1, 11.2, true);
   addBox(0.2, 4.2, 6.8, wMat, -2.5, 2.1, 7.8, true);
   addBox(0.2, 4.2, 6.8, wMat, 2.5, 2.1, 7.8, true);
-  addBox(4.8, 4.2, 0.2, wMat, 0, 2.1, 1.1, true);
-  addBox(4.8, 4.2, 0.2, wMat, 0, 2.1, -1.6, true);
-  addBox(0.2, 4.2, 2.8, wMat, -2.1, 2.1, -0.25, true);
-  addBox(0.2, 4.2, 2.8, wMat, 2.9, 2.1, -0.25, true);
+  // Sealed solid central core between left (-2.0) and right (+3.0) corridors
+  addBox(5.2, 4.2, 0.22, wMat, 0.5, 2.1, 1.1, true);
+  addBox(5.2, 4.2, 0.22, wMat, 0.5, 2.1, -11.5, true);
+  addBox(0.22, 4.2, 12.8, wMat, -2.0, 2.1, -5.2, true);
+  addBox(0.22, 4.2, 15.8, wMat, 3.0, 2.1, -6.7, true);
+  for (const pz of [-2.0, -6.2, -10.2]) {
+    addBox(0.36, 4.2, 0.45, createMaterial({ color: 0xd5dfe0 }), -1.96, 2.1, pz, false);
+    addBox(0.36, 4.2, 0.45, createMaterial({ color: 0xd5dfe0 }), 3.04, 2.1, pz, false);
+  }
   addBox(4.6, 4.2, 0.2, wMat, -4.7, 2.1, 4.6, true);
   addBox(3.6, 4.2, 0.2, wMat, 4.7, 2.1, 4.6, true);
   addBox(0.2, 4.2, 16.2, wMat, -7.0, 2.1, -3.5, true);
-  addBox(0.2, 4.2, 15.2, wMat, 6.4, 2.1, -3.0, true);
+  addBox(0.2, 4.2, 19.2, wMat, 6.4, 2.1, -5.0, true);
   addBox(5.2, 4.2, 0.2, wMat, -4.5, 2.1, -11.5, true);
-  addBox(3.4, 4.2, 0.2, wMat, 4.7, 2.1, -10.5, true);
+  addBox(3.4, 4.2, 0.2, wMat, 4.7, 2.1, -14.5, true);
 
   addSign(
     2.4,
     0.85,
     tex.sign('← 屏蔽重门（左拐再右拐）', '#f4f7f6', '#273336', '候机连廊（右拐再左拐） →'),
-    0,
+    0.5,
     2.25,
-    1.22,
+    1.23,
   );
 
   const lineMatB = createMaterial({
@@ -99,7 +105,7 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   addBox(4.3, 0.012, 0.26, lineMatB, -2.5, 0.008, 3.0, false);
   addBox(0.26, 0.012, 12.0, lineMatB, -4.5, 0.008, -3.0, false);
   addBox(4.5, 0.012, 0.26, lineMatG, 2.6, 0.008, 2.6, false);
-  addBox(0.26, 0.012, 11.5, lineMatG, 4.7, 0.008, -3.2, false);
+  addBox(0.26, 0.012, 15.5, lineMatG, 4.7, 0.008, -5.2, false);
   addSign(
     2.2,
     0.9,
@@ -184,16 +190,16 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
     createMaterial({ color: 0x99bdcc, transparent: true, opacity: 0.45 }),
     4.7,
     1.5,
-    -10.3,
+    -14.3,
     true,
   );
   addSign(
     2.0,
     0.85,
-    tex.sign('候机连廊 · 通往机场', '#e4edf0', '#22343d', '单向通道 · 往前出航站楼'),
+    tex.sign('候机连廊 · 通往机场', '#e4edf0', '#22343d', '往前出航站楼'),
     4.7,
     3.15,
-    -10.22,
+    -14.22,
   );
 
   let doorOpen = false;
@@ -235,9 +241,9 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   });
   addInteract(
     'hosp_to_air',
-    V(4.7, 1.4, -9.8),
+    V(4.7, 1.4, -13.8),
     '推门去机场候机区',
-    '穿过候机连廊去航站楼（单向）',
+    '穿过长连廊去航站楼',
     () => {
       const ai = sceneIdxById('airport');
       if (ai !== -1) {
@@ -255,7 +261,7 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   );
 
   addCollectible('hospital', -6.4, 1.1, -7.2, 0x77b8d4);
-  setBounds({ minX: -6.8, maxX: 6.2, minZ: -11.2, maxZ: 10.9 });
+  setBounds({ minX: -6.8, maxX: 6.2, minZ: -14.2, maxZ: 10.9 });
   setSurfaceFn(() => 'stone');
 
   return {

@@ -90,7 +90,7 @@ export function buildInfirmaryScene(ctx: SceneContext): SceneInitResult {
   addSign(
     1.5,
     0.72,
-    tex.sign('学校教室 · 出门右转', '#f7f3e8', '#354a3a', '回教学楼门厅', true),
+    tex.sign('学校教室 · 出门左转', '#f7f3e8', '#354a3a', '回教学楼门厅', true),
     0,
     2.85,
     9.8,

@@ -24,47 +24,57 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
     sceneIdxById,
     loadScene,
     showWhisper,
+    openModal,
+    closeModal,
     setBounds,
     setHeightFn,
     setSurfaceFn,
   } = ctx;
 
-  scene.background = new T.Color(0x232830);
-  scene.fog = new T.FogExp2(0x232830, 0.015);
-  scene.add(new T.HemisphereLight(0xb2c0ce, 0x454a52, 0.95));
-  scene.add(new T.AmbientLight(0x707c88, 0.9));
-  const tube1 = new T.PointLight(0xeef6fa, 1.25, 22);
+  scene.background = new T.Color(0x343c45);
+  scene.fog = new T.FogExp2(0x343c45, 0.012);
+  scene.add(new T.HemisphereLight(0xd8e5f0, 0x67707a, 1.25));
+  scene.add(new T.AmbientLight(0x9caab8, 1.1));
+  const tube1 = new T.PointLight(0xeef6fa, 1.65, 28);
   tube1.position.set(0, 3.2, -4);
   scene.add(tube1);
-  const tube2 = new T.PointLight(0xf2d194, 1.1, 20);
+  const tube2 = new T.PointLight(0xf2d7a4, 1.45, 26);
   tube2.position.set(-6, 3.2, 5);
   scene.add(tube2);
-  const tube3 = new T.PointLight(0xeef6fa, 1.1, 20);
+  const tube3 = new T.PointLight(0xeef6fa, 1.45, 26);
   tube3.position.set(6, 3.2, 5);
   scene.add(tube3);
-  const tube4 = new T.PointLight(0xffe7b8, 1.2, 18);
+  const tube4 = new T.PointLight(0xffe7b8, 1.5, 24);
   tube4.position.set(0, 3.8, -12.5);
   scene.add(tube4);
+  const tube5 = new T.PointLight(0xeef6fa, 1.35, 24);
+  tube5.position.set(-6, 3.2, -5);
+  scene.add(tube5);
+  const tube6 = new T.PointLight(0xeef6fa, 1.35, 24);
+  tube6.position.set(6, 3.2, -5);
+  scene.add(tube6);
   const lampMat = createMaterial({
     color: 0xffffff,
-    emissive: 0xe6f2f8,
-    emissiveIntensity: 1.2,
+    emissive: 0xeaf4fa,
+    emissiveIntensity: 1.45,
   });
   for (const [lx, lz] of [
     [0, -4],
     [-6, 5],
     [6, 5],
+    [-6, -5],
+    [6, -5],
     [0, -11.5],
   ]) {
     addBox(2.4, 0.08, 0.24, lampMat, lx, 3.55, lz, false, false, false);
   }
-  const gTex = tex.concrete('#5a5e63', 0.18, 'gar');
+  const gTex = tex.concrete('#6f747b', 0.16, 'gar');
   gTex.repeat.set(6, 6);
   addBox(
     24,
     0.2,
     24,
-    createMaterial({ map: gTex, roughness: 0.55, metalness: 0.08 }),
+    createMaterial({ map: gTex, roughness: 0.52, metalness: 0.08 }),
     0,
     -0.1,
     0,
@@ -76,13 +86,13 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
     24,
     0.3,
     24,
-    createMaterial({ color: 0x464a50, roughness: 0.95 }),
+    createMaterial({ color: 0x5c626a, roughness: 0.92 }),
     0,
     3.7,
     0,
     false,
   );
-  const wallMat = createMaterial({ color: 0x5c6066, roughness: 0.9 });
+  const wallMat = createMaterial({ color: 0x767c84, roughness: 0.88 });
   addBox(9.6, 3.8, 0.3, wallMat, -7.2, 1.9, -12, true);
   addBox(9.6, 3.8, 0.3, wallMat, 7.2, 1.9, -12, true);
   addBox(0.3, 3.8, 24, wallMat, -12, 1.9, 0, true);
@@ -138,12 +148,12 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
     false,
   );
   addSign(
-    1.4,
-    0.55,
-    tex.sign('B4 · 溶洞', '#3b3024', '#e8b658', '货运专用电梯'),
+    1.55,
+    0.58,
+    tex.sign('B2 · 电梯间', '#3b3024', '#e8b658', '1F 后院 / B4 溶洞'),
     8.4,
     3.25,
-    11.84,
+    11.82,
     Math.PI,
   );
   addBox(
@@ -421,8 +431,8 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
   addInteract(
     'gar_elev_call',
     V(6.85, 1.25, 11.7),
-    '按下货运电梯呼叫按钮',
-    'B4 溶洞 · 货运专用',
+    '按下电梯呼叫按钮',
+    '前往 1F 清晨后院 / B4 幽深洞穴',
     () => {
       if (freightRiding) {
         return;
@@ -434,35 +444,60 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
       sfx.play('door');
       showWhisper(
         freightOpen
-          ? '铁门沿着锈滑轨挪开，井道底下飘上来一股潮气。'
-          : '货运铁门哐地合上。',
+          ? '电梯门沿着滑轨滑开，里面通往 1F 清晨后院与 B4 洞穴。'
+          : '电梯门合拢了。',
       );
     },
   );
+  const rideGarageElevator = (target: 'backyard' | 'cave') => {
+    if (freightRiding) {
+      return;
+    }
+    freightRiding = true;
+    closeModal();
+    freightOpen = false;
+    sfx.play('door');
+    showWhisper(
+      target === 'backyard'
+        ? '电梯门合上，轿厢稳稳升向 1F 博物馆后院……'
+        : '电梯门合上，轿厢往 B4 洞窟沉了下去……',
+    );
+    addTimedRedirect(() => {
+      freightRiding = false;
+      const idx = sceneIdxById(target);
+      if (idx !== -1) {
+        if (target === 'backyard') {
+          state.pendingSpawn = { pos: V(0, 1.65, -7.8), yaw: Math.PI };
+          loadScene(idx);
+          showWhisper('磨砂玻璃门轻咔滑开，清晨后院的冷亮空气与青草味扑面而来。');
+        } else {
+          state.pendingSpawn = { pos: V(0, 1.77, -8.1), yaw: 0 };
+          loadScene(idx);
+          showWhisper('停稳在 B4 洞窟北侧的黄铜小电梯里，暗池的水声就在前头。');
+        }
+      }
+    }, 700);
+  };
   addInteract(
     'gar_elev_go',
     V(8.4, 1.3, 12.9),
-    '走进轿厢并按下 B4 溶洞 下行',
-    '前往 B4 幽深洞穴',
+    '按下轿厢楼层按键',
+    '选择前往 1F 清晨后院或 B4 幽深洞穴',
     () => {
       if (freightRiding) {
         return;
       }
-      freightRiding = true;
-      freightOpen = false;
-      sfx.play('door');
-      showWhisper('铁门合上，轿厢沉了下去……');
-      addTimedRedirect(() => {
-        const ci = sceneIdxById('cave');
-        if (ci !== -1) {
-          state.pendingSpawn = {
-            pos: V(-7.0, 1.65, 3.0),
-            yaw: -Math.PI * 0.5,
-          };
-          loadScene(ci);
-          showWhisper('停稳在 B4 洞窟西侧的货运铁门前，暗池的水声从里头传过来。');
-        }
-      }, 720);
+      sfx.play('click');
+      openModal(
+        'B2 · 电梯楼层选择',
+        '这部电梯上行直达阳光清爽的博物馆后院，下行直达湿冷的 B4 幽深洞穴。请选择楼层：',
+        [
+          { label: '前往 1F · 博物馆清晨后院', fn: () => rideGarageElevator('backyard') },
+          { label: '前往 B4 · 幽深洞穴', fn: () => rideGarageElevator('cave') },
+          { label: '留在 B2 地下车库', fn: closeModal },
+        ],
+        { meta: 'B2 地下车库电梯' },
+      );
     },
   );
   addInteract(
@@ -509,6 +544,6 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
   return {
     pos: V(0, 1.65, 7.5),
     yaw: 0,
-    whisper: '车库亮堂了不少，南墙角落还嵌着一部写着「B4 · 溶洞」的旧货运电梯。',
+    whisper: '亮堂了不少的地下车库里，南墙角落的电梯可以选去清晨后院或 B4 洞穴。',
   };
 }

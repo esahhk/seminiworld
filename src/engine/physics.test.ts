@@ -83,12 +83,13 @@ test('easeInOutQuad maps endpoints accurately', () => {
   assert.equal(easeInOutQuad(1), 1);
 });
 
-test('SCENES_META contains all 16 scenes with unique IDs and collectibles', () => {
-  assert.equal(SCENES_META.length, 16);
+test('SCENES_META contains all 17 scenes with unique IDs and collectibles', () => {
+  assert.equal(SCENES_META.length, 17);
   const ids = new Set(SCENES_META.map((s) => s.id));
-  assert.equal(ids.size, 16);
+  assert.equal(ids.size, 17);
   assert.equal(sceneIdxById('platform'), 0);
   assert.equal(sceneIdxById('cave'), 15);
+  assert.equal(sceneIdxById('backyard'), 16);
   for (const m of SCENES_META) {
     assert.ok(m.name.length > 0);
     assert.ok(m.item.length > 0);

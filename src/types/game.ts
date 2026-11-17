@@ -16,7 +16,8 @@ export type SceneId =
   | 'convenience'
   | 'subway'
   | 'studio'
-  | 'cave';
+  | 'cave'
+  | 'backyard';
 
 export type BookKey = 'office' | 'studio' | 'convenience';
 

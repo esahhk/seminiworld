@@ -97,6 +97,12 @@ export const SCENES_META: SceneMeta[] = [
     item: '湿润方解石',
     desc: '在手电光下泛着微弱蜂蜜色折光的小矿石。',
   },
+  {
+    id: 'backyard',
+    name: '博物馆清晨后院',
+    item: '带露水的白绣球花瓣',
+    desc: '刚过早八点还挂着薄凉水汽的一小簇白花瓣。',
+  },
 ];
 
 export function sceneIdxById(id: SceneId): number {

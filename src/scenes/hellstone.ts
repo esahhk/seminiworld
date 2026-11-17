@@ -204,11 +204,66 @@ export function buildHellstoneScene(ctx: SceneContext): SceneInitResult {
   }
 
   const rustMat = createMaterial({
-    color: 0x5c3c2e,
-    metalness: 0.45,
-    roughness: 0.8,
+    color: 0x85684d,
+    metalness: 0.35,
+    roughness: 0.68,
   });
-  addBox(0.95, 0.55, 0.65, rustMat, 8.6, -0.08, 2.6, true);
+  addBox(0.98, 0.56, 0.68, rustMat, 8.6, -0.07, 2.6, true);
+  addBox(
+    1.0,
+    0.1,
+    0.7,
+    createMaterial({ color: 0xd9cfb8, roughness: 0.8 }),
+    8.6,
+    0.04,
+    2.6,
+    false,
+  );
+  addBox(
+    0.16,
+    0.1,
+    0.06,
+    createMaterial({ color: 0xd1b36b, metalness: 0.7, roughness: 0.3 }),
+    8.6,
+    0.16,
+    2.24,
+    false,
+  );
+  addCylinder(
+    0.045,
+    0.045,
+    0.2,
+    8,
+    createMaterial({
+      color: 0xa6d8e0,
+      emissive: 0x45737d,
+      emissiveIntensity: 0.35,
+      transparent: true,
+      opacity: 0.75,
+    }),
+    8.45,
+    0.31,
+    2.55,
+  );
+  addCylinder(
+    0.045,
+    0.045,
+    0.2,
+    8,
+    createMaterial({
+      color: 0xa6d8e0,
+      emissive: 0x45737d,
+      emissiveIntensity: 0.35,
+      transparent: true,
+      opacity: 0.75,
+    }),
+    8.72,
+    0.31,
+    2.62,
+  );
+  const crateGlow = new T.PointLight(0xffb478, 0.95, 7);
+  crateGlow.position.set(8.2, 0.95, 2.6);
+  scene.add(crateGlow);
   const leg1 = addCylinder(0.03, 0.03, 1.5, 6, rustMat, -7.8, 0.05, -5.6);
   leg1.rotation.set(1.2, 0.4, 0.8);
   const leg2 = addCylinder(0.03, 0.03, 1.4, 6, rustMat, -8.1, 0.05, -5.9);

@@ -211,52 +211,151 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
     0,
     Math.PI / 2,
   );
-  const fridgeLight = new T.PointLight(0xd9f5ff, 0.85, 8);
-  fridgeLight.position.set(-10.5, 2.0, 0);
+  // Storefront fascia accent band & interior ceiling light coves
+  addBox(0.24, 0.22, 9.2, createMaterial({ color: 0x1f5e48 }), -4.42, 3.55, 0, false);
+  addBox(0.24, 0.1, 9.2, createMaterial({ color: 0xd97a38 }), -4.42, 3.38, 0, false);
+  addBox(0.9, 0.04, 1.7, createMaterial({ color: 0x353b42, roughness: 0.95 }), -4.98, 0.16, 0, false);
+  const ceilingStripMat = createMaterial({
+    color: 0xfff8ea,
+    emissive: 0xffe4b8,
+    emissiveIntensity: 0.85,
+  });
+  for (const lz of [-2.1, 2.1]) {
+    addBox(3.8, 0.06, 0.24, ceilingStripMat, -8.0, 3.48, lz, false);
+  }
+
+  // Illuminated glass-door beverage refrigerator along west wall (-11.0)
+  const fridgeCaseMat = createMaterial({ color: 0xd8e8eb, roughness: 0.35 });
+  const fridgeInnerMat = createMaterial({ color: 0xeaf4f7, roughness: 0.4 });
+  const fridgeGlassMat = createMaterial({
+    color: 0xc2e6f2,
+    transparent: true,
+    opacity: 0.24,
+    roughness: 0.08,
+  });
+  const fridgeShelfGlowMat = createMaterial({
+    color: 0xe6f8ff,
+    emissive: 0xbfeaff,
+    emissiveIntensity: 0.9,
+  });
+  const fridgeLight = new T.PointLight(0xd9f5ff, 0.95, 9);
+  fridgeLight.position.set(-10.2, 2.0, 0);
   scene.add(fridgeLight);
-  addBox(
-    0.75,
-    2.4,
-    5.2,
-    createMaterial({ color: 0xd8e8eb, roughness: 0.3 }),
-    -11.0,
-    1.2,
-    0,
-    true,
-  );
-  addBox(
-    0.9,
-    1.0,
-    3.0,
-    createMaterial({ color: 0xd18a49, roughness: 0.6 }),
-    -6.5,
-    0.5,
-    -2.6,
-    true,
-  );
-  addBox(
-    0.6,
-    0.28,
-    0.75,
-    createMaterial({ color: 0xc9c3b8, metalness: 0.5 }),
-    -6.4,
-    1.14,
-    -2.4,
-    true,
-  );
-  addBox(0.34, 0.34, 0.45, createMaterial({ color: 0xe0ddd5 }), -6.6, 1.18, -3.3, false);
-  addBox(3.4, 1.6, 0.6, createMaterial({ color: 0xded8cc }), -8.2, 0.8, 1.6, true);
+  // Rear cabinet shell & side cheeks (collider covers overall 0.75 x 2.4 x 5.2 footprint)
+  addBox(0.75, 2.4, 5.2, createMaterial({ visible: false }), -11.0, 1.2, 0, true);
+  addBox(0.18, 2.4, 5.2, fridgeInnerMat, -11.28, 1.2, 0, false);
+  addBox(0.72, 2.4, 0.14, fridgeCaseMat, -11.0, 1.2, -2.53, false);
+  addBox(0.72, 2.4, 0.14, fridgeCaseMat, -11.0, 1.2, 2.53, false);
+  addBox(0.72, 0.32, 5.2, fridgeCaseMat, -11.0, 2.26, 0, false);
+  addBox(0.72, 0.24, 5.2, fridgeCaseMat, -11.0, 0.24, 0, false);
+  addBox(0.08, 0.08, 4.9, fridgeShelfGlowMat, -10.75, 2.08, 0, false);
+  for (const divZ of [-1.25, 0, 1.25]) {
+    addBox(0.68, 1.85, 0.06, createMaterial({ color: 0x9aa9b2, metalness: 0.4 }), -10.98, 1.2, divZ, false);
+  }
+  const bottleMats = [
+    createMaterial({ color: 0x3b8c5e }),
+    createMaterial({ color: 0xc94238 }),
+    createMaterial({ color: 0x3469a6 }),
+    createMaterial({ color: 0xe0a434 }),
+  ];
+  for (const sy of [0.55, 0.96, 1.38, 1.78]) {
+    addBox(0.5, 0.04, 4.92, fridgeCaseMat, -10.98, sy, 0, false);
+    for (let bi = 0; bi < 16; bi++) {
+      const bz = -2.25 + bi * 0.3;
+      if (Math.abs(bz + 1.25) < 0.08 || Math.abs(bz) < 0.08 || Math.abs(bz - 1.25) < 0.08) {
+        continue;
+      }
+      addCylinder(
+        0.055,
+        0.058,
+        0.24,
+        8,
+        bottleMats[(bi + Math.round(sy * 3)) % bottleMats.length],
+        -10.85,
+        sy + 0.14,
+        bz,
+        false,
+      );
+    }
+  }
+  // Glass doors & silver handles
+  addBox(0.04, 1.82, 4.9, fridgeGlassMat, -10.64, 1.2, 0, false);
+  for (const hz of [-1.42, -1.08, -0.17, 0.17, 1.08, 1.42]) {
+    addBox(0.04, 0.36, 0.04, createMaterial({ color: 0xbac3c9, metalness: 0.7 }), -10.59, 1.25, hz, false);
+  }
+
+  // Checkout counter + quartz top + partitioned Oden warmer + POS register + bun warmer
+  addBox(0.9, 0.96, 3.0, createMaterial({ color: 0xc98447, roughness: 0.62 }), -6.5, 0.56, -2.6, true);
+  addBox(0.98, 0.08, 3.08, createMaterial({ color: 0xebe6db, roughness: 0.35 }), -6.5, 1.04, -2.6, false);
+  // Stainless oden cooker pot & dividers (-6.4, 1.14, -2.4)
+  addBox(0.6, 0.24, 0.76, createMaterial({ color: 0xc2c7ca, metalness: 0.65, roughness: 0.3 }), -6.4, 1.16, -2.4, false);
+  addBox(0.5, 0.02, 0.66, createMaterial({ color: 0xb87635, roughness: 0.2 }), -6.4, 1.25, -2.4, false);
+  addBox(0.03, 0.08, 0.68, createMaterial({ color: 0xd9dee0, metalness: 0.7 }), -6.4, 1.26, -2.4, false);
+  for (const oz of [-2.52, -2.28]) {
+    addBox(0.52, 0.08, 0.03, createMaterial({ color: 0xd9dee0, metalness: 0.7 }), -6.4, 1.26, oz, false);
+  }
+  addCylinder(0.06, 0.06, 0.08, 10, createMaterial({ color: 0xf2ead7 }), -6.5, 1.27, -2.62, false);
+  addCylinder(0.055, 0.055, 0.08, 10, createMaterial({ color: 0xf2ead7 }), -6.32, 1.27, -2.62, false);
+  addBox(0.09, 0.08, 0.09, createMaterial({ color: 0x736b64 }), -6.48, 1.27, -2.38, false);
+  addBox(0.62, 0.22, 0.78, createMaterial({ color: 0xddeef5, transparent: true, opacity: 0.3 }), -6.4, 1.38, -2.4, false);
+  // Paper bowls & condiment cups (-6.6, -3.3)
+  addCylinder(0.075, 0.055, 0.24, 10, createMaterial({ color: 0xece8de }), -6.6, 1.2, -3.1, false);
+  addBox(0.32, 0.36, 0.42, createMaterial({ color: 0xe6eff2, transparent: true, opacity: 0.45 }), -6.5, 1.26, -3.55, false);
+  addBox(0.34, 0.06, 0.44, createMaterial({ color: 0xc97b38 }), -6.5, 1.46, -3.55, false);
+  for (const bz of [-3.46, -3.64]) {
+    addMesh(new T.SphereGeometry(0.055, 8, 6), createMaterial({ color: 0xf5f2ea }), -6.5, 1.2, bz, false, false);
+  }
+  // POS register monitor + card pad
+  addBox(0.28, 0.08, 0.36, createMaterial({ color: 0x2d3238 }), -6.42, 1.12, -1.65, false);
+  addBox(0.06, 0.24, 0.32, createMaterial({ color: 0x252a30 }), -6.42, 1.28, -1.65, false);
+  addBox(0.07, 0.18, 0.26, createMaterial({ color: 0x5da9d9, emissive: 0x255778, emissiveIntensity: 0.6 }), -6.41, 1.29, -1.65, false);
+
+  // Stocked 4-tier central gondola shelf (-8.2, 0.8, 1.6)
+  const shelfColMat = createMaterial({ color: 0xdad4c8, roughness: 0.65 });
+  addBox(3.4, 1.6, 0.6, createMaterial({ visible: false }), -8.2, 0.8, 1.6, true);
+  addBox(3.36, 1.56, 0.08, shelfColMat, -8.2, 0.9, 1.6, false);
+  addBox(3.36, 0.18, 0.58, createMaterial({ color: 0x454a4f }), -8.2, 0.2, 1.6, false);
+  const snackMats = [
+    createMaterial({ color: 0xd9563f }),
+    createMaterial({ color: 0xe3b13b }),
+    createMaterial({ color: 0x4b9468 }),
+    createMaterial({ color: 0x4c79b8 }),
+    createMaterial({ color: 0xe8e2d3 }),
+  ];
+  for (const ty of [0.46, 0.82, 1.18, 1.54]) {
+    addBox(3.4, 0.04, 0.62, shelfColMat, -8.2, ty, 1.6, false);
+    addBox(3.42, 0.035, 0.63, createMaterial({ color: 0x1f5e48 }), -8.2, ty, 1.6, false);
+    for (let si = 0; si < 9; si++) {
+      const sxPos = -9.65 + si * 0.36;
+      const sm = snackMats[(si + Math.round(ty * 4)) % snackMats.length];
+      addBox(0.22, 0.24, 0.18, sm, sxPos, ty + 0.14, 1.42, false);
+      addBox(0.22, 0.24, 0.18, snackMats[(si + 2) % snackMats.length], sxPos, ty + 0.14, 1.78, false);
+    }
+  }
+
+  // Window dining counter + bar stools + tea cup + kraft notebook (-4.95, 2.6)
   addBox(
     0.45,
-    0.95,
+    0.08,
     2.4,
     createMaterial({ map: tex.wood('#9c7248', '#704f2f') }),
     -4.95,
-    0.48,
+    0.92,
     2.6,
-    true,
+    false,
   );
-  addBox(0.24, 0.06, 0.32, createMaterial({ color: 0xb89668 }), -4.95, 0.98, 2.4, false);
+  addBox(0.45, 0.95, 2.4, createMaterial({ visible: false }), -4.95, 0.48, 2.6, true);
+  for (const lz of [1.55, 3.65]) {
+    addCylinder(0.03, 0.03, 0.82, 8, createMaterial({ color: 0x383d42, metalness: 0.6 }), -4.95, 0.5, lz, false);
+  }
+  for (const szPos of [2.05, 3.15]) {
+    addCylinder(0.18, 0.18, 0.05, 12, createMaterial({ map: tex.wood('#8c653e', '#614326') }), -5.42, 0.68, szPos, false);
+    addCylinder(0.03, 0.03, 0.56, 8, createMaterial({ color: 0x383d42, metalness: 0.6 }), -5.42, 0.4, szPos, false);
+    addCylinder(0.16, 0.18, 0.03, 12, createMaterial({ color: 0x383d42, metalness: 0.6 }), -5.42, 0.16, szPos, false);
+  }
+  addBox(0.24, 0.04, 0.32, createMaterial({ color: 0xb89668 }), -4.95, 0.98, 2.4, false);
+  addCylinder(0.045, 0.04, 0.1, 10, createMaterial({ color: 0xe6e1d6 }), -4.95, 1.01, 2.95, false);
+  addBox(0.14, 0.1, 0.12, createMaterial({ color: 0xd9d4c7 }), -4.95, 1.01, 3.35, false);
 
   let doorOpen = false;
   let fridgeOn = true;
@@ -359,7 +458,8 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
   );
   addInteract('cv_fridge', V(-10.4, 1.4, 0), '拨动冷柜灯开关', '切换冷柜照明', () => {
     fridgeOn = !fridgeOn;
-    fridgeLight.intensity = fridgeOn ? 0.85 : 0.08;
+    fridgeLight.intensity = fridgeOn ? 0.95 : 0.08;
+    fridgeShelfGlowMat.emissiveIntensity = fridgeOn ? 0.9 : 0.06;
     sfx.play('switch');
     showWhisper(
       fridgeOn ? '冰柜亮起一片冷白光，铝罐表面凝着细密水珠。' : '灯暗了，压缩机在墙脚嗡嗡低响。',
