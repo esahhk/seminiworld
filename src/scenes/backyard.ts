@@ -364,11 +364,11 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
       const idx = sceneIdxById(target);
       if (idx !== -1) {
         if (target === 'garage') {
-          state.pendingSpawn = { pos: V(8.4, 1.75, 12.8), yaw: Math.PI };
+          state.pendingSpawn = { pos: V(8.4, 1.75, 12.8), yaw: 0 };
           loadScene(idx);
           showWhisper('门轻咔滑开，门外是亮堂的 B2 地下车库。');
         } else {
-          state.pendingSpawn = { pos: V(0, 1.77, -8.1), yaw: 0 };
+          state.pendingSpawn = { pos: V(0, 1.77, -8.1), yaw: Math.PI };
           loadScene(idx);
           showWhisper('电梯停稳，又回到了 B4 暗池洞窟。');
         }
@@ -387,6 +387,14 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
       [
         { label: '前往 B2 · 地下车库', fn: () => rideElevatorTo('garage') },
         { label: '前往 B4 · 幽深洞穴', fn: () => rideElevatorTo('cave') },
+        {
+          label: elevOpen ? '关闭电梯门' : '打开电梯门',
+          fn: () => {
+            elevOpen = !elevOpen;
+            sfx.play('click');
+            closeModal();
+          },
+        },
         { label: '留在此层', fn: closeModal },
       ],
       { meta: '博物馆后院小电梯 · 清晨微光中' },
@@ -400,7 +408,7 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
 
   addInteract(
     'by_elev_btn',
-    V(1.65, 1.25, -6.9),
+    V(1.65, 1.25, -6.75),
     '按后院小电梯门外按钮',
     '轻开磨砂玻璃门或选择楼层',
     () => {
@@ -413,13 +421,15 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
         elevOpen ? '磨砂玻璃门轻咔滑开，清晨的青草气顺着门缝透了进去。' : '玻璃门轻轻合拢。',
       );
     },
+    { radius: 0.75 },
   );
   addInteract(
     'by_elev_in',
-    V(0, 1.2, -8.3),
+    V(0, 1.55, -7.6),
     '按下轿厢楼层按键',
     '选择前往 B2 车库或 B4 洞穴',
     openFloorSelector,
+    { radius: 0.9 },
   );
 
   addInteract('by_flowers', V(-0.9, 0.7, -3.0), '俯身看看沾着露水的绣球与蕨叶', '摸一把清晨石沿', () => {
@@ -433,7 +443,7 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
   setSurfaceFn(() => 'marble');
 
   return {
-    pos: V(0, 1.65, -7.8),
+    pos: V(0, 1.75, -7.8),
     yaw: Math.PI,
     whisper: '磨砂玻璃门轻咔滑开，带着露水的湿泥与青草味迎面扑进清爽的清晨空气里。',
   };

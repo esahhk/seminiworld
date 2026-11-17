@@ -237,9 +237,14 @@ export function buildCaveScene(ctx: SceneContext): SceneInitResult {
   };
   colliders.push(doorColBottom);
 
+  const spawnedInElev = !!state.pendingSpawn && state.pendingSpawn.pos.z < -7.2;
   let lanternHigh = true;
-  let elevOpen = false;
+  let elevOpen = spawnedInElev;
   let elevPending = false;
+  if (spawnedInElev) {
+    cDoor.position.x = 2.1;
+    doorColBottom.active = false;
+  }
 
   function rideToFloor(target: 'backyard' | 'garage') {
     if (elevPending) {
@@ -259,11 +264,11 @@ export function buildCaveScene(ctx: SceneContext): SceneInitResult {
       const idx = sceneIdxById(target);
       if (idx !== -1) {
         if (target === 'backyard') {
-          state.pendingSpawn = { pos: V(0, 1.65, -7.8), yaw: Math.PI };
+          state.pendingSpawn = { pos: V(0, 1.75, -7.8), yaw: Math.PI };
           loadScene(idx);
           showWhisper('磨砂玻璃门轻咔滑开，阳光照着的清晨后院和露水花草正迎面扑来。');
         } else {
-          state.pendingSpawn = { pos: V(8.4, 1.75, 12.8), yaw: Math.PI };
+          state.pendingSpawn = { pos: V(8.4, 1.75, 12.8), yaw: 0 };
           loadScene(idx);
           showWhisper('门轻咔滑开，外面就是亮堂的 B2 地下车库。');
         }
@@ -282,6 +287,14 @@ export function buildCaveScene(ctx: SceneContext): SceneInitResult {
       [
         { label: '前往 1F · 博物馆清晨后院', fn: () => rideToFloor('backyard') },
         { label: '前往 B2 · 地下车库', fn: () => rideToFloor('garage') },
+        {
+          label: elevOpen ? '关闭电梯门' : '打开电梯门',
+          fn: () => {
+            elevOpen = !elevOpen;
+            sfx.play('click');
+            closeModal();
+          },
+        },
         { label: '留在 B4 洞穴', fn: closeModal },
       ],
       { meta: '洞窟北侧小电梯' },
@@ -341,7 +354,7 @@ export function buildCaveScene(ctx: SceneContext): SceneInitResult {
 
   addInteract(
     'cave_elev_btn',
-    V(1.68, 1.25, -6.9),
+    V(1.68, 1.25, -6.75),
     '按小电梯门外按钮',
     '轻开磨砂玻璃门',
     () => {
@@ -356,13 +369,15 @@ export function buildCaveScene(ctx: SceneContext): SceneInitResult {
           : '玻璃门轻轻合上。',
       );
     },
+    { radius: 0.75 },
   );
   addInteract(
     'cave_elev_in',
-    V(0, 1.2, -8.3),
+    V(0, 1.55, -7.6),
     '按下电梯楼层按键',
     '选择前往 1F 清晨后院或 B2 地下车库',
     openFloorChoices,
+    { radius: 0.9 },
   );
 
   addCollectible('cave', 4.2, 1.1, -6.0, 0xe6be9c);

@@ -518,12 +518,15 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
     }
   });
   setHeightFn((x, z, standingY = 0) => {
+    if (x >= -12.9 && x <= 8.8 && z >= -12.0 && z <= -3.55 && standingY >= 4.4) {
+      return 5.0;
+    }
     if (x >= 8.8 && x <= 12.6 && z >= -5.6 && z <= -1.85 && standingY >= 4.4) {
       return 5.0;
     }
     if (
-      x >= 10.75 &&
-      x <= 12.55 &&
+      x >= 10.76 &&
+      x <= 12.6 &&
       z >= -1.85 &&
       z <= 2.95 &&
       standingY >= 2.0
@@ -538,8 +541,8 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
       return 2.5;
     }
     if (
-      x >= 9.15 &&
-      x <= 10.85 &&
+      x >= 9.0 &&
+      x <= 10.74 &&
       z >= -1.9 &&
       z <= 2.95 &&
       standingY < 2.7
