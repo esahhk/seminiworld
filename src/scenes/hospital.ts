@@ -361,33 +361,35 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   });
 
   const noteCanvas = document.createElement('canvas');
-  noteCanvas.width = 320;
+  noteCanvas.width = 360;
   noteCanvas.height = 156;
   const nctx = noteCanvas.getContext('2d');
   if (nctx) {
     nctx.fillStyle = '#fff2a6';
-    nctx.fillRect(0, 0, 320, 156);
+    nctx.fillRect(0, 0, 360, 156);
     nctx.fillStyle = '#f3df82';
-    nctx.fillRect(0, 0, 320, 26);
+    nctx.fillRect(0, 0, 360, 26);
     nctx.strokeStyle = '#d4bd62';
     nctx.lineWidth = 4;
-    nctx.strokeRect(2, 2, 316, 152);
+    nctx.strokeRect(2, 2, 356, 152);
     nctx.fillStyle = '#6c54a8';
     nctx.beginPath();
-    nctx.arc(34, 62, 9, 0, Math.PI * 2);
+    nctx.arc(32, 63, 8, 0, Math.PI * 2);
     nctx.fill();
     nctx.fillStyle = '#261e36';
-    nctx.font = 'bold 26px "PingFang SC", "Microsoft YaHei", sans-serif';
-    nctx.fillText('25:00 见 · Nightcord', 52, 71);
+    nctx.font =
+      'bold 24px "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", "PingFang SC", "Microsoft YaHei", sans-serif';
+    nctx.fillText('25時、ナイトコードで。', 48, 72);
     nctx.strokeStyle = 'rgba(108, 84, 168, 0.35)';
     nctx.lineWidth = 2;
     nctx.beginPath();
     nctx.moveTo(24, 92);
-    nctx.lineTo(296, 92);
+    nctx.lineTo(336, 92);
     nctx.stroke();
     nctx.fillStyle = '#4e3d70';
     nctx.font = '20px "PingFang SC", "Microsoft YaHei", sans-serif';
-    nctx.fillText('按 E 传送到 Nightcord', 46, 128);
+    nctx.textAlign = 'center';
+    nctx.fillText('按 E 传送到 Nightcord', 180, 128);
   }
   const noteTex = track(new T.CanvasTexture(noteCanvas));
   noteTex.colorSpace = T.SRGBColorSpace;
@@ -534,7 +536,7 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
       sfx.play('click');
       openModal(
         '隔离区终端 · Nightcord',
-        '黑色主机风扇低声运转，屏幕停留在 25 时的聊天界面。\n\n显示器下沿贴着一张手写便签：「25:00 见 · 传送到 Nightcord」。\n\n这台电脑连接着一处不出现在“切换世界”里的隐藏去处，是否现在传送？',
+        '黑色主机风扇低声运转，屏幕停留在 25 时的聊天界面。\n\n显示器下沿贴着一张手写便签：「25時、ナイトコードで。」。\n\n这台电脑连接着一处不出现在“切换世界”里的隐藏去处，是否现在传送？',
         [
           {
             label: '传送到 Nightcord',
