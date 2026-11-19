@@ -349,61 +349,101 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
     mkMesh(new T.BoxGeometry(0.02, 0.024, 0.22), cyanLedMat, towerX - 0.095, 0.99, towerZ - 0.02),
   );
 
-  const screenCanvas = document.createElement('canvas');
-  screenCanvas.width = 256;
-  screenCanvas.height = 160;
-  const sctx = screenCanvas.getContext('2d');
-  if (sctx) {
-    sctx.fillStyle = '#091117';
-    sctx.fillRect(0, 0, 256, 160);
-    sctx.fillStyle = '#11222c';
-    sctx.fillRect(0, 0, 256, 22);
-    sctx.fillStyle = '#5ee0d4';
-    sctx.font = 'bold 11px monospace';
-    sctx.fillText('SYS://HIDDEN_WORLD_LINK', 10, 15);
-    sctx.fillStyle = '#8be8dd';
-    sctx.font = '11px monospace';
-    sctx.fillText('> NODE: ISOLATION_01', 12, 46);
-    sctx.fillText('> DEST: nightcord.esahhk.xyz', 12, 66);
-    sctx.fillText('> STATUS: LINK READY', 12, 86);
-    sctx.fillStyle = '#38a89d';
-    sctx.fillRect(12, 102, 196, 2);
-    sctx.fillStyle = '#d8f7f3';
-    sctx.font = '12px sans-serif';
-    sctx.fillText('按 [E] 接入隐藏世界终端_', 12, 128);
-  }
-  const screenTex = track(new T.CanvasTexture(screenCanvas));
+  const screenTex = track(new T.TextureLoader().load('/assets/aistudio/IMG_9951_6079adba.jpeg'));
   screenTex.colorSpace = T.SRGBColorSpace;
+  screenTex.minFilter = T.LinearFilter;
   const screenMat = createMaterial({
     map: screenTex,
-    emissive: 0x3ec8be,
+    emissive: 0xffffff,
     emissiveMap: screenTex,
-    emissiveIntensity: 0.78,
-    roughness: 0.18,
+    emissiveIntensity: 0.72,
+    roughness: 0.16,
+  });
+
+  const noteCanvas = document.createElement('canvas');
+  noteCanvas.width = 320;
+  noteCanvas.height = 156;
+  const nctx = noteCanvas.getContext('2d');
+  if (nctx) {
+    nctx.fillStyle = '#fff2a6';
+    nctx.fillRect(0, 0, 320, 156);
+    nctx.fillStyle = '#f3df82';
+    nctx.fillRect(0, 0, 320, 26);
+    nctx.strokeStyle = '#d4bd62';
+    nctx.lineWidth = 4;
+    nctx.strokeRect(2, 2, 316, 152);
+    nctx.fillStyle = '#6c54a8';
+    nctx.beginPath();
+    nctx.arc(34, 62, 9, 0, Math.PI * 2);
+    nctx.fill();
+    nctx.fillStyle = '#261e36';
+    nctx.font = 'bold 26px "PingFang SC", "Microsoft YaHei", sans-serif';
+    nctx.fillText('25:00 见 · Nightcord', 52, 71);
+    nctx.strokeStyle = 'rgba(108, 84, 168, 0.35)';
+    nctx.lineWidth = 2;
+    nctx.beginPath();
+    nctx.moveTo(24, 92);
+    nctx.lineTo(296, 92);
+    nctx.stroke();
+    nctx.fillStyle = '#4e3d70';
+    nctx.font = '20px "PingFang SC", "Microsoft YaHei", sans-serif';
+    nctx.fillText('按 E 传送到 Nightcord', 46, 128);
+  }
+  const noteTex = track(new T.CanvasTexture(noteCanvas));
+  noteTex.colorSpace = T.SRGBColorSpace;
+  const noteMat = createMaterial({
+    map: noteTex,
+    emissive: 0xfff0a0,
+    emissiveMap: noteTex,
+    emissiveIntensity: 0.16,
+    roughness: 0.72,
+  });
+  const tapeMat = createMaterial({
+    color: 0xe8e4d5,
+    transparent: true,
+    opacity: 0.58,
+    roughness: 0.4,
   });
 
   const monX = -0.14;
   const monZ = -0.16;
-  deskGroup.add(
+  const stickyNote = mkMesh(
+    new T.BoxGeometry(0.24, 0.115, 0.004),
+    noteMat,
+    monX + 0.11,
+    0.875,
+    monZ + 0.029,
+    false,
+    false,
+  );
+  stickyNote.rotation.z = -0.045;
+  const stickyTape = mkMesh(
+    new T.PlaneGeometry(0.068, 0.022),
+    tapeMat,
+    monX + 0.112,
+    0.932,
+    monZ + 0.032,
+    false,
+    false,
+  );
+  stickyTape.rotation.z = 0.05;
 
+  deskGroup.add(
     mkMesh(new T.BoxGeometry(0.26, 0.016, 0.16), blackSteelMat, monX, 0.788, monZ),
     mkMesh(new T.BoxGeometry(0.055, 0.24, 0.035), blackSteelMat, monX, 0.91, monZ - 0.04),
-
     mkMesh(new T.BoxGeometry(0.68, 0.4, 0.028), pcChassisMat, monX, 1.12, monZ + 0.01, true, false),
-
     mkMesh(new T.PlaneGeometry(0.64, 0.36), screenMat, monX, 1.125, monZ + 0.026, false, false),
-
+    stickyNote,
+    stickyTape,
     mkMesh(new T.BoxGeometry(0.018, 0.008, 0.006), cyanLedMat, monX + 0.28, 0.935, monZ + 0.026),
-
     mkMesh(new T.BoxGeometry(0.38, 0.018, 0.14), pcChassisMat, monX - 0.06, 0.795, 0.14),
     mkMesh(new T.BoxGeometry(0.35, 0.01, 0.11), pcMatteBlack, monX - 0.06, 0.808, 0.14),
     mkMesh(new T.BoxGeometry(0.34, 0.004, 0.006), cyanLedMat, monX - 0.06, 0.804, 0.205),
-
     mkMesh(new T.BoxGeometry(0.066, 0.028, 0.11), pcChassisMat, monX + 0.24, 0.8, 0.15),
     mkMesh(new T.BoxGeometry(0.012, 0.008, 0.022), brushedSteelMat, monX + 0.24, 0.816, 0.12),
   );
 
-  const pcGlow = new T.PointLight(0x63d6cc, 0.65, 4.8);
+  const pcGlow = new T.PointLight(0x9c82e8, 0.68, 4.8);
   pcGlow.position.set(-4.64, 1.32, -10.25);
   scene.add(pcGlow);
 
@@ -489,15 +529,15 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
     'hosp_pc',
     V(-4.5, 1.15, -10.2),
     '操作黑色台式电脑',
-    '跳转至隐藏世界 nightcord.esahhk.xyz',
+    '传送到 Nightcord',
     () => {
       sfx.play('click');
       openModal(
-        '隔离区终端 · 黑色台式机',
-        '黑色主机风扇低声运转，屏幕亮着一行冷青色指令：\n\n「LINK READY // https://nightcord.esahhk.xyz」\n\n这台电脑连接着一处不出现在“切换世界”里的隐藏世界。点击下方按钮即可直接前往。',
+        '隔离区终端 · Nightcord',
+        '黑色主机风扇低声运转，屏幕停留在 25 时的聊天界面。\n\n显示器下沿贴着一张手写便签：「25:00 见 · 传送到 Nightcord」。\n\n这台电脑连接着一处不出现在“切换世界”里的隐藏去处，是否现在传送？',
         [
           {
-            label: '前往 nightcord.esahhk.xyz',
+            label: '传送到 Nightcord',
             href: 'https://nightcord.esahhk.xyz',
             fn: () => {
               sfx.play('chime');
@@ -506,7 +546,7 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
           },
           { label: '离开电脑', fn: closeModal },
         ],
-        { meta: '独立终端 · 隐藏世界传送点' },
+        { meta: '隐藏传送点 · Nightcord' },
       );
     },
     { radius: 2.6 },
