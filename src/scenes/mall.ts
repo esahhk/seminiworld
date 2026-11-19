@@ -84,30 +84,25 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
     roughness: 0.35,
   });
 
-  // Main upper mezzanine floor + full glass railing with top metal rail over plants & atrium
   addBox(21.7, 0.28, 8.5, upperConc, -2.05, 4.88, -7.75, false, true, true);
   addBox(21.7, 1.05, 0.1, glassRailMat, -2.05, 5.52, -3.55, true);
   addBox(21.7, 0.06, 0.12, railMetalMat, -2.05, 6.06, -3.55, false);
 
-  // Upper stairwell landing + side/front railings (leaving x=10.75..12.6 open for the upper stair flight)
   addBox(3.8, 0.28, 4.0, upperConc, 10.7, 4.88, -3.85, false, true, true);
   addBox(0.1, 1.05, 1.75, glassRailMat, 8.85, 5.52, -2.72, true);
   addBox(0.12, 0.06, 1.75, railMetalMat, 8.85, 6.06, -2.72, false);
   addBox(1.9, 1.05, 0.1, glassRailMat, 9.8, 5.52, -1.85, true);
   addBox(1.9, 0.06, 0.12, railMetalMat, 9.8, 6.06, -1.85, false);
 
-  // Mid landing ONLY at z=2.85..5.25 (clear of lower flight!) + solid support base + mid-landing guardrail & collider
   addBox(3.6, 0.32, 2.4, upperConc, 10.8, 2.34, 4.05, false, true, true);
   addBox(3.6, 2.2, 0.45, createMaterial({ color: 0xbec2c6, roughness: 0.9 }), 10.8, 1.1, 5.05, true);
   addBox(3.6, 1.05, 0.14, glassRailMat, 10.8, 3.02, 5.2, true);
   addBox(3.6, 0.07, 0.16, railMetalMat, 10.8, 3.56, 5.2, false);
 
-  // Stairwell outer walls & thick central spine wall
   addBox(0.22, 6.0, 11.2, createMaterial({ color: 0xd0cec8 }), 12.6, 3.0, -0.3, true);
   addBox(0.22, 4.9, 7.3, createMaterial({ color: 0xd0cec8 }), 9.0, 2.45, 1.75, true);
   addBox(0.22, 5.4, 5.1, createMaterial({ color: 0x868b91 }), 10.75, 2.7, 0.4, true);
 
-  // Substantial stepped stair flights with solid under-step risers/carriages
   for (let i = 0; i < 10; i++) {
     const lh = 0.25 + i * 0.25;
     addBox(
@@ -136,7 +131,7 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
       true,
     );
   }
-  // Sloped handrails along lower & upper flights
+
   const railLower = addBox(0.06, 0.08, 5.2, railMetalMat, 10.64, 2.15, 0.65, false);
   railLower.rotation.x = -0.46;
   const railUpper = addBox(0.06, 0.08, 5.2, railMetalMat, 10.88, 4.65, 0.4, false);

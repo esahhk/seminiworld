@@ -194,18 +194,18 @@ export function buildInfirmaryScene(ctx: SceneContext): SceneInitResult {
     createMaterial({
       color: 0x8a5b3e,
     }),
-    7.4,
-    0.9,
-    -0.5,
+    6.05,
+    0.85,
+    -1.65,
   );
   addMesh(
     new T.ConeGeometry(0.12, 0.32, 6),
     createMaterial({
       color: 0x4e8a4c,
     }),
-    7.4,
-    1.1,
-    -0.5,
+    6.05,
+    1.04,
+    -1.65,
   );
   addBox(
     2.0,

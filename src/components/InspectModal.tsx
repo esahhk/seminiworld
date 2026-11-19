@@ -128,16 +128,29 @@ export function InspectModal({
             </>
           ) : (
             <div className="act-right">
-              {(modal?.actions ?? []).map((act) => (
-                <button
-                  key={act.label}
-                  type="button"
-                  className="btn"
-                  onClick={() => act.fn?.()}
-                >
-                  {act.label}
-                </button>
-              ))}
+              {(modal?.actions ?? []).map((act) =>
+                act.href ? (
+                  <a
+                    key={act.label}
+                    href={act.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-world"
+                    onClick={() => act.fn?.()}
+                  >
+                    {act.label}
+                  </a>
+                ) : (
+                  <button
+                    key={act.label}
+                    type="button"
+                    className="btn"
+                    onClick={() => act.fn?.()}
+                  >
+                    {act.label}
+                  </button>
+                ),
+              )}
               {(modal?.actions ?? []).length === 0 && (
                 <button type="button" className="btn" onClick={onClose}>
                   合上

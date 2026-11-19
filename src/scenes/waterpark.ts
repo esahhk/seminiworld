@@ -42,9 +42,14 @@ export function buildWaterparkScene(ctx: SceneContext): SceneInitResult {
   });
   addBox(26, 0.2, 24, tileMat, 0, -0.1, 0, true, false, true);
   addBox(26, 0.3, 24, createMaterial({ color: 0xebf4f5 }), 0, 11.5, 0, false);
+  const rimMat = createMaterial({ color: 0xe6f2f4, roughness: 0.35 });
+  addBox(12.2, 0.56, 0.3, rimMat, 0, 0.28, -9.85, false, true, true);
+  addBox(12.2, 0.56, 0.3, rimMat, 0, 0.28, -1.15, false, true, true);
+  addBox(0.3, 0.56, 8.9, rimMat, -6.05, 0.28, -5.5, false, true, true);
+  addBox(0.3, 0.56, 8.9, rimMat, 6.05, 0.28, -5.5, false, true, true);
   addBox(12, 0.24, 8.6, createMaterial({ color: 0x3f8fa6 }), 0, 0.0, -5.5, false);
   const waterMesh = addMesh(
-    new T.PlaneGeometry(11.6, 8.2),
+    new T.PlaneGeometry(11.8, 8.4),
     createMaterial({
       color: 0x3fc5d9,
       transparent: true,
@@ -59,6 +64,9 @@ export function buildWaterparkScene(ctx: SceneContext): SceneInitResult {
     false,
   );
   waterMesh.rotation.x = -Math.PI / 2;
+  const hoopStandMat = createMaterial({ color: 0xc8d8de, metalness: 0.6, roughness: 0.3 });
+  addCylinder(0.055, 0.065, 1.02, 10, hoopStandMat, 0, 0.51, -5.5, false);
+  addCylinder(0.24, 0.28, 0.12, 12, hoopStandMat, 0, 0.14, -5.5, false);
   addMesh(
     new T.TorusGeometry(0.65, 0.08, 10, 20),
     createMaterial({ color: 0xf0924b }),
@@ -236,8 +244,12 @@ export function buildWaterparkScene(ctx: SceneContext): SceneInitResult {
     -Math.PI / 2,
   );
   addBox(9.2, 0.2, 5.4, createMaterial({ color: 0x3b8ca3 }), 3.2, 5.25, 6.2, false);
+  addBox(9.4, 0.52, 0.26, rimMat, 3.2, 5.56, 3.5, false, false, true);
+  addBox(9.4, 0.52, 0.26, rimMat, 3.2, 5.56, 8.9, false, false, true);
+  addBox(0.26, 0.52, 5.66, rimMat, -1.45, 5.56, 6.2, false, false, true);
+  addBox(0.26, 0.52, 5.66, rimMat, 7.85, 5.56, 6.2, false, false, true);
   const upperWater = addMesh(
-    new T.PlaneGeometry(8.6, 4.8),
+    new T.PlaneGeometry(9.0, 5.2),
     createMaterial({
       color: 0x4ad5eb,
       transparent: true,

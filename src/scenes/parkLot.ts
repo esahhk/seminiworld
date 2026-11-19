@@ -242,7 +242,6 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
     addWheel(pivot, rx, wheelY, trimMat);
     addWheel(pivot, fx, wheelY, trimMat);
 
-    // Connected diamond bicycle frame
     const bb: [number, number, number] = [-0.07, 0.29, 0];
     const sc: [number, number, number] = [-0.21, 0.71, 0];
     const hb: [number, number, number] = [0.33, 0.61, 0];
@@ -383,12 +382,12 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
     }
     if (opts.kickstand) {
       const leanAngle = opts.lean ?? 0.08;
-      // Kickstand pivots from bottom-bracket height down cleanly onto ground line (y = 0)
+
       const footZ = Math.tan(leanAngle) * 0.3 + 0.16;
       addTube(pivot, [-0.14, 0.27, 0.04], [-0.18, 0.015, footZ], 0.012, trimMat, true);
       pivot.rotation.x = leanAngle;
     } else if (opts.lean) {
-      // Lean rotates around X axis passing through the wheel ground contact patch (y = 0, z = 0)
+
       pivot.rotation.x = opts.lean;
     }
 
@@ -409,12 +408,10 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
     return g;
   }
 
-  // Frequently-ridden commuter bikes parked upright cleanly on paved lot kickstands
   addBike(-6.1, 1.8, 0.35, 0x2d698f, { basket: true, kickstand: true, lean: 0.07 });
   addBike(5.6, 2.2, -0.45, 0xc95438, { rack: true, crate: true, kickstand: true, lean: 0.07 });
   addBike(5.75, -1.6, -0.18, 0x3b8064, { basket: true, kickstand: true, lean: 0.06 });
 
-  // Cluster of old, seldom-ridden bikes locked to a camphor tree and gathered along a weathered rack
   addBox(0.42, 0.06, 2.4, chromeMat, 6.2, 0.09, -6.45, false);
   for (const rz of [-7.25, -6.45, -5.65]) {
     addBox(0.32, 0.34, 0.04, chromeMat, 6.2, 0.26, rz, false);

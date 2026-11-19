@@ -241,7 +241,6 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
     false,
   );
 
-  // Gate card-reader pedestal right beside the 03 boarding sliding glass doors
   addBox(0.24, 1.12, 0.24, frameMat, 2.15, 0.56, -8.42, true);
   addBox(
     0.16,
@@ -279,12 +278,10 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
     return mesh;
   }
 
-  // Main cabin cylinder (local z: -7.25 .. +7.25)
   const cabin = new T.Mesh(new T.CylinderGeometry(1.9, 1.9, 14.5, 24), bodyMat);
   cabin.rotation.x = Math.PI / 2;
   addLocal(cabin, 0, 3.25, 0);
 
-  // Seamless forward fuselage taper & radome (flush r=1.9 at z=+7.25 -> r=1.02 at z=+10.0)
   const noseCone = new T.Mesh(new T.CylinderGeometry(1.02, 1.9, 2.75, 24), bodyMat);
   noseCone.rotation.x = Math.PI / 2;
   addLocal(noseCone, 0, 3.25, 8.625);
@@ -293,7 +290,6 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
   radome.scale.set(1, 0.96, 1.45);
   addLocal(radome, 0, 3.25, 10.0);
 
-  // Correct tapered tailcone: wide r=1.9 forward (+Z at z=-7.25), narrow r=0.4 aft (-Z at z=-12.1)
   const tailCone = new T.Mesh(new T.CylinderGeometry(1.9, 0.4, 4.9, 24), bodyMat);
   tailCone.rotation.x = Math.PI / 2 + 0.055;
   addLocal(tailCone, 0, 3.385, -9.68);
@@ -303,7 +299,6 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
   apuNozzle.rotation.x = Math.PI / 2;
   addLocal(apuNozzle, 0, 3.52, -12.42, false);
 
-  // Flight deck windshield flush across upper nose slope with visible lit interior
   addLocal(
     new T.Mesh(new T.BoxGeometry(1.24, 0.36, 0.78), createMaterial({ color: 0x262e36 })),
     0,
@@ -344,7 +339,6 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
   centerPost.rotation.x = -0.58;
   aircraft.add(centerPost);
 
-  // Livery stripes & cabin windows
   addLocal(new T.Mesh(new T.BoxGeometry(0.14, 0.32, 13.8), liveryBlue), 1.88, 3.05, 0, false);
   addLocal(new T.Mesh(new T.BoxGeometry(0.14, 0.32, 13.8), liveryBlue), -1.88, 3.05, 0, false);
   for (let w = 0; w < 14; w++) {
@@ -367,17 +361,16 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
     false,
   );
 
-  // Aft-swept tapered wings with seamlessly attached blended winglets
   for (const side of [-1, 1] as const) {
     const wingGrp = new T.Group();
     wingGrp.position.set(side * 1.5, 2.58, 0.4);
     wingGrp.rotation.z = side * 0.065;
 
     const wingShape = new T.Shape();
-    wingShape.moveTo(0, -1.75);
-    wingShape.lineTo(0, 1.65);
-    wingShape.lineTo(side * 11.4, -2.35);
-    wingShape.lineTo(side * 11.4, -3.55);
+    wingShape.moveTo(0, -1.65);
+    wingShape.lineTo(0, 1.75);
+    wingShape.lineTo(side * 11.4, 3.55);
+    wingShape.lineTo(side * 11.4, 2.35);
     wingShape.closePath();
 
     const wingGeo = track(
@@ -390,14 +383,12 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
       }),
     );
     const wingMesh = new T.Mesh(wingGeo, wingMat);
-    // Shape Y maps to -Z so nose-forward (+Y shape) becomes aft (-Y shape) -> rotate X = +PI/2 maps +Y to +Z
     wingMesh.rotation.x = -Math.PI / 2;
     wingMesh.position.y = -0.1;
     wingMesh.castShadow = true;
     wingMesh.receiveShadow = true;
     wingGrp.add(wingMesh);
 
-    // Blended winglet anchored at exact local tip chord (x = side*11.4, z = -3.55 .. -2.35)
     const wlShape = new T.Shape();
     wlShape.moveTo(0, 0);
     wlShape.lineTo(1.2, 0);
@@ -413,17 +404,19 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
         bevelSegments: 1,
       }),
     );
+    const wlPivot = new T.Group();
+    wlPivot.position.set(side * 11.38, 0.0, -2.35);
+    wlPivot.rotation.z = -side * 0.22;
     const wlMesh = new T.Mesh(wlGeo, liveryBlue);
     wlMesh.rotation.y = Math.PI / 2;
-    wlMesh.rotation.x = side * -0.22;
-    wlMesh.position.set(side * 11.35, 0.02, -2.35);
+    wlMesh.position.set(-0.045, -0.06, 0);
     wlMesh.castShadow = true;
-    wingGrp.add(wlMesh);
+    wlPivot.add(wlMesh);
+    wingGrp.add(wlPivot);
 
     aircraft.add(wingGrp);
   }
 
-  // Tapered swept vertical stabilizer + dorsal fillet
   const finShape = new T.Shape();
   finShape.moveTo(0, 4.75);
   finShape.lineTo(1.5, 5.15);
@@ -447,7 +440,6 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
   vTail.castShadow = true;
   aircraft.add(vTail);
 
-  // Subtle red accent trim stripe along top of vertical fin
   const finStripe = new T.Shape();
   finStripe.moveTo(3.4, 8.0);
   finStripe.lineTo(4.15, 9.15);
@@ -460,13 +452,12 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
   stripeMesh.position.set(-0.125, 0, -6.1);
   aircraft.add(stripeMesh);
 
-  // Swept horizontal stabilizers embedded cleanly into tapered tailcone
   for (const side of [-1, 1] as const) {
     const hShape = new T.Shape();
-    hShape.moveTo(0, -1.05);
-    hShape.lineTo(0, 0.85);
-    hShape.lineTo(side * 4.35, -0.9);
-    hShape.lineTo(side * 4.35, -1.65);
+    hShape.moveTo(0, -0.85);
+    hShape.lineTo(0, 1.05);
+    hShape.lineTo(side * 4.35, 1.65);
+    hShape.lineTo(side * 4.35, 0.9);
     hShape.closePath();
     const hGeo = track(
       new T.ExtrudeGeometry(hShape, {
@@ -485,7 +476,6 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
     aircraft.add(hMesh);
   }
 
-  // Under-wing turbofan engines & swept pylons attached into aft-swept wing undersides
   for (const ex of [-5.1, 5.1]) {
     const engZ = 0.05;
     const cowl = new T.Mesh(new T.CylinderGeometry(0.82, 0.78, 2.7, 18), wingMat);
@@ -500,7 +490,6 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
     addLocal(new T.Mesh(new T.BoxGeometry(0.22, 1.0, 1.7), wingMat), ex, 2.38, engZ + 0.1, false);
   }
 
-  // Nose landing gear + main landing gear + yellow wheel chocks
   addLocal(new T.Mesh(new T.CylinderGeometry(0.11, 0.11, 2.0, 8), darkMetal), 0, 1.0, 8.9);
   for (const wx of [-0.22, 0.22]) {
     const nw = new T.Mesh(new T.CylinderGeometry(0.32, 0.32, 0.18, 12), darkMetal);

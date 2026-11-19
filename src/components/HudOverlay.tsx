@@ -41,7 +41,8 @@ export function HudOverlay({
   onToggleImmersive,
   onPromptClick,
 }: HudOverlayProps) {
-  const total = SCENES_META.length;
+  const visibleTotal = SCENES_META.filter((m) => !m.hidden).length;
+  const isHiddenScene = Boolean(SCENES_META[sceneIdx]?.hidden);
 
   return (
     <>
@@ -49,7 +50,7 @@ export function HudOverlay({
         <div className="top-left">
           <div className="scene-badge">
             <span className="scene-idx" id="ui-idx">
-              {String(sceneIdx + 1).padStart(2, '0')}/{total}
+              {isHiddenScene ? '??/??' : `${String(sceneIdx + 1).padStart(2, '0')}/${visibleTotal}`}
             </span>
             <span id="ui-name">{sceneName}</span>
           </div>
@@ -81,11 +82,12 @@ export function HudOverlay({
           </button>
           <button
             type="button"
-            className={`btn${activePanel === 'scenes' ? ' active' : ''}`}
+            className={`btn btn-world${activePanel === 'scenes' ? ' active' : ''}`}
             id="btn-scenes"
             onClick={() => onTogglePanel('scenes')}
           >
-            目录
+            <span className="world-dot" aria-hidden="true" />
+            切换世界
           </button>
           <button
             type="button"
@@ -95,7 +97,7 @@ export function HudOverlay({
           >
             拾遗{' '}
             <span id="col-count">
-              {collectedCount}/{total}
+              {collectedCount}/{visibleTotal}
             </span>
           </button>
           <button type="button" className="btn" id="btn-reset" onClick={onReset}>

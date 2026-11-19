@@ -42,29 +42,32 @@ export function Panels({
   onChangeFov,
   onToggleImmersive,
 }: PanelsProps) {
-  const total = SCENES_META.length;
+  const visibleEntries = SCENES_META.map((m, idx) => ({ m, idx })).filter(
+    ({ m }) => !m.hidden,
+  );
+  const total = visibleEntries.length;
 
   return (
     <>
       <div className={`panel${activePanel === 'scenes' ? ' open' : ''}`} id="panel-scenes">
         <h3>
-          <span>十七处漫游目录（点击直达）</span>
+          <span>切换世界（点击直达）</span>
           <button type="button" className="btn" onClick={onClose}>
             关闭
           </button>
         </h3>
         <div className="scene-grid" id="scene-grid">
-          {SCENES_META.map((m, i) => (
+          {visibleEntries.map(({ m, idx }, order) => (
             <button
               key={m.id}
               type="button"
-              className={`sc-item${i === sceneIdx ? ' cur' : ''}`}
+              className={`sc-item${idx === sceneIdx ? ' cur' : ''}`}
               onClick={() => {
-                onSelectScene(i);
+                onSelectScene(idx);
                 onClose();
               }}
             >
-              <span className="sc-num">{String(i + 1).padStart(2, '0')}</span>
+              <span className="sc-num">{String(order + 1).padStart(2, '0')}</span>
               <span>{m.name}</span>
             </button>
           ))}
@@ -81,7 +84,7 @@ export function Panels({
           </button>
         </h3>
         <div className="col-list" id="col-list">
-          {SCENES_META.map((m, i) => {
+          {visibleEntries.map(({ m }, order) => {
             const got = collected.has(m.id);
             return (
               <button
@@ -96,7 +99,7 @@ export function Panels({
                 }}
               >
                 <span>
-                  {String(i + 1).padStart(2, '0')} · {got ? m.item : '未寻得'}
+                  {String(order + 1).padStart(2, '0')} · {got ? m.item : '未寻得'}
                 </span>
                 <span>{got ? m.name : '?'}</span>
               </button>

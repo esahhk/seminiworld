@@ -41,6 +41,7 @@ export interface SceneMeta {
   name: string;
   item: string;
   desc: string;
+  hidden?: boolean;
 }
 
 export interface BookPage {
@@ -63,6 +64,7 @@ export interface BookProgress {
 export interface ModalAction {
   label: string;
   fn?: () => void;
+  href?: string;
 }
 
 export interface ModalConfig {

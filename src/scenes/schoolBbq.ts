@@ -11,6 +11,7 @@ export function buildSchoolBbqScene(ctx: SceneContext): SceneInitResult {
     V,
     addMesh,
     addBox,
+    addCylinder,
     addSign,
     createMaterial,
     addInteract,
@@ -178,7 +179,6 @@ export function buildSchoolBbqScene(ctx: SceneContext): SceneInitResult {
     Math.PI / 2,
   );
 
-  // Blackboard frame + crisp self-lit chalk writing surface so text reads cleanly
   addBox(
     4.2,
     1.5,
@@ -299,7 +299,35 @@ export function buildSchoolBbqScene(ctx: SceneContext): SceneInitResult {
   let doorOpen = false;
   let fanOn = false;
 
+  const fanMetalMat = createMaterial({ color: 0xd2d8dc, metalness: 0.45, roughness: 0.4 });
+  addCylinder(0.24, 0.28, 0.06, 14, fanMetalMat, -3.0, 0.16, -7.4, false);
+  addCylinder(0.03, 0.035, 1.05, 8, fanMetalMat, -3.0, 0.7, -7.4, false);
+  const fanCage = addMesh(
+    new T.TorusGeometry(0.24, 0.018, 8, 20),
+    fanMetalMat,
+    -3.0,
+    1.26,
+    -7.32,
+    false,
+    false,
+  );
+  const fanBlades = new T.Group();
+  fanBlades.position.set(-3.0, 1.26, -7.32);
+  const bladeMat = createMaterial({ color: 0x7ea5bd, roughness: 0.35 });
+  for (let bi = 0; bi < 3; bi++) {
+    const b = new T.Mesh(new T.BoxGeometry(0.07, 0.2, 0.015), bladeMat);
+    const ang = (bi * Math.PI * 2) / 3;
+    b.position.set(Math.cos(ang) * 0.1, Math.sin(ang) * 0.1, 0);
+    b.rotation.z = ang + Math.PI / 2;
+    fanBlades.add(b);
+  }
+  scene.add(fanBlades);
+  void fanCage;
+
   updaters.push((dt) => {
+    if (fanOn) {
+      fanBlades.rotation.z += dt * 14;
+    }
     smokes.forEach((s) => {
       s.p += dt * 0.24;
       if (s.p > 1) {

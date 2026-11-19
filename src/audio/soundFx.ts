@@ -247,7 +247,7 @@ export class SoundFX {
       this.ambSrc?.stop();
       this.ctx?.close();
     } catch {
-      // ignore close errors
+
     }
     this.ctx = null;
     this.ambSrc = null;

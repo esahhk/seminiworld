@@ -10,19 +10,22 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
     tex,
     sfx,
     V,
+    track,
+    mkMesh,
     addMesh,
     addBox,
     addSign,
-    syncColX,
     createMaterial,
     addInteract,
     addCollectible,
     addTimedRedirect,
+    colliders,
     updaters,
     sceneIdxById,
     loadScene,
     showWhisper,
     openModal,
+    closeModal,
     setBounds,
     setSurfaceFn,
   } = ctx;
@@ -40,23 +43,22 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   c3.position.set(4.7, 3.8, -4);
   scene.add(c3);
 
+  const flTex = tex.tiles('#dde2e1', '#d3d9d8', '#b9c0bf', 6, 'hosp_f');
+  flTex.repeat.set(3, 5);
   const flMat = createMaterial({
-    map: tex.tiles('#dde2e1', '#d3d9d8', '#b9c0bf', 6, 'hosp_f'),
+    map: flTex,
     roughness: 0.35,
   });
   const wMat = createMaterial({ color: 0xe5eceb });
   const ceilMat = createMaterial({ color: 0xf3f5f5 });
-  addBox(5.2, 0.2, 7.6, flMat, 0, -0.1, 7.4, true, false, true);
-  addBox(14.0, 0.2, 3.6, flMat, 0, -0.1, 2.8, true, false, true);
-  addBox(5.0, 0.2, 13.0, flMat, -4.5, -0.1, -5.0, true, false, true);
-  addBox(3.4, 0.2, 16.0, flMat, 4.7, -0.1, -6.5, true, false, true);
-  addBox(5.4, 0.2, 15.0, flMat, 0.5, -0.1, -5.0, false, false, true);
+
+  addBox(14.4, 0.2, 26.2, flMat, -0.3, -0.1, -1.6, true, false, true);
   addBox(16.0, 0.2, 28.0, ceilMat, 0, 4.2, -1.5, false);
 
   addBox(5.2, 4.2, 0.2, wMat, 0, 2.1, 11.2, true);
   addBox(0.2, 4.2, 6.8, wMat, -2.5, 2.1, 7.8, true);
   addBox(0.2, 4.2, 6.8, wMat, 2.5, 2.1, 7.8, true);
-  // Sealed solid central core between left (-2.0) and right (+3.0) corridors
+
   addBox(5.2, 4.2, 0.22, wMat, 0.5, 2.1, 1.1, true);
   addBox(5.2, 4.2, 0.22, wMat, 0.5, 2.1, -11.5, true);
   addBox(0.22, 4.2, 12.8, wMat, -2.0, 2.1, -5.2, true);
@@ -75,7 +77,7 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   addSign(
     2.4,
     0.85,
-    tex.sign('← 屏蔽重门（左拐再右拐）', '#f4f7f6', '#273336', '候机连廊（右拐再左拐） →'),
+    tex.sign('← 隔离屏蔽门（左拐再右拐）', '#f4f7f6', '#273336', '候机连廊（右拐再左拐） →'),
     0.5,
     2.25,
     1.23,
@@ -99,17 +101,18 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
     polygonOffsetFactor: -1,
     polygonOffsetUnits: -1,
   });
-  addBox(0.26, 0.012, 7.6, lineMatB, -0.45, 0.008, 6.8, false);
-  addBox(0.26, 0.012, 7.6, lineMatG, 0.0, 0.008, 6.8, false);
+
+  addBox(0.26, 0.012, 7.34, lineMatB, -0.45, 0.008, 6.8, false);
+  addBox(0.26, 0.012, 7.87, lineMatG, 0.0, 0.008, 6.665, false);
   addBox(0.26, 0.012, 7.6, lineMatO, 0.45, 0.008, 6.8, false);
-  addBox(4.3, 0.012, 0.26, lineMatB, -2.5, 0.008, 3.0, false);
-  addBox(0.26, 0.012, 12.0, lineMatB, -4.5, 0.008, -3.0, false);
-  addBox(4.5, 0.012, 0.26, lineMatG, 2.6, 0.008, 2.6, false);
-  addBox(0.26, 0.012, 15.5, lineMatG, 4.7, 0.008, -5.2, false);
+  addBox(4.31, 0.012, 0.26, lineMatB, -2.475, 0.008, 3.0, false);
+  addBox(0.26, 0.012, 11.87, lineMatB, -4.5, 0.008, -3.065, false);
+  addBox(4.96, 0.012, 0.26, lineMatG, 2.35, 0.008, 2.6, false);
+  addBox(0.26, 0.012, 16.41, lineMatG, 4.7, 0.008, -5.735, false);
   addSign(
     2.2,
     0.9,
-    tex.sign('蓝线:屏蔽重门  绿线:候机连廊', '#f4f7f6', '#273336', '请沿地面标志线通行'),
+    tex.sign('蓝线:隔离屏蔽门  绿线:候机连廊', '#f4f7f6', '#273336', '请沿地面标志线通行'),
     0,
     0.025,
     7.2,
@@ -130,27 +133,107 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   addMesh(new T.PlaneGeometry(1.5, 1.5), radMat, -4.5, 0.032, -5.4, false, false).rotation.x =
     -Math.PI / 2;
 
-  addBox(1.2, 4.2, 0.5, createMaterial({ color: 0xd2dcdd }), -6.3, 2.1, -3.5, true);
-  addBox(1.2, 4.2, 0.5, createMaterial({ color: 0xd2dcdd }), -2.7, 2.1, -3.5, true);
-  addBox(3.4, 0.85, 0.5, createMaterial({ color: 0xd2dcdd }), -4.5, 3.78, -3.5, true);
-  const bigDoor = addBox(
-    3.4,
-    3.3,
-    0.42,
-    createMaterial({ color: 0x7d9299, metalness: 0.35, roughness: 0.45 }),
-    -4.5,
-    1.65,
-    -3.5,
-    true,
+  const doorFrameMat = createMaterial({ color: 0xbcc7ca, metalness: 0.45, roughness: 0.42 });
+  const brushedSteelMat = createMaterial({ color: 0x9aa9b0, metalness: 0.72, roughness: 0.28 });
+  const doorBodyMat = createMaterial({ color: 0x6f858d, metalness: 0.38, roughness: 0.46 });
+  const rubberSealMat = createMaterial({ color: 0x202529, roughness: 0.9, metalness: 0.05 });
+  const leadGlassMat = createMaterial({
+    color: 0x7cb0ba,
+    transparent: true,
+    opacity: 0.36,
+    roughness: 0.12,
+    metalness: 0.18,
+  });
+
+  addBox(1.2, 4.2, 0.56, doorFrameMat, -6.3, 2.1, -3.5, true);
+  addBox(1.2, 4.2, 0.56, doorFrameMat, -2.7, 2.1, -3.5, true);
+  addBox(3.4, 0.85, 0.56, doorFrameMat, -4.5, 3.78, -3.5, true);
+  addBox(2.45, 0.025, 0.62, brushedSteelMat, -4.5, 0.012, -3.5, false);
+
+  addBox(4.85, 0.16, 0.22, brushedSteelMat, -3.6, 3.44, -3.18, false);
+  addBox(4.85, 0.05, 0.06, rubberSealMat, -3.6, 3.36, -3.12, false);
+
+  const doorGroup = new T.Group();
+  doorGroup.position.set(-4.5, 0, -3.5);
+  scene.add(doorGroup);
+
+  doorGroup.add(
+    mkMesh(new T.BoxGeometry(3.4, 1.62, 0.36), doorBodyMat, 0, 0.81, 0, true, true),
+    mkMesh(new T.BoxGeometry(3.4, 0.86, 0.36), doorBodyMat, 0, 2.87, 0, true, true),
+    mkMesh(new T.BoxGeometry(1.16, 0.82, 0.36), doorBodyMat, -1.12, 2.03, 0, true, true),
+    mkMesh(new T.BoxGeometry(1.16, 0.82, 0.36), doorBodyMat, 1.12, 2.03, 0, true, true),
+
+    mkMesh(new T.BoxGeometry(1.08, 0.78, 0.08), leadGlassMat, 0, 2.03, 0, false, false),
+    mkMesh(new T.BoxGeometry(1.14, 0.06, 0.4), rubberSealMat, 0, 2.43, 0, false, false),
+    mkMesh(new T.BoxGeometry(1.14, 0.06, 0.4), rubberSealMat, 0, 1.63, 0, false, false),
+    mkMesh(new T.BoxGeometry(0.06, 0.84, 0.4), rubberSealMat, -0.55, 2.03, 0, false, false),
+    mkMesh(new T.BoxGeometry(0.06, 0.84, 0.4), rubberSealMat, 0.55, 2.03, 0, false, false),
+
+    mkMesh(new T.BoxGeometry(3.44, 0.42, 0.38), brushedSteelMat, 0, 0.21, 0, false, true),
+    mkMesh(new T.BoxGeometry(3.44, 0.08, 0.39), brushedSteelMat, 0, 3.28, 0, false, false),
+
+    mkMesh(new T.BoxGeometry(0.07, 3.3, 0.38), rubberSealMat, -1.72, 1.65, 0, false, false),
+    mkMesh(new T.BoxGeometry(0.07, 3.3, 0.38), rubberSealMat, 1.72, 1.65, 0, false, false),
+
+    mkMesh(new T.BoxGeometry(0.24, 0.22, 0.14), brushedSteelMat, -0.95, 3.36, 0.26, false, false),
+    mkMesh(new T.BoxGeometry(0.24, 0.22, 0.14), brushedSteelMat, 0.95, 3.36, 0.26, false, false),
+
+    mkMesh(
+      new T.BoxGeometry(3.2, 0.12, 0.39),
+      createMaterial({ map: tex.hazard(), roughness: 0.6 }),
+      0,
+      0.52,
+      0,
+      false,
+      false,
+    ),
   );
-  addSign(
-    1.8,
-    0.85,
-    tex.sign('屏蔽重门', '#d68536', '#1b1a18', '请勿倚靠 · 电动缓缓开启'),
-    -4.5,
-    2.1,
-    -3.27,
+
+  for (const sideZ of [0.24, -0.24]) {
+    doorGroup.add(
+      mkMesh(new T.CylinderGeometry(0.028, 0.028, 0.72, 10), brushedSteelMat, -0.82, 1.25, sideZ),
+      mkMesh(
+        new T.BoxGeometry(0.06, 0.06, 0.1),
+        brushedSteelMat,
+        -0.82,
+        1.56,
+        sideZ * 0.82,
+      ),
+      mkMesh(
+        new T.BoxGeometry(0.06, 0.06, 0.1),
+        brushedSteelMat,
+        -0.82,
+        0.94,
+        sideZ * 0.82,
+      ),
+    );
+  }
+
+  const doorSignPlane = mkMesh(
+    new T.PlaneGeometry(1.42, 0.42),
+    createMaterial({
+      map: tex.sign('隔离屏蔽铁门', '#d68536', '#1b1a18', '电动气密 · 请勿倚靠'),
+      roughness: 0.55,
+    }),
+    0,
+    1.26,
+    0.195,
+    false,
+    false,
   );
+  doorGroup.add(doorSignPlane);
+
+  const doorCol = {
+    minX: -6.2,
+    maxX: -2.8,
+    minZ: -3.72,
+    maxZ: -3.28,
+    minY: 0,
+    maxY: 3.3,
+    active: true,
+  };
+  colliders.push(doorCol);
+
   const beacon = addMesh(
     new T.SphereGeometry(0.14, 10, 10),
     createMaterial({
@@ -159,18 +242,19 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
       emissiveIntensity: 0.8,
     }),
     -2.9,
-    3.55,
-    -3.22,
+    3.62,
+    -3.16,
   );
   const btnMat = createMaterial({
     color: 0x5ab885,
     emissive: 0x266e46,
     emissiveIntensity: 0.5,
   });
-  addBox(0.32, 0.46, 0.08, createMaterial({ color: 0xdfe4e5 }), -2.35, 1.35, -3.22, false);
-  addBox(0.16, 0.16, 0.04, btnMat, -2.35, 1.35, -3.17, false);
-  addBox(0.32, 0.46, 0.08, createMaterial({ color: 0xdfe4e5 }), -2.35, 1.35, -3.78, false);
-  addBox(0.16, 0.16, 0.04, btnMat, -2.35, 1.35, -3.83, false);
+  addBox(0.32, 0.46, 0.08, createMaterial({ color: 0xdfe4e5 }), -2.35, 1.35, -3.2, false);
+  addBox(0.16, 0.16, 0.04, btnMat, -2.35, 1.35, -3.15, false);
+  addBox(0.32, 0.46, 0.08, createMaterial({ color: 0xdfe4e5 }), -2.35, 1.35, -3.8, false);
+  addBox(0.16, 0.16, 0.04, btnMat, -2.35, 1.35, -3.85, false);
+
   addBox(
     0.55,
     1.0,
@@ -182,6 +266,173 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
     true,
   );
   addBox(1.8, 0.45, 0.55, createMaterial({ color: 0x7aa6b8 }), -3.2, 0.35, -7.6, true);
+
+  const deskGroup = new T.Group();
+  deskGroup.position.set(-4.5, 0, -10.58);
+  scene.add(deskGroup);
+
+  const deskTopMat = createMaterial({
+    map: tex.wood('#3a3e44', '#2b2e33', 'hosp_desk'),
+    roughness: 0.58,
+    metalness: 0.1,
+  });
+  const blackSteelMat = createMaterial({ color: 0x1a1d22, metalness: 0.45, roughness: 0.42 });
+  const pcChassisMat = createMaterial({ color: 0x13161a, metalness: 0.38, roughness: 0.44 });
+  const pcMatteBlack = createMaterial({ color: 0x1e2228, metalness: 0.2, roughness: 0.68 });
+  const pcGlassMat = createMaterial({
+    color: 0x1e2832,
+    transparent: true,
+    opacity: 0.48,
+    roughness: 0.08,
+    metalness: 0.25,
+  });
+  const cyanLedMat = createMaterial({
+    color: 0x8ef2ea,
+    emissive: 0x3ec8be,
+    emissiveIntensity: 1.15,
+  });
+  const deskMatFabric = createMaterial({ color: 0x181b20, roughness: 0.92 });
+
+  deskGroup.add(
+    mkMesh(new T.BoxGeometry(1.72, 0.06, 0.8), deskTopMat, 0, 0.75, 0, true, true),
+
+    mkMesh(new T.BoxGeometry(0.05, 0.72, 0.05), blackSteelMat, -0.8, 0.36, -0.34, true, false),
+    mkMesh(new T.BoxGeometry(0.05, 0.72, 0.05), blackSteelMat, -0.8, 0.36, 0.34, true, false),
+    mkMesh(new T.BoxGeometry(0.05, 0.04, 0.72), blackSteelMat, -0.8, 0.02, 0, false, false),
+
+    mkMesh(new T.BoxGeometry(0.05, 0.72, 0.05), blackSteelMat, 0.8, 0.36, -0.34, true, false),
+    mkMesh(new T.BoxGeometry(0.05, 0.72, 0.05), blackSteelMat, 0.8, 0.36, 0.34, true, false),
+    mkMesh(new T.BoxGeometry(0.05, 0.04, 0.72), blackSteelMat, 0.8, 0.02, 0, false, false),
+    mkMesh(new T.BoxGeometry(1.58, 0.14, 0.03), blackSteelMat, 0, 0.62, -0.34, false, false),
+
+    mkMesh(new T.BoxGeometry(0.42, 0.66, 0.68), pcChassisMat, 0.55, 0.35, 0.01, true, true),
+    mkMesh(new T.BoxGeometry(0.16, 0.02, 0.025), brushedSteelMat, 0.55, 0.58, 0.36, false, false),
+    mkMesh(new T.BoxGeometry(0.16, 0.02, 0.025), brushedSteelMat, 0.55, 0.37, 0.36, false, false),
+    mkMesh(new T.BoxGeometry(0.16, 0.02, 0.025), brushedSteelMat, 0.55, 0.16, 0.36, false, false),
+
+    mkMesh(new T.BoxGeometry(0.84, 0.006, 0.36), deskMatFabric, -0.14, 0.783, 0.14, false, true),
+  );
+
+  const towerX = 0.58;
+  const towerZ = -0.05;
+  deskGroup.add(
+
+    mkMesh(new T.BoxGeometry(0.04, 0.02, 0.04), rubberSealMat, towerX - 0.08, 0.79, towerZ - 0.17),
+    mkMesh(new T.BoxGeometry(0.04, 0.02, 0.04), rubberSealMat, towerX + 0.08, 0.79, towerZ - 0.17),
+    mkMesh(new T.BoxGeometry(0.04, 0.02, 0.04), rubberSealMat, towerX - 0.08, 0.79, towerZ + 0.17),
+    mkMesh(new T.BoxGeometry(0.04, 0.02, 0.04), rubberSealMat, towerX + 0.08, 0.79, towerZ + 0.17),
+
+    mkMesh(new T.BoxGeometry(0.22, 0.45, 0.44), pcChassisMat, towerX, 1.025, towerZ, true, true),
+
+    mkMesh(new T.BoxGeometry(0.2, 0.41, 0.02), pcMatteBlack, towerX, 1.025, towerZ + 0.225),
+    mkMesh(
+      new T.TorusGeometry(0.048, 0.006, 8, 18),
+      cyanLedMat,
+      towerX,
+      1.11,
+      towerZ + 0.236,
+      false,
+      false,
+    ),
+    mkMesh(
+      new T.TorusGeometry(0.048, 0.006, 8, 18),
+      cyanLedMat,
+      towerX,
+      0.95,
+      towerZ + 0.236,
+      false,
+      false,
+    ),
+    mkMesh(new T.BoxGeometry(0.032, 0.008, 0.012), cyanLedMat, towerX - 0.05, 1.254, towerZ + 0.18),
+
+    mkMesh(new T.BoxGeometry(0.012, 0.37, 0.36), pcGlassMat, towerX - 0.112, 1.03, towerZ),
+    mkMesh(new T.BoxGeometry(0.02, 0.024, 0.22), cyanLedMat, towerX - 0.095, 0.99, towerZ - 0.02),
+  );
+
+  const screenCanvas = document.createElement('canvas');
+  screenCanvas.width = 256;
+  screenCanvas.height = 160;
+  const sctx = screenCanvas.getContext('2d');
+  if (sctx) {
+    sctx.fillStyle = '#091117';
+    sctx.fillRect(0, 0, 256, 160);
+    sctx.fillStyle = '#11222c';
+    sctx.fillRect(0, 0, 256, 22);
+    sctx.fillStyle = '#5ee0d4';
+    sctx.font = 'bold 11px monospace';
+    sctx.fillText('SYS://HIDDEN_WORLD_LINK', 10, 15);
+    sctx.fillStyle = '#8be8dd';
+    sctx.font = '11px monospace';
+    sctx.fillText('> NODE: ISOLATION_01', 12, 46);
+    sctx.fillText('> DEST: nightcord.esahhk.xyz', 12, 66);
+    sctx.fillText('> STATUS: LINK READY', 12, 86);
+    sctx.fillStyle = '#38a89d';
+    sctx.fillRect(12, 102, 196, 2);
+    sctx.fillStyle = '#d8f7f3';
+    sctx.font = '12px sans-serif';
+    sctx.fillText('按 [E] 接入隐藏世界终端_', 12, 128);
+  }
+  const screenTex = track(new T.CanvasTexture(screenCanvas));
+  screenTex.colorSpace = T.SRGBColorSpace;
+  const screenMat = createMaterial({
+    map: screenTex,
+    emissive: 0x3ec8be,
+    emissiveMap: screenTex,
+    emissiveIntensity: 0.78,
+    roughness: 0.18,
+  });
+
+  const monX = -0.14;
+  const monZ = -0.16;
+  deskGroup.add(
+
+    mkMesh(new T.BoxGeometry(0.26, 0.016, 0.16), blackSteelMat, monX, 0.788, monZ),
+    mkMesh(new T.BoxGeometry(0.055, 0.24, 0.035), blackSteelMat, monX, 0.91, monZ - 0.04),
+
+    mkMesh(new T.BoxGeometry(0.68, 0.4, 0.028), pcChassisMat, monX, 1.12, monZ + 0.01, true, false),
+
+    mkMesh(new T.PlaneGeometry(0.64, 0.36), screenMat, monX, 1.125, monZ + 0.026, false, false),
+
+    mkMesh(new T.BoxGeometry(0.018, 0.008, 0.006), cyanLedMat, monX + 0.28, 0.935, monZ + 0.026),
+
+    mkMesh(new T.BoxGeometry(0.38, 0.018, 0.14), pcChassisMat, monX - 0.06, 0.795, 0.14),
+    mkMesh(new T.BoxGeometry(0.35, 0.01, 0.11), pcMatteBlack, monX - 0.06, 0.808, 0.14),
+    mkMesh(new T.BoxGeometry(0.34, 0.004, 0.006), cyanLedMat, monX - 0.06, 0.804, 0.205),
+
+    mkMesh(new T.BoxGeometry(0.066, 0.028, 0.11), pcChassisMat, monX + 0.24, 0.8, 0.15),
+    mkMesh(new T.BoxGeometry(0.012, 0.008, 0.022), brushedSteelMat, monX + 0.24, 0.816, 0.12),
+  );
+
+  const pcGlow = new T.PointLight(0x63d6cc, 0.65, 4.8);
+  pcGlow.position.set(-4.64, 1.32, -10.25);
+  scene.add(pcGlow);
+
+  const chairGroup = new T.Group();
+  chairGroup.position.set(-4.62, 0, -9.62);
+  chairGroup.rotation.y = 0.26;
+  scene.add(chairGroup);
+  const chairFabricMat = createMaterial({ color: 0x22262c, roughness: 0.82 });
+  chairGroup.add(
+
+    mkMesh(new T.CylinderGeometry(0.035, 0.035, 0.42, 8), blackSteelMat, 0, 0.24, 0),
+    mkMesh(new T.BoxGeometry(0.52, 0.035, 0.045), blackSteelMat, 0, 0.055, 0),
+    mkMesh(new T.BoxGeometry(0.045, 0.035, 0.52), blackSteelMat, 0, 0.055, 0),
+
+    mkMesh(new T.BoxGeometry(0.48, 0.07, 0.46), chairFabricMat, 0, 0.46, 0, true, true),
+    mkMesh(new T.BoxGeometry(0.46, 0.52, 0.06), chairFabricMat, 0, 0.76, 0.21, true, true),
+    mkMesh(new T.BoxGeometry(0.05, 0.2, 0.3), blackSteelMat, -0.25, 0.58, 0.02),
+    mkMesh(new T.BoxGeometry(0.05, 0.2, 0.3), blackSteelMat, 0.25, 0.58, 0.02),
+  );
+
+  colliders.push({
+    minX: -5.42,
+    maxX: -3.58,
+    minZ: -11.02,
+    maxZ: -9.85,
+    minY: 0,
+    maxY: 1.5,
+    active: true,
+  });
 
   addBox(
     2.2,
@@ -205,38 +456,67 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   let doorOpen = false;
   const hospDoorInter = addInteract(
     'hosp_door',
-    V(-3.8, 1.4, -3.15),
-    '开启厚重铅门',
+    V(-4.5, 1.4, -3.15),
+    '开启隔离屏蔽铁门',
     '打开后可直接穿过门洞',
     () => {
       doorOpen = !doorOpen;
       sfx.play('door');
       showWhisper(
         doorOpen
-          ? '气压阀轻嗤一声，这扇半米厚的屏蔽门笨重地滑开了。'
-          : '厚门缓缓合拢，发出一声低沉闷响。',
+          ? '气压阀轻嗤一声，这扇半米厚的隔离铁门顺着滑轨缓缓滑开了。'
+          : '厚重铁门沿着滑轨合拢，发出一声低沉闷响。',
       );
     },
     {
       radius: 3.8,
-      getLabel: () => (doorOpen ? '关闭厚重铅门' : '开启厚重铅门'),
+      getLabel: () => (doorOpen ? '关闭隔离屏蔽铁门' : '开启隔离屏蔽铁门'),
     },
   );
-  updaters.push((dt) => {
-    bigDoor.position.x += ((doorOpen ? -1.4 : -4.5) - bigDoor.position.x) * Math.min(1, dt * 2.4);
-    syncColX(bigDoor, 1.7);
+  updaters.push((dt, t) => {
+    doorGroup.position.x += ((doorOpen ? -1.4 : -4.5) - doorGroup.position.x) * Math.min(1, dt * 2.4);
+    doorCol.minX = doorGroup.position.x - 1.7;
+    doorCol.maxX = doorGroup.position.x + 1.7;
     (beacon.material as InstanceType<typeof T.MeshStandardMaterial>).emissiveIntensity = doorOpen
       ? 0.2
       : 1.1;
+    pcGlow.intensity = 0.58 + Math.sin(t * 2.6) * 0.08;
     hospDoorInter.pos.z = player.pos.z > -3.5 ? -3.15 : -3.85;
-    hospDoorInter.pos.x = bigDoor.position.x > -3.0 ? -2.4 : -3.8;
+    hospDoorInter.pos.x = doorGroup.position.x > -3.0 ? -2.4 : -4.5;
   });
+
+  addInteract(
+    'hosp_pc',
+    V(-4.5, 1.15, -10.2),
+    '操作黑色台式电脑',
+    '跳转至隐藏世界 nightcord.esahhk.xyz',
+    () => {
+      sfx.play('click');
+      openModal(
+        '隔离区终端 · 黑色台式机',
+        '黑色主机风扇低声运转，屏幕亮着一行冷青色指令：\n\n「LINK READY // https://nightcord.esahhk.xyz」\n\n这台电脑连接着一处不出现在“切换世界”里的隐藏世界。点击下方按钮即可直接前往。',
+        [
+          {
+            label: '前往 nightcord.esahhk.xyz',
+            href: 'https://nightcord.esahhk.xyz',
+            fn: () => {
+              sfx.play('chime');
+              closeModal();
+            },
+          },
+          { label: '离开电脑', fn: closeModal },
+        ],
+        { meta: '独立终端 · 隐藏世界传送点' },
+      );
+    },
+    { radius: 2.6 },
+  );
 
   addInteract('hosp_floor', V(0, 0.2, 7.2), '低头看地面彩色标志线', '核对分岔方向', () => {
     sfx.play('paper');
     openModal(
       '地面色彩导引',
-      '蓝线往左拐再右拐，通向尽头那扇画着防辐射标志的厚重铅门；\n绿线和橙线往右拐，顺着灰青色的连廊直通机场候机区。\n\n地面打过蜡，走上去鞋底发出清脆响声。',
+      '蓝线往左拐再右拐，通向尽头那扇画着防辐射标志的隔离屏蔽铁门；\n绿线和橙线往右拐，顺着灰青色的连廊直通机场候机区。\n\n地面打过蜡，走上去鞋底发出清脆响声。',
     );
   });
   addInteract(
@@ -267,6 +547,6 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   return {
     pos: V(0, 1.65, 9.4),
     yaw: 0,
-    whisper: '左边那扇厚门还在等刷卡，右边这条连廊一直通到候机区。',
+    whisper: '左边那扇厚重的隔离铁门后似乎亮着一点冷青色微光，右边连廊一直通到候机区。',
   };
 }

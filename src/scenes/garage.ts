@@ -387,6 +387,7 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
   let exitedToPark = false;
   let freightOpen = spawnedInElev;
   let freightRiding = false;
+  let wasOutsideCabin = !spawnedInElev;
   if (spawnedInElev) {
     garElevL.position.x = 6.8;
     garElevR.position.x = 10.0;
@@ -394,6 +395,16 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
     syncColX(garElevR, 0.56);
   }
   updaters.push((dt, t) => {
+    const inCabin = player.pos.x > 7.25 && player.pos.x < 9.55 && player.pos.z > 12.15;
+    if (!inCabin && player.pos.z < 11.6) {
+      wasOutsideCabin = true;
+    }
+    if (inCabin && wasOutsideCabin && freightOpen && !freightRiding) {
+      freightOpen = false;
+      wasOutsideCabin = false;
+      sfx.play('door');
+      showWhisper('走进轿厢后，电梯门自动合拢；按 [E] 选择楼层或重新开门。');
+    }
     gateArm.rotation.z +=
       ((gateUp ? 1.15 : 0) - gateArm.rotation.z) * Math.min(1, dt * 5);
     gateCol.active = gateArm.rotation.z < 0.55;
@@ -438,8 +449,8 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
   addInteract(
     'gar_elev_call',
     V(6.85, 1.25, 11.6),
-    '按下电梯呼叫按钮',
-    '前往 1F 清晨后院 / B4 幽深洞穴',
+    '打开电梯门',
+    '打开电梯门进入轿厢',
     () => {
       if (freightRiding) {
         return;
@@ -451,11 +462,14 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
       sfx.play('door');
       showWhisper(
         freightOpen
-          ? '电梯门沿着滑轨滑开，里面通往 1F 清晨后院与 B4 洞穴。'
+          ? '电梯门沿着滑轨滑开，走进去后门会自动关上。'
           : '电梯门合拢了。',
       );
     },
-    { radius: 0.75 },
+    {
+      radius: 0.9,
+      getLabel: () => (freightOpen ? '关闭电梯门' : '打开电梯门'),
+    },
   );
   const rideGarageElevator = (target: 'backyard' | 'cave') => {
     if (freightRiding) {
@@ -479,18 +493,18 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
           loadScene(idx);
           showWhisper('磨砂玻璃门轻咔滑开，清晨后院的冷亮空气与青草味扑面而来。');
         } else {
-          state.pendingSpawn = { pos: V(0, 1.77, -8.1), yaw: Math.PI };
+          state.pendingSpawn = { pos: V(0, 1.77, -12.1), yaw: Math.PI };
           loadScene(idx);
-          showWhisper('停稳在 B4 洞窟北侧的黄铜小电梯里，暗池的水声就在前头。');
+          showWhisper('停稳在 B4 幽深洞穴北端的黄铜小电梯里，前方就是狭长洞道。');
         }
       }
     }, 700);
   };
   addInteract(
     'gar_elev_go',
-    V(8.4, 1.55, 12.35),
+    V(8.4, 1.45, 12.45),
     '按下轿厢楼层按键',
-    '选择前往 1F 清晨后院或 B4 幽深洞穴',
+    '选择前往 1F 清晨后院、B4 幽深洞穴或开关门',
     () => {
       if (freightRiding) {
         return;
@@ -498,7 +512,7 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
       sfx.play('click');
       openModal(
         'B2 · 电梯楼层选择',
-        '这部电梯上行直达阳光清爽的博物馆后院，下行直达湿冷的 B4 幽深洞穴。请选择楼层：',
+        '这部电梯上行直达阳光清爽的博物馆后院，下行直达湿冷的 B4 幽深洞穴。请选择楼层或开关电梯门：',
         [
           { label: '前往 1F · 博物馆清晨后院', fn: () => rideGarageElevator('backyard') },
           { label: '前往 B4 · 幽深洞穴', fn: () => rideGarageElevator('cave') },
@@ -506,16 +520,16 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
             label: freightOpen ? '关闭电梯门' : '打开电梯门',
             fn: () => {
               freightOpen = !freightOpen;
+              wasOutsideCabin = false;
               sfx.play('door');
               closeModal();
             },
           },
-          { label: '留在 B2 地下车库', fn: closeModal },
         ],
         { meta: 'B2 地下车库电梯' },
       );
     },
-    { radius: 0.9 },
+    { radius: 1.4 },
   );
   addInteract(
     'gar_gate',

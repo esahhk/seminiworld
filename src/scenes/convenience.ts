@@ -202,18 +202,20 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
   const doorGlassMat = createMaterial({ color: 0xaad1e3, transparent: true, opacity: 0.42 });
   const doorL = addBox(0.12, 2.8, 1.4, doorGlassMat, -4.5, 1.4, -0.7, true);
   const doorR = addBox(0.12, 2.8, 1.4, doorGlassMat, -4.5, 1.4, 0.7, true);
+
+  addBox(0.18, 0.88, 7.36, createMaterial({ color: 0x1b4737, roughness: 0.45 }), -4.3, 3.16, 0, false);
   addSign(
     7.2,
-    1.15,
+    0.78,
     tex.sign('24H 街角便利店', '#f5f0e1', '#1f5e48', '热关东煮 · 冰饮 · 饭团'),
-    -4.38,
-    3.2,
+    -4.195,
+    3.16,
     0,
     Math.PI / 2,
   );
-  // Storefront fascia accent band & interior ceiling light coves
-  addBox(0.24, 0.22, 9.2, createMaterial({ color: 0x1f5e48 }), -4.42, 3.55, 0, false);
-  addBox(0.24, 0.1, 9.2, createMaterial({ color: 0xd97a38 }), -4.42, 3.38, 0, false);
+
+  addBox(0.24, 0.2, 9.2, createMaterial({ color: 0x1f5e48 }), -4.42, 3.74, 0, false);
+  addBox(0.24, 0.08, 9.2, createMaterial({ color: 0xd97a38 }), -4.42, 3.6, 0, false);
   addBox(0.9, 0.04, 1.7, createMaterial({ color: 0x353b42, roughness: 0.95 }), -4.98, 0.16, 0, false);
   const ceilingStripMat = createMaterial({
     color: 0xfff8ea,
@@ -224,7 +226,6 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
     addBox(3.8, 0.06, 0.24, ceilingStripMat, -8.0, 3.48, lz, false);
   }
 
-  // Illuminated glass-door beverage refrigerator along west wall (-11.0)
   const fridgeCaseMat = createMaterial({ color: 0xd8e8eb, roughness: 0.35 });
   const fridgeInnerMat = createMaterial({ color: 0xeaf4f7, roughness: 0.4 });
   const fridgeGlassMat = createMaterial({
@@ -241,7 +242,7 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
   const fridgeLight = new T.PointLight(0xd9f5ff, 0.95, 9);
   fridgeLight.position.set(-10.2, 2.0, 0);
   scene.add(fridgeLight);
-  // Rear cabinet shell & side cheeks (collider covers overall 0.75 x 2.4 x 5.2 footprint)
+
   addBox(0.75, 2.4, 5.2, createMaterial({ visible: false }), -11.0, 1.2, 0, true);
   addBox(0.18, 2.4, 5.2, fridgeInnerMat, -11.28, 1.2, 0, false);
   addBox(0.72, 2.4, 0.14, fridgeCaseMat, -11.0, 1.2, -2.53, false);
@@ -278,16 +279,15 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
       );
     }
   }
-  // Glass doors & silver handles
+
   addBox(0.04, 1.82, 4.9, fridgeGlassMat, -10.64, 1.2, 0, false);
   for (const hz of [-1.42, -1.08, -0.17, 0.17, 1.08, 1.42]) {
     addBox(0.04, 0.36, 0.04, createMaterial({ color: 0xbac3c9, metalness: 0.7 }), -10.59, 1.25, hz, false);
   }
 
-  // Checkout counter + quartz top + partitioned Oden warmer + POS register + bun warmer
   addBox(0.9, 0.96, 3.0, createMaterial({ color: 0xc98447, roughness: 0.62 }), -6.5, 0.56, -2.6, true);
   addBox(0.98, 0.08, 3.08, createMaterial({ color: 0xebe6db, roughness: 0.35 }), -6.5, 1.04, -2.6, false);
-  // Stainless oden cooker pot & dividers (-6.4, 1.14, -2.4)
+
   addBox(0.6, 0.24, 0.76, createMaterial({ color: 0xc2c7ca, metalness: 0.65, roughness: 0.3 }), -6.4, 1.16, -2.4, false);
   addBox(0.5, 0.02, 0.66, createMaterial({ color: 0xb87635, roughness: 0.2 }), -6.4, 1.25, -2.4, false);
   addBox(0.03, 0.08, 0.68, createMaterial({ color: 0xd9dee0, metalness: 0.7 }), -6.4, 1.26, -2.4, false);
@@ -298,19 +298,18 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
   addCylinder(0.055, 0.055, 0.08, 10, createMaterial({ color: 0xf2ead7 }), -6.32, 1.27, -2.62, false);
   addBox(0.09, 0.08, 0.09, createMaterial({ color: 0x736b64 }), -6.48, 1.27, -2.38, false);
   addBox(0.62, 0.22, 0.78, createMaterial({ color: 0xddeef5, transparent: true, opacity: 0.3 }), -6.4, 1.38, -2.4, false);
-  // Paper bowls & condiment cups (-6.6, -3.3)
+
   addCylinder(0.075, 0.055, 0.24, 10, createMaterial({ color: 0xece8de }), -6.6, 1.2, -3.1, false);
   addBox(0.32, 0.36, 0.42, createMaterial({ color: 0xe6eff2, transparent: true, opacity: 0.45 }), -6.5, 1.26, -3.55, false);
   addBox(0.34, 0.06, 0.44, createMaterial({ color: 0xc97b38 }), -6.5, 1.46, -3.55, false);
   for (const bz of [-3.46, -3.64]) {
     addMesh(new T.SphereGeometry(0.055, 8, 6), createMaterial({ color: 0xf5f2ea }), -6.5, 1.2, bz, false, false);
   }
-  // POS register monitor + card pad
+
   addBox(0.28, 0.08, 0.36, createMaterial({ color: 0x2d3238 }), -6.42, 1.12, -1.65, false);
   addBox(0.06, 0.24, 0.32, createMaterial({ color: 0x252a30 }), -6.42, 1.28, -1.65, false);
   addBox(0.07, 0.18, 0.26, createMaterial({ color: 0x5da9d9, emissive: 0x255778, emissiveIntensity: 0.6 }), -6.41, 1.29, -1.65, false);
 
-  // Stocked 4-tier central gondola shelf (-8.2, 0.8, 1.6)
   const shelfColMat = createMaterial({ color: 0xdad4c8, roughness: 0.65 });
   addBox(3.4, 1.6, 0.6, createMaterial({ visible: false }), -8.2, 0.8, 1.6, true);
   addBox(3.36, 1.56, 0.08, shelfColMat, -8.2, 0.9, 1.6, false);
@@ -333,7 +332,6 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
     }
   }
 
-  // Window dining counter + bar stools + tea cup + kraft notebook (-4.95, 2.6)
   addBox(
     0.45,
     0.08,

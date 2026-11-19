@@ -167,7 +167,6 @@ export function buildPlatformScene(ctx: SceneContext): SceneInitResult {
     false,
   );
 
-  // Redesigned AC exhaust fan unit: fixed semi-cylindrical shroud + 6-blade rotating rotor
   addBox(
     1.1,
     0.9,

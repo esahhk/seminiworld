@@ -26,11 +26,17 @@ export function buildSubwayScene(ctx: SceneContext): SceneInitResult {
 
   scene.background = new T.Color(0x101318);
   scene.fog = new T.Fog(0x101318, 18, 46);
-  scene.add(new T.HemisphereLight(0xd2e1eb, 0x3c424a, 0.75));
+  scene.add(new T.HemisphereLight(0xd2e1eb, 0x3c424a, 0.95));
+  const subStripMat = createMaterial({
+    color: 0xf4f8fc,
+    emissive: 0xdcebf5,
+    emissiveIntensity: 1.1,
+  });
   for (const pz of [-8, 0, 8]) {
-    const l = new T.PointLight(0xeef6fa, 0.85, 18);
+    const l = new T.PointLight(0xeef6fa, 0.95, 20);
     l.position.set(0, 4.0, pz);
     scene.add(l);
+    addBox(3.6, 0.08, 0.22, subStripMat, 0, 4.62, pz, false, false, false);
   }
   const exitGlow = new T.PointLight(0xffe7b8, 1.1, 10);
   exitGlow.position.set(0, 2.8, -12.5);
@@ -63,13 +69,17 @@ export function buildSubwayScene(ctx: SceneContext): SceneInitResult {
     addBox(0.65, 4.8, 0.65, createMaterial({ color: 0xd8ddd8 }), -2.2, 2.4, pz, true);
     addBox(0.65, 4.8, 0.65, createMaterial({ color: 0xd8ddd8 }), 2.2, 2.4, pz, true);
   }
+  const hangerMat = createMaterial({ color: 0x7b848c, metalness: 0.6, roughness: 0.4 });
+  addBox(0.06, 0.72, 0.06, hangerMat, -0.95, 4.44, -2.0, false);
+  addBox(0.06, 0.72, 0.06, hangerMat, 0.95, 4.44, -2.0, false);
+  addBox(2.7, 0.96, 0.1, createMaterial({ color: 0x162b42, roughness: 0.5 }), 0, 3.65, -2.0, false);
   addSign(
     2.6,
     0.9,
     tex.sign('换乘站 · 1 / 4 / 7 号线', '#1f3c5c', '#f0f2f4', '四线同层穿行'),
-    -2.2,
-    3.1,
-    -1.65,
+    0,
+    3.65,
+    -1.94,
   );
   addBox(3.4, 3.4, 1.4, createMaterial({ color: 0xdfd8c8 }), 0, 1.7, -14.2, true);
   addBox(
@@ -160,7 +170,7 @@ export function buildSubwayScene(ctx: SceneContext): SceneInitResult {
         : '恢复平峰间隔，列车缓缓滑进黑洞口。',
     );
   });
-  addInteract('sub_map', V(-2.2, 2.0, -1.8), '抬头看柱子上的线路图', '核对四条地铁方向', () => {
+  addInteract('sub_map', V(0, 2.5, -2.0), '抬头看悬吊线路牌', '核对四条地铁方向', () => {
     sfx.play('paper');
     openModal(
       '多线同台换乘站',

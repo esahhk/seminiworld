@@ -92,7 +92,7 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
   let colliders: Collider[] = [];
   let interactables: Interactable[] = [];
   let updaters: ((dt: number, t: number) => void)[] = [];
-  let trackedResources: (THREE.BufferGeometry | THREE.Material | THREE.Texture)[] = [];
+  const trackedResources = new Set<THREE.BufferGeometry | THREE.Material | THREE.Texture>();
   let activeIntervals: number[] = [];
   let activeTimeouts: number[] = [];
   let sitTimer: number | null = null;
@@ -128,7 +128,7 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
   const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
   function track<G extends THREE.BufferGeometry | THREE.Material | THREE.Texture>(obj: G): G {
-    trackedResources.push(obj);
+    trackedResources.add(obj);
     return obj;
   }
 
@@ -411,10 +411,9 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
       try {
         r.dispose();
       } catch {
-        // ignore dispose errors
       }
     });
-    trackedResources = [];
+    trackedResources.clear();
     activeIntervals.forEach((id) => window.clearInterval(id));
     activeIntervals = [];
     activeTimeouts.forEach((id) => window.clearTimeout(id));
@@ -431,10 +430,12 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
     if (isSoftwareGl || state.perf === 'fast') {
       return;
     }
+    const isSmallScreen = window.innerWidth <= 900;
+    const shadowRes = isSmallScreen ? 768 : 1024;
     scene.traverse((obj) => {
       const light = obj as THREE.DirectionalLight;
       if (light.isDirectionalLight && light.castShadow) {
-        light.shadow.mapSize.set(1024, 1024);
+        light.shadow.mapSize.set(shadowRes, shadowRes);
         light.shadow.camera.near = 0.5;
         light.shadow.camera.far = 65;
         const d = 16;
@@ -443,6 +444,11 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
         light.shadow.camera.top = d;
         light.shadow.camera.bottom = -d;
         light.shadow.bias = -0.0005;
+      }
+      const spot = obj as THREE.SpotLight;
+      if (spot.isSpotLight && spot.castShadow) {
+        spot.shadow.mapSize.set(512, 512);
+        spot.shadow.bias = -0.0005;
       }
     });
   }
@@ -643,7 +649,7 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
               p.catch(() => {});
             }
           } catch {
-            // ignore pointer lock denial
+
           }
         }
         dragging = true;
@@ -739,7 +745,10 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
   };
 
   function resize(): void {
-    const pr = isSoftwareGl ? 1 : Math.min(window.devicePixelRatio || 1, 2) * state.resScale;
+    const maxDpr = window.innerWidth <= 900 ? 1.5 : 1.75;
+    const pr = isSoftwareGl
+      ? 1
+      : Math.min(window.devicePixelRatio || 1, maxDpr) * state.resScale;
     renderer.setPixelRatio(pr);
     renderer.setSize(window.innerWidth, window.innerHeight);
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -763,6 +772,7 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
   window.addEventListener('touchend', onCTouchEnd);
   window.addEventListener('touchcancel', onCTouchEnd);
   window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', resize);
   mq?.addEventListener('change', resize);
   resize();
 
@@ -912,16 +922,24 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
 
       const standingY = player.pos.y - player.height;
       const groundY = heightFn(player.pos.x, player.pos.z, standingY);
-      player.vel.y -= 14.5 * dt;
-      player.pos.y += player.vel.y * dt;
-      if (player.pos.y <= groundY + player.height + 0.14 && player.vel.y <= 0.5) {
-        if (Math.abs(player.pos.y - (groundY + player.height)) < 0.45) {
-          player.pos.y = groundY + player.height;
+      const targetY = groundY + player.height;
+      const yDiff = targetY - player.pos.y;
+      if (player.pos.y <= targetY + 0.16 && player.vel.y <= 0.5) {
+        if (Math.abs(yDiff) < 0.012) {
+          player.pos.y = targetY;
         } else {
-          player.pos.y += (groundY + player.height - player.pos.y) * Math.min(1, dt * 18);
+          player.pos.y += yDiff * Math.min(1, dt * 15);
         }
         player.vel.y = 0;
         player.onGround = true;
+      } else {
+        player.vel.y -= 14.5 * dt;
+        player.pos.y += player.vel.y * dt;
+        if (player.pos.y <= targetY) {
+          player.pos.y = targetY;
+          player.vel.y = 0;
+          player.onGround = true;
+        }
       }
 
       if (moved > 0.005 && player.onGround) {
@@ -932,7 +950,9 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
         }
       }
 
-      const bob = moved > 0.005 && player.onGround ? Math.sin(elapsed * 10) * 0.032 : 0;
+      const onSlope = Math.abs(yDiff) > 0.035;
+      const bob =
+        moved > 0.005 && player.onGround && !onSlope ? Math.sin(elapsed * 9) * 0.016 : 0;
       camera.position.set(player.pos.x, player.pos.y + bob, player.pos.z);
       camera.rotation.order = 'YXZ';
       camera.rotation.y = player.yaw;
@@ -973,16 +993,18 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
     }
   }
 
-  const clock = new THREE.Clock();
+  let lastFrameMs = performance.now();
+  let elapsedSec = 0;
 
   function animate(now?: number): void {
     if (!alive) {
       return;
     }
     const ts = now ?? performance.now();
-    const dt = Math.min(clock.getDelta(), 0.05);
-    const elapsed = clock.elapsedTime;
-    stepSimulation(ts, dt, elapsed);
+    const dt = Math.min(Math.max((ts - lastFrameMs) / 1000, 0), 0.05);
+    lastFrameMs = ts;
+    elapsedSec += dt;
+    stepSimulation(ts, dt, elapsedSec);
 
     if (isSoftwareGl) {
       afterDraw(() => {
@@ -1021,6 +1043,7 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
     window.removeEventListener('touchend', onCTouchEnd);
     window.removeEventListener('touchcancel', onCTouchEnd);
     window.removeEventListener('resize', resize);
+    window.removeEventListener('orientationchange', resize);
     mq?.removeEventListener('change', resize);
     tex.dispose();
     sfx.dispose();
@@ -1043,6 +1066,9 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
     setPerf(perf: PerfMode) {
       state.perf = perf;
       renderer.shadowMap.enabled = !isSoftwareGl && perf === 'high';
+      if (perf === 'high') {
+        setupShadows();
+      }
       renderer.shadowMap.needsUpdate = true;
       scene.traverse((o) => {
         const m = (o as THREE.Mesh).material;

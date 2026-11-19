@@ -20,6 +20,7 @@ export function TouchControls({
   const joyZoneRef = useRef<HTMLDivElement>(null);
   const joyKnobRef = useRef<HTMLDivElement>(null);
   const joyIdRef = useRef<number | null>(null);
+  const lastTouchRef = useRef(0);
 
   const onJoyChangeRef = useRef(onJoyChange);
   const onTouchActiveRef = useRef(onTouchActive);
@@ -131,13 +132,16 @@ export function TouchControls({
         id="touch-jump"
         aria-label="跳跃"
         onTouchStart={(e) => {
-          e.preventDefault();
           e.stopPropagation();
+          lastTouchRef.current = Date.now();
           onTouchActive();
           onJump();
         }}
         onClick={(e) => {
           e.stopPropagation();
+          if (Date.now() - lastTouchRef.current < 450) {
+            return;
+          }
           onJump();
         }}
       >
@@ -148,13 +152,16 @@ export function TouchControls({
         id="touch-act"
         aria-label="互动"
         onTouchStart={(e) => {
-          e.preventDefault();
           e.stopPropagation();
+          lastTouchRef.current = Date.now();
           onTouchActive();
           onInteract();
         }}
         onClick={(e) => {
           e.stopPropagation();
+          if (Date.now() - lastTouchRef.current < 450) {
+            return;
+          }
           onInteract();
         }}
       >

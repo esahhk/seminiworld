@@ -8,6 +8,7 @@ export function buildZigzagScene(ctx: SceneContext): SceneInitResult {
     tex,
     sfx,
     V,
+    track,
     addMesh,
     addBox,
     addCylinder,
@@ -103,7 +104,7 @@ export function buildZigzagScene(ctx: SceneContext): SceneInitResult {
   for (let i = 0; i < 14; i++) {
     const sy = 0.15 + i * 0.29;
     const sz = 5.2 - i * 0.62;
-    addBox(3.4, 0.3, 0.65, stepMat, -4.0, sy, sz, false, true, true);
+    addBox(3.4, 0.3, 0.65, stepMat, -4.0, sy, sz, false, false, true);
     addBox(3.42, 0.03, 0.05, edgeMat, -4.0, sy + 0.16, sz + 0.31, false, false, false);
   }
   addBox(12.4, 4.2, 4.4, stepMat, 0, 2.1, -5.2, false, true, true);
@@ -146,31 +147,16 @@ export function buildZigzagScene(ctx: SceneContext): SceneInitResult {
   );
   const flowers: { petal: ReturnType<typeof addMesh>; phase: number }[] = [];
   const fColors = [0xf0cf5b, 0xe87b70, 0xf5f2e6, 0xd685b8];
+  const stemGeo = track(new T.CylinderGeometry(0.015, 0.015, 0.28, 5));
+  const stemMat = createMaterial({ color: 0x4d7d3a });
+  const petalGeo = track(new T.DodecahedronGeometry(0.075, 0));
+  const petalMats = fColors.map((c) => createMaterial({ color: c, roughness: 0.7 }));
   for (let i = 0; i < 52; i++) {
     const fx = -3.0 + Math.random() * 6.0;
     const fz = -6.45 + Math.random() * 0.7;
-    addCylinder(
-      0.015,
-      0.015,
-      0.28,
-      5,
-      createMaterial({ color: 0x4d7d3a }),
-      fx,
-      4.64,
-      fz,
-      false,
-      false,
-    );
+    addMesh(stemGeo, stemMat, fx, 4.64, fz, false, false);
     flowers.push({
-      petal: addMesh(
-        new T.DodecahedronGeometry(0.075, 0),
-        createMaterial({ color: fColors[i % 4], roughness: 0.7 }),
-        fx,
-        4.8,
-        fz,
-        false,
-        false,
-      ),
+      petal: addMesh(petalGeo, petalMats[i % 4], fx, 4.8, fz, false, false),
       phase: Math.random() * 6,
     });
   }
@@ -219,7 +205,7 @@ export function buildZigzagScene(ctx: SceneContext): SceneInitResult {
   for (let i = 0; i < 14; i++) {
     const sy = 4.2 + i * 0.29;
     const sz = -2.86 + i * 0.62;
-    addBox(3.4, 0.3, 0.65, stepMat, 4.0, sy, sz, false, true, true);
+    addBox(3.4, 0.3, 0.65, stepMat, 4.0, sy, sz, false, false, true);
     addBox(3.42, 0.03, 0.05, edgeMat, 4.0, sy + 0.16, sz - 0.31, false, false, false);
   }
   addBox(5.5, 8.25, 5, stepMat, 4.0, 4.125, 7.8, false, true, true);
@@ -253,8 +239,8 @@ export function buildZigzagScene(ctx: SceneContext): SceneInitResult {
       return 8.25;
     }
     if (x >= 2.3 && x <= 5.7 && z >= -3.185 && z < 5.3 && standingY >= 3.8) {
-      const step = Math.floor((z + 3.185) / 0.62);
-      const h = 4.35 + Math.min(13, Math.max(0, step)) * 0.29;
+      const t = Math.min(1, Math.max(0, (z + 3.185) / 8.485));
+      const h = 4.2 + t * 4.05;
       if (h <= standingY + 0.65) {
         return h;
       }
@@ -263,8 +249,8 @@ export function buildZigzagScene(ctx: SceneContext): SceneInitResult {
       return 4.2;
     }
     if (x >= -5.7 && x <= -2.3 && z >= -3.185 && z <= 5.525) {
-      const step = Math.floor((5.525 - z) / 0.62);
-      const h = 0.3 + Math.min(13, Math.max(0, step)) * 0.29;
+      const t = Math.min(1, Math.max(0, (5.525 - z) / 8.71));
+      const h = 0.3 + t * 3.9;
       if (h <= standingY + 0.65) {
         return h;
       }
