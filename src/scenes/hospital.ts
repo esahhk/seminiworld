@@ -1,5 +1,6 @@
 import type { SceneContext } from './sceneContext';
 import type { SceneInitResult } from '../types/game';
+import { buildParkBench } from '../engine/propKit';
 
 export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   const {
@@ -14,6 +15,7 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
     mkMesh,
     addMesh,
     addBox,
+    addCylinder,
     addSign,
     createMaterial,
     addInteract,
@@ -32,28 +34,37 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
 
   scene.background = new T.Color(0xd7e1e2);
   scene.fog = new T.Fog(0xd7e1e2, 16, 48);
-  scene.add(new T.HemisphereLight(0xf5fbfc, 0x909fa1, 0.95));
-  const c1 = new T.PointLight(0xffffff, 0.9, 18);
+  scene.add(new T.HemisphereLight(0xf2f8fa, 0x829194, 0.85));
+  const c1 = new T.PointLight(0xffffff, 0.55, 18);
   c1.position.set(0, 3.8, 7);
   scene.add(c1);
-  const c2 = new T.PointLight(0xeef7f9, 0.9, 18);
+  const c2 = new T.PointLight(0xeef7f9, 0.6, 18);
   c2.position.set(-4.5, 3.8, -4);
   scene.add(c2);
-  const c3 = new T.PointLight(0xd9ecf2, 0.85, 18);
+  const c3 = new T.PointLight(0xd9ecf2, 0.55, 18);
   c3.position.set(4.7, 3.8, -4);
   scene.add(c3);
 
+  const bump = tex.bumpNoise('hosp_b', 18);
   const flTex = tex.tiles('#dde2e1', '#d3d9d8', '#b9c0bf', 6, 'hosp_f');
   flTex.repeat.set(3, 5);
   const flMat = createMaterial({
     map: flTex,
-    roughness: 0.35,
+    bumpMap: bump,
+    bumpScale: 0.004,
+    roughness: 0.34,
   });
-  const wMat = createMaterial({ color: 0xe5eceb });
-  const ceilMat = createMaterial({ color: 0xf3f5f5 });
+  const wMat = createMaterial({ color: 0xe5eceb, roughness: 0.88 });
+  const ceilMat = createMaterial({ color: 0xf3f5f5, roughness: 0.9 });
+  const crashRailMat = createMaterial({ color: 0x7a9ea8, roughness: 0.45 });
+  const ceilLightMat = createMaterial({ color: 0xf7fcfc, emissive: 0xdff2f5, emissiveIntensity: 0.92 });
 
   addBox(14.4, 0.2, 26.2, flMat, -0.3, -0.1, -1.6, true, false, true);
   addBox(16.0, 0.2, 28.0, ceilMat, 0, 4.2, -1.5, false);
+
+  for (const [lx, lz] of [[0, 7.5], [-4.5, -1.0], [-4.5, -7.5], [4.7, -1.0], [4.7, -7.5], [4.7, -12.0]]) {
+    addBox(1.2, 0.04, 2.4, ceilLightMat, lx, 4.08, lz, false, false, false);
+  }
 
   addBox(5.2, 4.2, 0.2, wMat, 0, 2.1, 11.2, true);
   addBox(0.2, 4.2, 6.8, wMat, -2.5, 2.1, 7.8, true);
@@ -74,47 +85,66 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   addBox(5.2, 4.2, 0.2, wMat, -4.5, 2.1, -11.5, true);
   addBox(3.4, 4.2, 0.2, wMat, 4.7, 2.1, -14.5, true);
 
+  const baseMat = createMaterial({ color: 0x4f6870, roughness: 0.62 });
+  addBox(0.06, 0.14, 15.6, crashRailMat, -6.88, 0.98, -3.5, false);
+  addBox(0.06, 0.14, 18.6, crashRailMat, 6.28, 0.98, -5.0, false);
+  addBox(0.06, 0.14, 6.4, crashRailMat, -2.38, 0.98, 7.8, false);
+  addBox(0.06, 0.14, 6.4, crashRailMat, 2.38, 0.98, 7.8, false);
+  addBox(5.2, 0.14, 0.06, crashRailMat, 0.5, 0.98, 1.23, false);
+
+  addBox(0.06, 0.16, 15.8, baseMat, -6.88, 0.08, -3.5, false);
+  addBox(0.06, 0.16, 18.8, baseMat, 6.28, 0.08, -5.0, false);
+  addBox(0.06, 0.16, 6.6, baseMat, -2.38, 0.08, 7.8, false);
+  addBox(0.06, 0.16, 6.6, baseMat, 2.38, 0.08, 7.8, false);
+  addBox(5.26, 0.16, 0.06, baseMat, 0.5, 0.08, 1.23, false);
+  addBox(0.28, 4.2, 0.28, createMaterial({ color: 0xd0dbdc, roughness: 0.78 }), -2.04, 2.1, 1.1, false);
+  addBox(0.28, 4.2, 0.28, createMaterial({ color: 0xd0dbdc, roughness: 0.78 }), 3.04, 2.1, 1.1, false);
+
+  addBox(0.14, 0.24, 0.1, createMaterial({ color: 0xf4f6f6 }), -2.35, 1.25, 4.2, false);
+  addBox(0.08, 0.08, 0.06, createMaterial({ color: 0x7cb8cf, transparent: true, opacity: 0.7 }), -2.32, 1.15, 4.2, false);
+
+  addBox(2.5, 0.94, 0.05, createMaterial({ color: 0x8ea1a8, metalness: 0.55, roughness: 0.35 }), 0.5, 2.25, 1.22, false);
   addSign(
     2.4,
     0.85,
-    tex.sign('← 隔离屏蔽门（左拐再右拐）', '#f4f7f6', '#273336', '候机连廊（右拐再左拐） →'),
+    tex.sign('← 隔离屏蔽门（左拐再右拐）', '#1c3542', '#eef6f7', '候机连廊（右拐再左拐） →'),
     0.5,
     2.25,
-    1.23,
+    1.26,
   );
 
   const lineMatB = createMaterial({
     color: 0x3684a8,
     polygonOffset: true,
-    polygonOffsetFactor: -1,
-    polygonOffsetUnits: -1,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
   });
   const lineMatG = createMaterial({
     color: 0x4b996b,
     polygonOffset: true,
-    polygonOffsetFactor: -1,
-    polygonOffsetUnits: -1,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
   });
   const lineMatO = createMaterial({
     color: 0xd1823b,
     polygonOffset: true,
-    polygonOffsetFactor: -1,
-    polygonOffsetUnits: -1,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
   });
 
-  addBox(0.26, 0.012, 7.34, lineMatB, -0.45, 0.008, 6.8, false);
-  addBox(0.26, 0.012, 7.87, lineMatG, 0.0, 0.008, 6.665, false);
-  addBox(0.26, 0.012, 7.6, lineMatO, 0.45, 0.008, 6.8, false);
-  addBox(4.31, 0.012, 0.26, lineMatB, -2.475, 0.008, 3.0, false);
-  addBox(0.26, 0.012, 11.87, lineMatB, -4.5, 0.008, -3.065, false);
-  addBox(4.96, 0.012, 0.26, lineMatG, 2.35, 0.008, 2.6, false);
-  addBox(0.26, 0.012, 16.41, lineMatG, 4.7, 0.008, -5.735, false);
+  addBox(0.26, 0.012, 7.34, lineMatB, -0.45, 0.015, 6.8, false);
+  addBox(0.26, 0.012, 7.87, lineMatG, 0.0, 0.015, 6.665, false);
+  addBox(0.26, 0.012, 7.6, lineMatO, 0.45, 0.015, 6.8, false);
+  addBox(4.31, 0.012, 0.26, lineMatB, -2.475, 0.015, 3.0, false);
+  addBox(0.26, 0.012, 11.87, lineMatB, -4.5, 0.015, -3.065, false);
+  addBox(4.96, 0.012, 0.26, lineMatG, 2.35, 0.015, 2.6, false);
+  addBox(0.26, 0.012, 16.41, lineMatG, 4.7, 0.015, -5.735, false);
   addSign(
     2.2,
     0.9,
-    tex.sign('蓝线:隔离屏蔽门  绿线:候机连廊', '#f4f7f6', '#273336', '请沿地面标志线通行'),
+    tex.sign('蓝线:隔离屏蔽门  绿线:候机连廊', '#1c3542', '#eef6f7', '请沿地面标志线通行'),
     0,
-    0.025,
+    0.032,
     7.2,
     0,
     -Math.PI / 2,
@@ -128,9 +158,9 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
     polygonOffsetFactor: -4,
     polygonOffsetUnits: -4,
   });
-  addMesh(new T.PlaneGeometry(1.5, 1.5), radMat, -4.5, 0.032, -1.6, false, false).rotation.x =
+  addMesh(new T.PlaneGeometry(1.5, 1.5), radMat, -4.5, 0.036, -1.6, false, false).rotation.x =
     -Math.PI / 2;
-  addMesh(new T.PlaneGeometry(1.5, 1.5), radMat, -4.5, 0.032, -5.4, false, false).rotation.x =
+  addMesh(new T.PlaneGeometry(1.5, 1.5), radMat, -4.5, 0.036, -5.4, false, false).rotation.x =
     -Math.PI / 2;
 
   const doorFrameMat = createMaterial({ color: 0xbcc7ca, metalness: 0.45, roughness: 0.42 });
@@ -148,7 +178,7 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   addBox(1.2, 4.2, 0.56, doorFrameMat, -6.3, 2.1, -3.5, true);
   addBox(1.2, 4.2, 0.56, doorFrameMat, -2.7, 2.1, -3.5, true);
   addBox(3.4, 0.85, 0.56, doorFrameMat, -4.5, 3.78, -3.5, true);
-  addBox(2.45, 0.025, 0.62, brushedSteelMat, -4.5, 0.012, -3.5, false);
+  addBox(2.45, 0.025, 0.62, brushedSteelMat, -4.5, 0.014, -3.5, false);
 
   addBox(4.85, 0.16, 0.22, brushedSteelMat, -3.6, 3.44, -3.18, false);
   addBox(4.85, 0.05, 0.06, rubberSealMat, -3.6, 3.36, -3.12, false);
@@ -192,20 +222,8 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   for (const sideZ of [0.24, -0.24]) {
     doorGroup.add(
       mkMesh(new T.CylinderGeometry(0.028, 0.028, 0.72, 10), brushedSteelMat, -0.82, 1.25, sideZ),
-      mkMesh(
-        new T.BoxGeometry(0.06, 0.06, 0.1),
-        brushedSteelMat,
-        -0.82,
-        1.56,
-        sideZ * 0.82,
-      ),
-      mkMesh(
-        new T.BoxGeometry(0.06, 0.06, 0.1),
-        brushedSteelMat,
-        -0.82,
-        0.94,
-        sideZ * 0.82,
-      ),
+      mkMesh(new T.BoxGeometry(0.06, 0.06, 0.1), brushedSteelMat, -0.82, 1.56, sideZ * 0.82),
+      mkMesh(new T.BoxGeometry(0.06, 0.06, 0.1), brushedSteelMat, -0.82, 0.94, sideZ * 0.82),
     );
   }
 
@@ -255,17 +273,11 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   addBox(0.32, 0.46, 0.08, createMaterial({ color: 0xdfe4e5 }), -2.35, 1.35, -3.8, false);
   addBox(0.16, 0.16, 0.04, btnMat, -2.35, 1.35, -3.85, false);
 
-  addBox(
-    0.55,
-    1.0,
-    1.1,
-    createMaterial({ color: 0xc8cfd1, metalness: 0.5 }),
-    -6.4,
-    0.5,
-    -7.2,
-    true,
-  );
-  addBox(1.8, 0.45, 0.55, createMaterial({ color: 0x7aa6b8 }), -3.2, 0.35, -7.6, true);
+  addBox(0.55, 1.0, 1.1, createMaterial({ color: 0xc8cfd1, metalness: 0.5 }), -6.4, 0.5, -7.2, true);
+  addBox(0.58, 0.04, 1.14, brushedSteelMat, -6.4, 1.02, -7.2, false);
+  addCylinder(0.11, 0.11, 0.92, 10, createMaterial({ color: 0x386694 }), -6.58, 0.46, -6.15);
+  addCylinder(0.04, 0.04, 0.12, 8, brushedSteelMat, -6.58, 0.96, -6.15);
+  buildParkBench(ctx, -2.9, 0, -7.6, -Math.PI / 2, true);
 
   const deskGroup = new T.Group();
   deskGroup.position.set(-4.5, 0, -10.58);
@@ -295,35 +307,31 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
 
   deskGroup.add(
     mkMesh(new T.BoxGeometry(1.72, 0.06, 0.8), deskTopMat, 0, 0.75, 0, true, true),
-
     mkMesh(new T.BoxGeometry(0.05, 0.72, 0.05), blackSteelMat, -0.8, 0.36, -0.34, true, false),
     mkMesh(new T.BoxGeometry(0.05, 0.72, 0.05), blackSteelMat, -0.8, 0.36, 0.34, true, false),
     mkMesh(new T.BoxGeometry(0.05, 0.04, 0.72), blackSteelMat, -0.8, 0.02, 0, false, false),
-
     mkMesh(new T.BoxGeometry(0.05, 0.72, 0.05), blackSteelMat, 0.8, 0.36, -0.34, true, false),
     mkMesh(new T.BoxGeometry(0.05, 0.72, 0.05), blackSteelMat, 0.8, 0.36, 0.34, true, false),
     mkMesh(new T.BoxGeometry(0.05, 0.04, 0.72), blackSteelMat, 0.8, 0.02, 0, false, false),
     mkMesh(new T.BoxGeometry(1.58, 0.14, 0.03), blackSteelMat, 0, 0.62, -0.34, false, false),
-
     mkMesh(new T.BoxGeometry(0.42, 0.66, 0.68), pcChassisMat, 0.55, 0.35, 0.01, true, true),
     mkMesh(new T.BoxGeometry(0.16, 0.02, 0.025), brushedSteelMat, 0.55, 0.58, 0.36, false, false),
     mkMesh(new T.BoxGeometry(0.16, 0.02, 0.025), brushedSteelMat, 0.55, 0.37, 0.36, false, false),
     mkMesh(new T.BoxGeometry(0.16, 0.02, 0.025), brushedSteelMat, 0.55, 0.16, 0.36, false, false),
-
     mkMesh(new T.BoxGeometry(0.84, 0.006, 0.36), deskMatFabric, -0.14, 0.783, 0.14, false, true),
+    mkMesh(new T.CylinderGeometry(0.038, 0.038, 0.095, 10), createMaterial({ color: 0x332b42 }), -0.68, 0.825, 0.15, false, false),
+    mkMesh(new T.BoxGeometry(0.03, 0.22, 0.03), blackSteelMat, -0.68, 0.89, -0.18, false, false),
+    mkMesh(new T.TorusGeometry(0.075, 0.018, 6, 16, Math.PI), blackSteelMat, -0.68, 1.0, -0.18, false, false),
   );
 
   const towerX = 0.58;
   const towerZ = -0.05;
   deskGroup.add(
-
     mkMesh(new T.BoxGeometry(0.04, 0.02, 0.04), rubberSealMat, towerX - 0.08, 0.79, towerZ - 0.17),
     mkMesh(new T.BoxGeometry(0.04, 0.02, 0.04), rubberSealMat, towerX + 0.08, 0.79, towerZ - 0.17),
     mkMesh(new T.BoxGeometry(0.04, 0.02, 0.04), rubberSealMat, towerX - 0.08, 0.79, towerZ + 0.17),
     mkMesh(new T.BoxGeometry(0.04, 0.02, 0.04), rubberSealMat, towerX + 0.08, 0.79, towerZ + 0.17),
-
     mkMesh(new T.BoxGeometry(0.22, 0.45, 0.44), pcChassisMat, towerX, 1.025, towerZ, true, true),
-
     mkMesh(new T.BoxGeometry(0.2, 0.41, 0.02), pcMatteBlack, towerX, 1.025, towerZ + 0.225),
     mkMesh(
       new T.TorusGeometry(0.048, 0.006, 8, 18),
@@ -344,7 +352,6 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
       false,
     ),
     mkMesh(new T.BoxGeometry(0.032, 0.008, 0.012), cyanLedMat, towerX - 0.05, 1.254, towerZ + 0.18),
-
     mkMesh(new T.BoxGeometry(0.012, 0.37, 0.36), pcGlassMat, towerX - 0.112, 1.03, towerZ),
     mkMesh(new T.BoxGeometry(0.02, 0.024, 0.22), cyanLedMat, towerX - 0.095, 0.99, towerZ - 0.02),
   );
@@ -455,11 +462,9 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   scene.add(chairGroup);
   const chairFabricMat = createMaterial({ color: 0x22262c, roughness: 0.82 });
   chairGroup.add(
-
     mkMesh(new T.CylinderGeometry(0.035, 0.035, 0.42, 8), blackSteelMat, 0, 0.24, 0),
     mkMesh(new T.BoxGeometry(0.52, 0.035, 0.045), blackSteelMat, 0, 0.055, 0),
     mkMesh(new T.BoxGeometry(0.045, 0.035, 0.52), blackSteelMat, 0, 0.055, 0),
-
     mkMesh(new T.BoxGeometry(0.48, 0.07, 0.46), chairFabricMat, 0, 0.46, 0, true, true),
     mkMesh(new T.BoxGeometry(0.46, 0.52, 0.06), chairFabricMat, 0, 0.76, 0.21, true, true),
     mkMesh(new T.BoxGeometry(0.05, 0.2, 0.3), blackSteelMat, -0.25, 0.58, 0.02),
@@ -476,6 +481,7 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
     active: true,
   });
 
+  addBox(2.42, 3.16, 0.22, doorFrameMat, 4.7, 1.58, -14.34, false);
   addBox(
     2.2,
     3.0,
@@ -486,12 +492,13 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
     -14.3,
     true,
   );
+  addBox(0.24, 0.05, 0.08, brushedSteelMat, 3.9, 1.25, -14.2, false);
   addSign(
     2.0,
     0.85,
     tex.sign('候机连廊 · 通往机场', '#e4edf0', '#22343d', '往前出航站楼'),
     4.7,
-    3.15,
+    3.24,
     -14.22,
   );
 

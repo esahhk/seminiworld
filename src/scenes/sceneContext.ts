@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from 'three/webgpu';
 import type { SoundFX } from '../audio/soundFx';
 import type { TexCache } from '../engine/texCache';
 import type {
@@ -13,6 +13,12 @@ import type {
   SharedGameState,
   SurfaceType,
 } from '../types/game';
+
+export interface RoadSpawnCandidate {
+  x: number;
+  z: number;
+  yaw: number;
+}
 
 export interface SceneContext {
   T: typeof THREE;
@@ -107,8 +113,10 @@ export interface SceneContext {
   activeIntervals: number[];
   updaters: ((dt: number, t: number) => void)[];
   colliders: Collider[];
+  roadCenters: RoadSpawnCandidate[];
   sceneIdxById: (id: SceneId) => number;
   loadScene: (idx: number) => void;
+  enterCityHub: (focusSceneId?: SceneId) => void;
   showWhisper: (txt: string, dur?: number) => void;
   openModal: (
     title: string,

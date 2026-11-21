@@ -1,5 +1,7 @@
 import type { SceneContext } from './sceneContext';
 import type { SceneInitResult } from '../types/game';
+import { addInstancedMeshes } from '../engine/propKit';
+import type { InstanceTransform } from '../engine/propKit';
 
 export function buildWaterparkScene(ctx: SceneContext): SceneInitResult {
   const {
@@ -10,6 +12,7 @@ export function buildWaterparkScene(ctx: SceneContext): SceneInitResult {
     sfx,
     V,
     track,
+    mkMesh,
     addMesh,
     addBox,
     addCylinder,
@@ -36,26 +39,37 @@ export function buildWaterparkScene(ctx: SceneContext): SceneInitResult {
   upperLight.position.set(2, 9.4, 6);
   scene.add(upperLight);
 
+  const bump = tex.bumpNoise('wp_b', 16);
   const tileMat = createMaterial({
     map: tex.tiles('#d8ecee', '#c6e2e6', '#9ac3c9', 6, 'wp_f'),
-    roughness: 0.25,
+    bumpMap: bump,
+    bumpScale: 0.004,
+    roughness: 0.24,
   });
   addBox(26, 0.2, 24, tileMat, 0, -0.1, 0, true, false, true);
   addBox(26, 0.3, 24, createMaterial({ color: 0xebf4f5 }), 0, 11.5, 0, false);
-  const rimMat = createMaterial({ color: 0xe6f2f4, roughness: 0.35 });
+
+  for (const ax of [-8, 0, 8]) {
+    addBox(0.32, 0.45, 23.6, createMaterial({ color: 0xd0e6ea }), ax, 11.15, 0, false);
+  }
+
+  const rimMat = createMaterial({ color: 0xe6f2f4, roughness: 0.32 });
   addBox(12.2, 0.56, 0.3, rimMat, 0, 0.28, -9.85, false, true, true);
   addBox(12.2, 0.56, 0.3, rimMat, 0, 0.28, -1.15, false, true, true);
   addBox(0.3, 0.56, 8.9, rimMat, -6.05, 0.28, -5.5, false, true, true);
   addBox(0.3, 0.56, 8.9, rimMat, 6.05, 0.28, -5.5, false, true, true);
   addBox(12, 0.24, 8.6, createMaterial({ color: 0x3f8fa6 }), 0, 0.0, -5.5, false);
+
+  const waterTex = tex.waterSurface();
   const waterMesh = addMesh(
     new T.PlaneGeometry(11.8, 8.4),
     createMaterial({
-      color: 0x3fc5d9,
+      color: 0x4ad5eb,
+      map: waterTex,
       transparent: true,
       opacity: 0.72,
-      roughness: 0.12,
-      metalness: 0.15,
+      roughness: 0.1,
+      metalness: 0.18,
     }),
     0,
     0.46,
@@ -64,51 +78,59 @@ export function buildWaterparkScene(ctx: SceneContext): SceneInitResult {
     false,
   );
   waterMesh.rotation.x = -Math.PI / 2;
-  const hoopStandMat = createMaterial({ color: 0xc8d8de, metalness: 0.6, roughness: 0.3 });
+
+  const hoopStandMat = createMaterial({ color: 0xc8d8de, metalness: 0.65, roughness: 0.28 });
   addCylinder(0.055, 0.065, 1.02, 10, hoopStandMat, 0, 0.51, -5.5, false);
   addCylinder(0.24, 0.28, 0.12, 12, hoopStandMat, 0, 0.14, -5.5, false);
-  addMesh(
-    new T.TorusGeometry(0.65, 0.08, 10, 20),
-    createMaterial({ color: 0xf0924b }),
-    0,
-    1.65,
-    -5.5,
-  );
-  const dolphin = addMesh(
-    new T.SphereGeometry(0.45, 12, 10),
-    createMaterial({ color: 0x577b96, roughness: 0.3 }),
-    -2,
-    0.3,
-    -5.5,
-  );
-  dolphin.scale.set(0.8, 0.7, 1.9);
+  addMesh(new T.TorusGeometry(0.65, 0.08, 10, 20), createMaterial({ color: 0xf0924b }), 0, 1.65, -5.5);
+
+  for (const lx of [-5.2, 5.2]) {
+    addBox(0.05, 0.85, 0.32, hoopStandMat, lx, 0.45, -1.25, false);
+    addBox(0.05, 0.85, 0.32, hoopStandMat, lx, 0.45, -1.55, false);
+  }
+
+  const dolphin = new T.Group();
+  dolphin.position.set(-2, 0.3, -5.5);
+  const dolMat = createMaterial({ color: 0x577b96, roughness: 0.25, metalness: 0.15 });
+  const dolBelly = createMaterial({ color: 0xd0e2eb, roughness: 0.3 });
+  const dBody = mkMesh(new T.SphereGeometry(0.38, 12, 10), dolMat, 0, 0, 0);
+  dBody.scale.set(0.82, 0.75, 2.05);
+  const dSnout = mkMesh(new T.ConeGeometry(0.14, 0.46, 10), dolMat, 0, -0.04, 0.85);
+  dSnout.rotation.x = Math.PI / 2;
+  const dFin = mkMesh(new T.BoxGeometry(0.06, 0.36, 0.26), dolMat, 0, 0.28, -0.05);
+  dFin.rotation.x = -0.35;
+  const dTail = mkMesh(new T.BoxGeometry(0.66, 0.06, 0.28), dolMat, 0, 0.04, -0.92);
+  const dUnderside = mkMesh(new T.SphereGeometry(0.28, 10, 8), dolBelly, 0, -0.1, 0.05);
+  dUnderside.scale.set(0.76, 0.55, 1.6);
+  dolphin.add(dBody, dSnout, dFin, dTail, dUnderside);
+  scene.add(dolphin);
+
+  function addParasolAndChair(cx: number, yBase: number, cz: number, colHex: number) {
+    addCylinder(0.16, 0.2, 0.06, 10, hoopStandMat, cx, yBase + 0.03, cz);
+    addCylinder(0.04, 0.04, 2.25, 8, createMaterial({ color: 0xf7f5f0 }), cx, yBase + 1.15, cz);
+    addCylinder(0.12, 1.05, 0.42, 12, createMaterial({ color: colHex, roughness: 0.55 }), cx, yBase + 2.38, cz);
+    addBox(0.62, 0.12, 1.45, createMaterial({ color: 0xf7f5f0, roughness: 0.75 }), cx + 0.75, yBase + 0.28, cz, false);
+    addBox(0.62, 0.1, 0.52, createMaterial({ color: colHex, roughness: 0.75 }), cx + 0.75, yBase + 0.44, cz - 0.55, false).rotation.x = 0.55;
+  }
 
   for (const [cx, cz, col] of [
     [-4.5, 0.6, 0xf07f99],
     [4.5, 0.6, 0xf2c95c],
     [8.6, 0.4, 0x9b7be0],
   ]) {
-    addCylinder(0.1, 0.1, 2.2, 8, createMaterial({ color: 0xf7f5f0 }), cx, 1.1, cz);
-    addCylinder(
-      0.65,
-      0.65,
-      0.22,
-      16,
-      createMaterial({ color: col, roughness: 0.35 }),
-      cx,
-      2.35,
-      cz,
-    ).rotation.x = Math.PI / 2;
+    addParasolAndChair(cx, 0, cz, col);
   }
+
+  addCylinder(0.03, 0.03, 1.85, 6, hoopStandMat, -6.55, 0.92, -5.8, false);
+  addCylinder(0.03, 0.03, 1.85, 6, hoopStandMat, -6.55, 0.92, -5.0, false);
+  addBox(0.55, 0.08, 0.9, createMaterial({ color: 0xffffff }), -6.55, 1.75, -5.4, false);
+  addMesh(new T.TorusGeometry(0.28, 0.06, 8, 16), createMaterial({ color: 0xe34b3b }), -6.52, 1.15, -4.95, false, false).rotation.y = Math.PI / 2;
+
   addBox(
     2.2,
     0.3,
     2.2,
-    createMaterial({
-      color: 0x4bb2c9,
-      emissive: 0x1b6678,
-      emissiveIntensity: 0.5,
-    }),
+    createMaterial({ color: 0x4bb2c9, emissive: 0x1b6678, emissiveIntensity: 0.5 }),
     -7.5,
     0.15,
     -1.5,
@@ -116,30 +138,24 @@ export function buildWaterparkScene(ctx: SceneContext): SceneInitResult {
   );
   const portalRing = addMesh(
     new T.TorusGeometry(1.1, 0.12, 10, 24),
-    createMaterial({
-      color: 0x7ee8f5,
-      emissive: 0x2da3b8,
-      emissiveIntensity: 0.6,
-    }),
+    createMaterial({ color: 0x7ee8f5, emissive: 0x2da3b8, emissiveIntensity: 0.6 }),
     -7.5,
     1.5,
     -1.5,
   );
+
   addBox(4.0, 1.9, 4.0, createMaterial({ color: 0xe8dfe6 }), 7.5, 0.95, -2.5, true, true, true);
   addBox(
     2.2,
     0.25,
     2.2,
-    createMaterial({
-      color: 0xf285a2,
-      emissive: 0x78233c,
-      emissiveIntensity: 0.5,
-    }),
+    createMaterial({ color: 0xf285a2, emissive: 0x78233c, emissiveIntensity: 0.5 }),
     7.5,
     2.0,
     -2.5,
     false,
   );
+  addBox(1.8, 0.72, 0.52, createMaterial({ color: 0xf7b2c6, roughness: 0.45 }), 7.6, 2.26, -0.95, false);
   addCylinder(0.5, 0.5, 0.35, 12, createMaterial({ color: 0xf7b2c6 }), 8.7, 2.15, -1.4);
 
   const cylX = -8.0;
@@ -175,17 +191,11 @@ export function buildWaterparkScene(ctx: SceneContext): SceneInitResult {
       false,
     );
   }
+  const ringItems: InstanceTransform[] = [];
   for (let r = 0; r < 5; r++) {
-    addMesh(
-      new T.TorusGeometry(2.08, 0.05, 8, 24),
-      createMaterial({ color: 0xd9f2f7 }),
-      cylX,
-      1.1 + r * 1.25,
-      cylZ,
-      false,
-      false,
-    ).rotation.x = Math.PI / 2;
+    ringItems.push({ x: cylX, y: 1.1 + r * 1.25, z: cylZ, rx: Math.PI / 2 });
   }
+  addInstancedMeshes(ctx, new T.TorusGeometry(2.08, 0.05, 8, 24), createMaterial({ color: 0xd9f2f7 }), ringItems, false, false);
 
   interface CylPlate {
     m: ReturnType<typeof addMesh>;
@@ -252,6 +262,7 @@ export function buildWaterparkScene(ctx: SceneContext): SceneInitResult {
     new T.PlaneGeometry(9.0, 5.2),
     createMaterial({
       color: 0x4ad5eb,
+      map: waterTex,
       transparent: true,
       opacity: 0.72,
       roughness: 0.1,
@@ -263,40 +274,15 @@ export function buildWaterparkScene(ctx: SceneContext): SceneInitResult {
     false,
   );
   upperWater.rotation.x = -Math.PI / 2;
-  addMesh(
-    new T.TorusGeometry(0.55, 0.16, 10, 20),
-    createMaterial({ color: 0xf27d9b }),
-    2.0,
-    5.76,
-    5.6,
-    false,
-    false,
-  ).rotation.x = Math.PI / 2;
-  addMesh(
-    new T.TorusGeometry(0.5, 0.15, 10, 20),
-    createMaterial({ color: 0xf2cf5c }),
-    4.6,
-    5.76,
-    6.8,
-    false,
-    false,
-  ).rotation.x = Math.PI / 2;
+  addMesh(new T.TorusGeometry(0.55, 0.16, 10, 20), createMaterial({ color: 0xf27d9b }), 2.0, 5.76, 5.6, false, false).rotation.x = Math.PI / 2;
+  addMesh(new T.TorusGeometry(0.5, 0.15, 10, 20), createMaterial({ color: 0xf2cf5c }), 4.6, 5.76, 6.8, false, false).rotation.x = Math.PI / 2;
+
   for (const [cx, cz, col] of [
     [-4.2, 8.8, 0xf287a4],
     [9.8, 8.5, 0x89dbad],
     [-2.5, 3.2, 0xb18ce8],
   ]) {
-    addCylinder(0.12, 0.12, 2.4, 8, createMaterial({ color: 0xfaf7f2 }), cx, 6.6, cz);
-    addCylinder(
-      0.72,
-      0.72,
-      0.24,
-      16,
-      createMaterial({ color: col, roughness: 0.35 }),
-      cx,
-      7.9,
-      cz,
-    ).rotation.x = Math.PI / 2;
+    addParasolAndChair(cx, 5.4, cz, col);
   }
   addSign(
     2.4,

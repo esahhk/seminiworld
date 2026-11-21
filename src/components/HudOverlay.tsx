@@ -1,10 +1,12 @@
 import type { RefObject } from 'react';
 import { SCENES_META } from '../data/scenesMeta';
-import type { PanelId } from '../types/game';
+import type { PanelId, VehicleHudState } from '../types/game';
 
 interface HudOverlayProps {
   sceneIdx: number;
   sceneName: string;
+  inCity: boolean;
+  vehicle: VehicleHudState;
   whisperText: string;
   whisperVisible: boolean;
   collectedCount: number;
@@ -16,6 +18,10 @@ interface HudOverlayProps {
   minimapRef: RefObject<HTMLCanvasElement | null>;
   onPrevScene: () => void;
   onNextScene: () => void;
+  onEnterCity: () => void;
+  onSummonTruck: () => void;
+  onToggleDrive: () => void;
+  onHonkTruck: () => void;
   onTogglePanel: (panel: Exclude<PanelId, null>) => void;
   onReset: () => void;
   onToggleImmersive: () => void;
@@ -25,6 +31,8 @@ interface HudOverlayProps {
 export function HudOverlay({
   sceneIdx,
   sceneName,
+  inCity,
+  vehicle,
   whisperText,
   whisperVisible,
   collectedCount,
@@ -36,6 +44,10 @@ export function HudOverlay({
   minimapRef,
   onPrevScene,
   onNextScene,
+  onEnterCity,
+  onSummonTruck,
+  onToggleDrive,
+  onHonkTruck,
   onTogglePanel,
   onReset,
   onToggleImmersive,
@@ -50,9 +62,13 @@ export function HudOverlay({
         <div className="top-left">
           <div className="scene-badge">
             <span className="scene-idx" id="ui-idx">
-              {isHiddenScene ? '??/??' : `${String(sceneIdx + 1).padStart(2, '0')}/${visibleTotal}`}
+              {inCity
+                ? 'CITY'
+                : isHiddenScene
+                  ? '??/??'
+                  : `${String(sceneIdx + 1).padStart(2, '0')}/${visibleTotal}`}
             </span>
-            <span id="ui-name">{sceneName}</span>
+            <span id="ui-name">{inCity ? '微缩城市' : sceneName}</span>
           </div>
           <div className={`whisper${whisperVisible ? ' show' : ''}`} id="ui-whisper">
             {whisperText}
@@ -82,12 +98,12 @@ export function HudOverlay({
           </button>
           <button
             type="button"
-            className={`btn btn-world${activePanel === 'scenes' ? ' active' : ''}`}
+            className={`btn btn-world${inCity ? ' active' : ''}`}
             id="btn-scenes"
-            onClick={() => onTogglePanel('scenes')}
+            onClick={onEnterCity}
           >
             <span className="world-dot" aria-hidden="true" />
-            切换世界
+            {inCity ? '返回现场' : '切换世界'}
           </button>
           <button
             type="button"
@@ -148,8 +164,58 @@ export function HudOverlay({
           </div>
         )}
 
+        {inCity && (
+          <div id="city-dock">
+            <button
+              type="button"
+              className="btn dock-btn"
+              id="btn-summon-truck"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSummonTruck();
+              }}
+            >
+              {vehicle.summoned ? '重新召唤卡车 [G]' : '召唤厢式卡车 [G]'}
+            </button>
+            <button
+              type="button"
+              className={`btn dock-btn${vehicle.driving ? ' active' : ''}`}
+              id="btn-drive-truck"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleDrive();
+              }}
+            >
+              {vehicle.driving ? '下车 [E]' : '驾驶卡车 [E]'}
+            </button>
+            {vehicle.summoned && (
+              <button
+                type="button"
+                className="btn dock-btn"
+                id="btn-horn-truck"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onHonkTruck();
+                }}
+              >
+                鸣笛 [H]
+              </button>
+            )}
+            {vehicle.driving && (
+              <div className="speed-pill" id="truck-speed">
+                <span className="gear-tag">{vehicle.gear}</span>
+                <span>{vehicle.speedKmh} km/h</span>
+              </div>
+            )}
+          </div>
+        )}
+
         <div id="subbar">
-          WASD 移动 · Shift 加速 · 空格跳跃 · 鼠标环视 · E 互动 · F 沉浸 · [ ] 切景
+          {vehicle.driving
+            ? 'W/S 油门倒车 · A/D 转向 · 空格手刹 · H 鸣笛 · E 下车 · 拖动环视'
+            : inCity
+              ? 'WASD 移动 · G 召唤厢式卡车 · E 进建筑或上车 · F 沉浸 · [ ] 切景'
+              : 'WASD 移动 · Shift 加速 · 空格跳跃 · 鼠标环视 · E 互动 · F 沉浸 · [ ] 切景'}
         </div>
       </div>
 

@@ -1,5 +1,7 @@
 import type { SceneContext } from './sceneContext';
 import type { SceneInitResult } from '../types/game';
+import { addInstancedMeshes, buildOfficeChair, buildPottedPlant } from '../engine/propKit';
+import type { InstanceTransform } from '../engine/propKit';
 
 export function buildOfficeScene(ctx: SceneContext): SceneInitResult {
   const {
@@ -30,24 +32,30 @@ export function buildOfficeScene(ctx: SceneContext): SceneInitResult {
   } = ctx;
 
   scene.background = new T.Color(0xc2d0dc);
-  scene.fog = new T.Fog(0xc2d0dc, 18, 68);
-  scene.add(new T.HemisphereLight(0xeef4fa, 0x737980, 0.9));
-  const flLight = new T.PointLight(0xeef6ff, 0.9, 22);
-  flLight.position.set(0, 3.6, 0);
+  scene.fog = new T.Fog(0xc2d0dc, 18, 74);
+  scene.add(new T.HemisphereLight(0xeef4fa, 0x737980, 0.92));
+
+  const flLight = new T.PointLight(0xeef6ff, 0.95, 22);
+  flLight.position.set(0, 3.55, 0);
   scene.add(flLight);
-  const deskLamp = new T.PointLight(0xffd296, 0.95, 7);
-  deskLamp.position.set(-3.2, 1.6, -2.5);
+
+  const deskLamp = new T.PointLight(0xffd296, 1.0, 7);
+  deskLamp.position.set(-3.15, 1.55, -2.55);
   scene.add(deskLamp);
-  const winSun = new T.DirectionalLight(0xfff5e4, 0.35);
-  winSun.position.set(16, 9, 2);
+
+  const winSun = new T.DirectionalLight(0xfff5e4, 0.55);
+  winSun.position.set(16, 10, 3);
+  winSun.castShadow = true;
   scene.add(winSun);
+
+  const bump = tex.bumpNoise('off_b', 28);
   const carpetTex = tex.tiles('#525c66', '#4b555f', '#3f4852', 6, 'off_fl');
   carpetTex.repeat.set(3, 3);
   addBox(
     14,
     0.2,
     12,
-    createMaterial({ map: carpetTex, roughness: 0.95 }),
+    createMaterial({ map: carpetTex, bumpMap: bump, bumpScale: 0.012, roughness: 0.94 }),
     0,
     -0.1,
     0,
@@ -55,74 +63,64 @@ export function buildOfficeScene(ctx: SceneContext): SceneInitResult {
     false,
     true,
   );
-  addBox(
-    14,
-    0.2,
-    12,
-    createMaterial({ color: 0xe5e6e2, roughness: 0.9 }),
-    0,
-    4.1,
-    0,
-    false,
-  );
-  const wallMat = createMaterial({ color: 0xd8d6cf, roughness: 0.9 });
+  addBox(14, 0.2, 12, createMaterial({ color: 0xe5e6e2, roughness: 0.88 }), 0, 4.1, 0, false);
+
+  const trofferFrameMat = createMaterial({ color: 0xc8ccd0, metalness: 0.4, roughness: 0.45 });
+  const trofferGlowMat = createMaterial({
+    color: 0xf7fbff,
+    emissive: 0xdeeeff,
+    emissiveIntensity: 0.85,
+  });
+  for (const tx of [-3.5, 3.5]) {
+    for (const tz of [-3.2, 0, 3.2]) {
+      addBox(1.5, 0.05, 0.72, trofferFrameMat, tx, 3.98, tz, false, false, false);
+      addBox(1.36, 0.03, 0.58, trofferGlowMat, tx, 3.96, tz, false, false, false);
+    }
+  }
+
+  const wallMat = createMaterial({ color: 0xd8d6cf, bumpMap: bump, bumpScale: 0.006, roughness: 0.9 });
+  const dadoMat = createMaterial({ map: tex.wood('#8e6e4c', '#694f34', 'off_dado'), roughness: 0.72 });
+  const baseTrimMat = createMaterial({ color: 0x3b4046, roughness: 0.65 });
+
   addBox(14, 4, 0.25, wallMat, 0, 2, -6, true);
-  addBox(
-    0.25,
-    4,
-    12,
-    createMaterial({ color: 0xd0cec6, roughness: 0.9 }),
-    -7,
-    2,
-    0,
-    true,
-  );
+  addBox(0.25, 4, 12, createMaterial({ color: 0xd0cec6, roughness: 0.9 }), -7, 2, 0, true);
   addBox(14, 4, 0.25, wallMat, 0, 2, 6, true);
+  addBox(13.8, 0.14, 0.04, baseTrimMat, 0, 0.07, -5.86, false);
+  addBox(13.8, 0.14, 0.04, baseTrimMat, 0, 0.07, 5.86, false);
+  addBox(0.04, 0.14, 11.8, baseTrimMat, -6.86, 0.07, 0, false);
+  addBox(13.8, 0.06, 0.06, dadoMat, 0, 1.05, -5.85, false);
+
+  const acousticMat = createMaterial({ color: 0x9aa4ad, roughness: 0.95 });
+  for (const ax of [-4.2, -1.6, 1.6, 4.2]) {
+    addBox(1.9, 1.4, 0.05, acousticMat, ax, 2.25, -5.85, false);
+  }
+
   addBox(0.3, 0.85, 12, wallMat, 7, 0.425, 0, true);
   addBox(0.3, 0.65, 12, wallMat, 7, 3.675, 0, true);
   addBox(0.3, 2.5, 2.2, wallMat, 7, 2.1, -4.9, true);
   addBox(0.3, 2.5, 2.2, wallMat, 7, 2.1, 4.9, true);
-  addBox(
-    0.42,
-    0.08,
-    7.8,
-    createMaterial({ color: 0xc2bcb0, roughness: 0.5 }),
-    6.95,
-    0.88,
-    0,
-    false,
-  );
+  addBox(0.46, 0.08, 7.8, createMaterial({ color: 0xc2bcb0, roughness: 0.45 }), 6.95, 0.88, 0, false);
   addBox(
     0.04,
     2.5,
     7.6,
-    createMaterial({
-      color: 0x9ec4d6,
-      transparent: true,
-      opacity: 0.26,
-      roughness: 0.1,
-    }),
+    createMaterial({ color: 0x9ec4d6, transparent: true, opacity: 0.26, roughness: 0.08 }),
     7.06,
     2.1,
     0,
     true,
   );
   for (const mz of [-3.8, -1.26, 1.26, 3.8]) {
-    addBox(
-      0.08,
-      2.5,
-      0.06,
-      createMaterial({ color: 0x454a50, metalness: 0.4 }),
-      7.02,
-      2.1,
-      mz,
-      false,
-    );
+    addBox(0.1, 2.5, 0.07, createMaterial({ color: 0x454a50, metalness: 0.45 }), 7.02, 2.1, mz, false);
   }
+
+  addBox(1.2, 0.34, 0.24, createMaterial({ color: 0xedece6, roughness: 0.4 }), -2.6, 3.55, -5.76, false);
+  addBox(1.1, 0.04, 0.08, createMaterial({ color: 0x2c3035 }), -2.6, 3.41, -5.7, false);
+
   addBox(
-    40,
+    44,
     0.2,
-    60,
+    64,
     createMaterial({ color: 0x7c8791, roughness: 0.95 }),
     27,
     -14,
@@ -131,17 +129,21 @@ export function buildOfficeScene(ctx: SceneContext): SceneInitResult {
     false,
     false,
   );
-  for (const [bx, bz, bh, col] of [
-    [24, -10, 24, 0x87939e],
-    [26, 4, 28, 0x77838e],
-    [32, -3, 32, 0x95a1ab],
-    [22, 14, 20, 0x808c96],
-  ]) {
+  const skySpecs: [number, number, number, number, string][] = [
+    [24, -10, 26, 0x87939e, '#727f8a'],
+    [26, 4, 30, 0x77838e, '#65717d'],
+    [33, -3, 34, 0x95a1ab, '#7f8c96'],
+    [23, 14, 22, 0x808c96, '#6d7882'],
+    [36, 13, 28, 0x89949e, '#737f88'],
+  ];
+  for (const [bx, bz, bh, col, hexStr] of skySpecs) {
+    const winTex = tex.facadeWindows(hexStr, '#f0d89e', 'off_sky_' + bx + '_' + bz);
+    winTex.repeat.set(2, 4);
     addBox(
-      7,
+      7.4,
       bh,
-      8,
-      createMaterial({ color: col, roughness: 0.9 }),
+      8.2,
+      createMaterial({ color: col, map: winTex, roughness: 0.6 }),
       bx,
       -8 + bh / 2,
       bz,
@@ -149,112 +151,61 @@ export function buildOfficeScene(ctx: SceneContext): SceneInitResult {
       false,
       false,
     );
-    for (let wy = 0; wy < 6; wy++) {
-      addBox(
-        0.1,
-        0.7,
-        5.2,
-        createMaterial({
-          color: 0xaed0e2,
-          emissive: 0x486275,
-          emissiveIntensity: 0.25,
-        }),
-        bx - 3.52,
-        0.5 + wy * 1.9,
-        bz,
-        false,
-        false,
-        false,
-      );
-    }
-  }
-  const blinds: ReturnType<typeof addMesh>[] = [];
-  const slatMat = createMaterial({ color: 0xeceae0, roughness: 0.65 });
-  const slatGeo = track(new T.BoxGeometry(0.085, 0.012, 2.42));
-  for (const bz of [-2.53, 0, 2.53]) {
     addBox(
-      0.06,
-      0.06,
-      2.46,
-      createMaterial({ color: 0xd0cec4 }),
-      6.82,
-      3.3,
+      7.8,
+      0.35,
+      8.6,
+      createMaterial({ color: 0x5c646c }),
+      bx,
+      -8 + bh + 0.17,
       bz,
       false,
+      false,
+      false,
     );
+  }
+
+  const blinds: ReturnType<typeof addMesh>[] = [];
+  const slatMat = createMaterial({ color: 0xeceae0, roughness: 0.6 });
+  const slatGeo = track(new T.BoxGeometry(0.085, 0.012, 2.42));
+  for (const bz of [-2.53, 0, 2.53]) {
+    addBox(0.07, 0.07, 2.46, createMaterial({ color: 0xd0cec4 }), 6.82, 3.3, bz, false);
     for (let r = 0; r < 18; r++) {
-      const sl = addMesh(
-        slatGeo,
-        slatMat,
-        6.82,
-        0.98 + r * 0.13,
-        bz,
-        false,
-        false,
-      );
+      const sl = addMesh(slatGeo, slatMat, 6.82, 0.98 + r * 0.13, bz, false, false);
       sl.rotation.z = 1.32;
       blinds.push(sl);
     }
   }
-  addCylinder(
-    0.012,
-    0.012,
-    1.5,
-    6,
-    createMaterial({ color: 0xe6e4dc }),
-    6.72,
-    2.35,
-    3.7,
-    false,
-    false,
-  );
+  addCylinder(0.012, 0.012, 1.5, 6, createMaterial({ color: 0xe6e4dc }), 6.72, 2.35, 3.7, false, false);
   let blindOpen = false;
 
-  addBox(
-    1.5,
-    2.7,
-    0.14,
-    createMaterial({ color: 0x6b7075, metalness: 0.35 }),
-    -4.2,
-    1.35,
-    5.84,
-    true,
-  );
+  const doorFrameMat = createMaterial({ color: 0x454a50, metalness: 0.5, roughness: 0.4 });
+  addBox(1.7, 2.84, 0.28, doorFrameMat, -4.2, 1.42, 5.88, false);
+  addBox(1.5, 2.7, 0.14, createMaterial({ color: 0x6b7075, metalness: 0.35 }), -4.2, 1.35, 5.84, true);
+  addBox(0.32, 0.14, 0.06, createMaterial({ color: 0x89b3c4, emissive: 0x355b6b, emissiveIntensity: 0.4 }), -4.2, 2.15, 5.76, false);
+  addBox(0.18, 0.04, 0.06, createMaterial({ color: 0xc8cdd1, metalness: 0.75 }), -3.65, 1.24, 5.76, false);
   addSign(
     1.4,
     0.65,
     tex.sign('下楼 · 汉堡店', '#eae4d6', '#42372c', '一层商场中庭'),
     -4.2,
-    2.95,
+    3.08,
     5.82,
     Math.PI,
   );
 
-  addBox(
-    1.1,
-    1.15,
-    0.65,
-    createMaterial({ map: tex.wood('#7b5838', '#573b22') }),
-    0,
-    0.58,
-    -2.8,
-    true,
-  );
-  addCylinder(
-    0.02,
-    0.02,
-    0.35,
-    8,
-    createMaterial({ color: 0x2c2c2c, metalness: 0.7 }),
-    0,
-    1.32,
-    -2.65,
-  );
+  const lecWood = createMaterial({ map: tex.wood('#7b5838', '#573b22'), roughness: 0.72 });
+  addBox(1.16, 0.08, 0.72, lecWood, 0, 0.04, -2.8, false);
+  addBox(1.06, 1.1, 0.62, lecWood, 0, 0.59, -2.8, true);
+  addBox(1.18, 0.06, 0.74, lecWood, 0, 1.15, -2.8, false);
+  addBox(0.75, 0.35, 0.04, createMaterial({ color: 0x26292d, roughness: 0.85 }), 0, 0.85, -2.48, false);
+  addCylinder(0.06, 0.06, 0.02, 10, createMaterial({ color: 0x2c2c2c, metalness: 0.7 }), 0.25, 1.19, -2.65);
+  addCylinder(0.018, 0.018, 0.35, 8, createMaterial({ color: 0x2c2c2c, metalness: 0.7 }), 0, 1.35, -2.65);
   addMesh(
-    new T.SphereGeometry(0.05, 10, 10),
-    createMaterial({ color: 0x3a3d42, metalness: 0.5 }),
+    new T.SphereGeometry(0.048, 10, 10),
+    createMaterial({ color: 0x3a3d42, metalness: 0.55 }),
     0,
-    1.5,
+    1.53,
     -2.65,
   );
   addSign(
@@ -262,112 +213,84 @@ export function buildOfficeScene(ctx: SceneContext): SceneInitResult {
     0.34,
     tex.sign('发言稿：第三段', '#fbf8ef', '#2b2926', '放慢语速 · 别低头', true),
     0,
-    1.19,
+    1.21,
     -2.8,
     0,
     -Math.PI / 2 - 0.32,
   );
+
+  const deskWood = createMaterial({ map: tex.wood('#9c7852', '#735535'), roughness: 0.62 });
+  const deskSteel = createMaterial({ color: 0x282d33, metalness: 0.55, roughness: 0.4 });
+  addBox(2.24, 0.06, 1.04, deskWood, -3.6, 0.73, -2.5, true);
+  for (const [lx, lz] of [[-4.6, -2.92], [-2.6, -2.92], [-4.6, -2.08], [-2.6, -2.08]]) {
+    addBox(0.06, 0.7, 0.06, deskSteel, lx, 0.35, lz, false);
+  }
+  addBox(0.45, 0.66, 0.88, deskWood, -2.74, 0.35, -2.5, true);
+  addBox(0.76, 0.01, 0.36, createMaterial({ color: 0x22262b, roughness: 0.9 }), -3.9, 0.765, -2.35, false);
+
+  addBox(0.22, 0.02, 0.16, deskSteel, -3.9, 0.77, -2.72, false);
+  addBox(0.05, 0.2, 0.03, deskSteel, -3.9, 0.86, -2.74, false);
+  addBox(0.6, 0.34, 0.03, createMaterial({ color: 0x1e2226 }), -3.9, 1.02, -2.7, false);
   addBox(
-    2.2,
-    0.75,
-    1.0,
-    createMaterial({ map: tex.wood('#9c7852', '#735535') }),
-    -3.6,
-    0.38,
-    -2.5,
-    true,
-  );
-  addCylinder(
-    0.05,
-    0.06,
-    0.12,
-    10,
-    createMaterial({ color: 0xc96f4a }),
-    -3.1,
-    0.82,
-    -2.3,
-  );
-  addBox(
-    0.46,
+    0.56,
     0.3,
-    0.04,
-    createMaterial({ color: 0x2b2e34 }),
+    0.015,
+    createMaterial({ color: 0x263f54, emissive: 0x3b6c8f, emissiveIntensity: 0.45 }),
     -3.9,
-    0.92,
-    -2.65,
+    1.02,
+    -2.68,
     false,
   );
-  addBox(
-    0.32,
-    0.05,
-    0.42,
-    createMaterial({ color: 0xe8dcc2, roughness: 0.8 }),
-    -2.9,
-    0.78,
-    -2.2,
-    false,
-  );
-  addBox(
-    0.95,
-    1.05,
-    0.75,
-    createMaterial({ color: 0xd8d8d4, roughness: 0.5 }),
-    4.8,
-    0.52,
-    -4.6,
-    true,
-  );
-  addCylinder(
-    0.2,
-    0.2,
-    0.45,
-    10,
-    createMaterial({ color: 0x78b2d4, transparent: true, opacity: 0.7 }),
-    -5.8,
-    1.25,
-    -4.8,
-  );
-  addBox(
-    0.55,
-    1.0,
-    0.55,
-    createMaterial({ color: 0xe6e6e2 }),
-    -5.8,
-    0.5,
-    -4.8,
-    true,
-  );
+  addBox(0.36, 0.018, 0.13, deskSteel, -3.9, 0.77, -2.35, false);
+  addBox(0.06, 0.022, 0.1, deskSteel, -3.62, 0.775, -2.34, false);
+
+  addCylinder(0.09, 0.11, 0.025, 12, deskSteel, -3.22, 0.77, -2.74);
+  addCylinder(0.014, 0.014, 0.36, 8, deskSteel, -3.22, 0.95, -2.76);
+  const lampShade = addCylinder(0.07, 0.13, 0.14, 12, createMaterial({ color: 0x3b5848, metalness: 0.3 }), -3.2, 1.15, -2.62);
+  lampShade.rotation.x = 0.4;
+
+  addCylinder(0.05, 0.055, 0.12, 12, createMaterial({ color: 0xc96f4a }), -3.12, 0.82, -2.26);
+  addCylinder(0.044, 0.044, 0.01, 10, createMaterial({ color: 0x3d2415 }), -3.12, 0.88, -2.26);
+  addBox(0.32, 0.05, 0.42, createMaterial({ color: 0xe8dcc2, roughness: 0.8 }), -2.9, 0.785, -2.2, false);
+  addBox(0.28, 0.04, 0.36, createMaterial({ color: 0xc8d2d9 }), -4.3, 0.78, -2.6, false);
+  addBox(0.26, 0.04, 0.34, createMaterial({ color: 0xd9c29c }), -4.3, 0.82, -2.58, false).rotation.y = 0.12;
+  buildOfficeChair(ctx, -3.6, 0, -1.65, 0.15, 0x262d35, true);
+
+  addBox(0.95, 0.82, 0.75, createMaterial({ color: 0xd8d8d4, roughness: 0.5 }), 4.8, 0.41, -4.6, true);
+  addBox(0.86, 0.24, 0.64, createMaterial({ color: 0xe4e6e8, roughness: 0.42 }), 4.8, 0.94, -4.6, false);
+  addBox(0.88, 0.05, 0.66, createMaterial({ color: 0x3a4046 }), 4.8, 1.09, -4.6, false);
+  addBox(0.22, 0.04, 0.14, createMaterial({ color: 0x2a2f34 }), 4.46, 0.98, -4.25, false);
+  addBox(0.04, 0.02, 0.04, createMaterial({ color: 0x54d17a, emissive: 0x28994c, emissiveIntensity: 0.9 }), 4.55, 1.0, -4.22, false);
+
+  addBox(0.55, 1.0, 0.55, createMaterial({ color: 0xe6e6e2, roughness: 0.4 }), -5.8, 0.5, -4.8, true);
+  addCylinder(0.2, 0.2, 0.48, 12, createMaterial({ color: 0x78b2d4, transparent: true, opacity: 0.65 }), -5.8, 1.26, -4.8);
+  addBox(0.04, 0.08, 0.04, createMaterial({ color: 0x386bb0 }), -5.72, 0.94, -4.5, false);
+  addBox(0.04, 0.08, 0.04, createMaterial({ color: 0xc94238 }), -5.88, 0.94, -4.5, false);
+
+  addBox(0.06, 1.32, 2.52, createMaterial({ color: 0x8c969e, metalness: 0.5 }), -6.86, 2.0, -1.5, false);
+  addBox(0.12, 0.04, 2.4, createMaterial({ color: 0x8c969e, metalness: 0.5 }), -6.8, 1.34, -1.5, false);
   addSign(
     2.4,
     1.2,
     tex.sign('周四前借投影线', '#f4f6f8', '#2f4354', '白板便签（擦一半）', true),
-    -6.85,
+    -6.82,
     2.0,
     -1.5,
     Math.PI / 2,
   );
+
   for (let x = -2.5; x <= 2.5; x += 1.6) {
-    addBox(
-      0.55,
-      0.45,
-      0.55,
-      createMaterial({ color: 0x39434d, roughness: 0.85 }),
-      x,
-      0.23,
-      1.8,
-      true,
-    );
-    addBox(
-      0.55,
-      0.55,
-      0.08,
-      createMaterial({ color: 0x39434d, roughness: 0.85 }),
-      x,
-      0.7,
-      2.05,
-      true,
-    );
+    buildOfficeChair(ctx, x, 0, 1.85, Math.PI, 0x35404b, true);
   }
+  const cupItems: InstanceTransform[] = [
+    { x: -5.8, y: 0.85, z: -4.45, color: 0xf4f4ee },
+    { x: -5.8, y: 0.89, z: -4.45, color: 0xf4f4ee },
+  ];
+  addInstancedMeshes(ctx, new T.CylinderGeometry(0.032, 0.026, 0.08, 8), createMaterial({ roughness: 0.5 }), cupItems, false, false);
+
+  buildPottedPlant(ctx, -6.1, 0, 4.9, 1.1, 0x8c563a);
+  buildPottedPlant(ctx, 6.0, 0, -5.0, 1.05, 0x6e7378);
+
   const scripts = [
     '「谢谢各位今天来捧场。前头那张旧PPT我昨晚刚改过一次，字体调大了点……」\n（纸页边角被手指搓毛了）',
     '「……新版本的动线和老版本其实差别不大，最容易卡壳的是交接那十来分钟，大家现场对照手头纸面就行。」\n（旁边拿铅笔画了颗五角星）',
@@ -425,8 +348,8 @@ export function buildOfficeScene(ctx: SceneContext): SceneInitResult {
       blinds.forEach((b) => {
         b.rotation.z = blindOpen ? 0.05 : 1.32;
       });
-      flLight.intensity = blindOpen ? 1.25 : 0.9;
-      winSun.intensity = blindOpen ? 1.05 : 0.35;
+      flLight.intensity = blindOpen ? 1.25 : 0.95;
+      winSun.intensity = blindOpen ? 1.1 : 0.55;
       sfx.play('switch');
       showWhisper(
         blindOpen
@@ -436,7 +359,7 @@ export function buildOfficeScene(ctx: SceneContext): SceneInitResult {
     },
   );
   addInteract('off_lamp', V(-3.2, 0.9, -2.5), '开关办公桌台灯', '冷暖光切换', () => {
-    deskLamp.intensity = deskLamp.intensity > 0 ? 0 : 0.95;
+    deskLamp.intensity = deskLamp.intensity > 0 ? 0 : 1.0;
     sfx.play('switch');
     showWhisper(
       deskLamp.intensity > 0

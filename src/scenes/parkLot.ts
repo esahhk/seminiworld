@@ -1,5 +1,11 @@
 import type { SceneContext } from './sceneContext';
 import type { SceneInitResult } from '../types/game';
+import {
+  addInstancedMeshes,
+  buildCamphorTree,
+  buildParkBench,
+  buildSedanCar,
+} from '../engine/propKit';
 
 export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
   const {
@@ -32,7 +38,7 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
   } = ctx;
 
   scene.background = new T.Color(0xc5dec9);
-  scene.fog = new T.Fog(0xc5dec9, 22, 68);
+  scene.fog = new T.Fog(0xc5dec9, 22, 72);
   scene.add(new T.HemisphereLight(0xf2faec, 0x49613f, 0.95));
   const sun = new T.DirectionalLight(0xfff4d4, 1.15);
   sun.position.set(16, 24, 10);
@@ -40,9 +46,9 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
   scene.add(sun);
 
   addBox(
-    34,
+    36,
     0.2,
-    34,
+    36,
     createMaterial({
       map: tex.grass('#4c733a', '#37592a'),
     }),
@@ -59,6 +65,8 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
     20,
     createMaterial({
       map: tex.concrete('#696e6b', 0.2, 'lot_asp'),
+      bumpMap: tex.bumpNoise('lot_b', 22),
+      bumpScale: 0.015,
     }),
     0,
     0.02,
@@ -67,12 +75,23 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
     false,
     true,
   );
+  const curbMat = createMaterial({ color: 0xa2a7a1, roughness: 0.85 });
+  addBox(0.24, 0.16, 20.2, curbMat, -7.1, 0.08, 0, false);
+  addBox(0.24, 0.16, 20.2, curbMat, 7.1, 0.08, 0, false);
+
+  const lineMat = createMaterial({ color: 0xe3e6de, roughness: 0.8 });
+  const wheelStopMat = createMaterial({ map: tex.hazard('pk_stop'), roughness: 0.7 });
   for (let z = -6; z <= 6; z += 3) {
-    addBox(3.6, 0.03, 0.08, createMaterial({ color: 0xdde0d8 }), -5, 0.075, z, false);
-    addBox(3.6, 0.03, 0.08, createMaterial({ color: 0xdde0d8 }), 5, 0.075, z, false);
+    addBox(3.6, 0.03, 0.08, lineMat, -5, 0.075, z, false);
+    addBox(3.6, 0.03, 0.08, lineMat, 5, 0.075, z, false);
+  }
+  for (const sx of [-6.4, 6.4]) {
+    for (const sz of [-4.5, -1.5, 1.5, 4.5]) {
+      addBox(0.18, 0.12, 1.55, wheelStopMat, sx, 0.1, sz, false);
+    }
   }
 
-  const canopies: { m: ReturnType<typeof addMesh>; p: number }[] = [];
+  const canopies: { m: ReturnType<typeof buildCamphorTree>; p: number }[] = [];
   (
     [
       [-9, -8],
@@ -89,70 +108,49 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
       [12, 6],
     ] as [number, number][]
   ).forEach(([tx, tz], i) => {
-    addCylinder(
-      0.28,
-      0.4,
-      4.4,
-      8,
-      createMaterial({ map: tex.wood('#634b35', '#473524') }),
-      tx,
-      2.2,
-      tz,
-      true,
-    );
-    canopies.push({
-      m: addMesh(
-        new T.DodecahedronGeometry(2.7 + (i % 2) * 0.45, 1),
-        createMaterial({ color: i % 2 ? 0x467a3e : 0x558c47, roughness: 0.9 }),
-        tx,
-        4.8,
-        tz,
-        true,
-      ),
-      p: i,
-    });
+    const grp = buildCamphorTree(ctx, tx, 0, tz, 0.95 + (i % 3) * 0.1, false);
+    canopies.push({ m: grp, p: i });
   });
 
-  const stemGeo = track(new T.CylinderGeometry(0.03, 0.04, 1.4, 5));
-  const bigHeadGeo = track(new T.DodecahedronGeometry(0.28, 0));
-  const bushGeo = track(new T.DodecahedronGeometry(0.8, 1));
-  const stemMat = createMaterial({ color: 0x3f6e33, roughness: 0.9 });
-  const bushMats = [
-    createMaterial({ color: 0x3b6931, roughness: 0.95 }),
-    createMaterial({ color: 0x4d803e, roughness: 0.95 }),
-    createMaterial({ color: 0x5c8e47, roughness: 0.95 }),
-  ];
-  const bloomMats = [
-    createMaterial({ color: 0xf0ca4d, roughness: 0.65 }),
-    createMaterial({ color: 0xe66f7a, roughness: 0.65 }),
-    createMaterial({ color: 0xf4f0de, roughness: 0.65 }),
-    createMaterial({ color: 0xc27ed9, roughness: 0.65 }),
-    createMaterial({ color: 0xf08c4f, roughness: 0.65 }),
-  ];
+  const bushItems: { x: number; y: number; z: number; sx: number; sy: number; sz: number; color: number }[] = [];
+  const stemItems: { x: number; y: number; z: number; sx: number; sy: number; sz: number }[] = [];
+  const bloomItems: { x: number; y: number; z: number; sx: number; sy: number; sz: number; color: number }[] = [];
+  const bloomColors = [0xf0ca4d, 0xe66f7a, 0xf4f0de, 0xc27ed9, 0xf08c4f];
+  const bushColors = [0x3b6931, 0x4d803e, 0x5c8e47];
+
   for (let i = 0; i < 74; i++) {
     const side = i % 3;
     let fx: number;
     let fz: number;
     if (side === 0) {
-      fx = -7.6 - Math.random() * 6.5;
+      fx = -7.7 - Math.random() * 6.5;
       fz = -11 + Math.random() * 22;
     } else if (side === 1) {
-      fx = 7.6 + Math.random() * 6.5;
+      fx = 7.7 + Math.random() * 6.5;
       fz = -11 + Math.random() * 22;
     } else {
       fx = (Math.random() > 0.5 ? 1 : -1) * (3.2 + Math.random() * 9.5);
       fz = -10.6 - Math.random() * 3.8;
     }
     if (i % 2 === 0) {
-      addMesh(bushGeo, bushMats[i % 3], fx, 0.45, fz, false, true);
+      bushItems.push({ x: fx, y: 0.42, z: fz, sx: 1, sy: 0.85, sz: 1, color: bushColors[i % 3] });
     }
     const hScale = 0.85 + Math.random() * 1.2;
-    const st = addMesh(stemGeo, stemMat, fx, 0.7 * hScale, fz, false, false);
-    st.scale.set(1, hScale, 1);
-    const hd = addMesh(bigHeadGeo, bloomMats[i % 5], fx, 1.42 * hScale, fz, false, false);
+    stemItems.push({ x: fx, y: 0.7 * hScale, z: fz, sx: 1, sy: hScale, sz: 1 });
     const bs = 0.9 + Math.random() * 0.7;
-    hd.scale.set(bs, bs * 0.75, bs);
+    bloomItems.push({
+      x: fx,
+      y: 1.42 * hScale,
+      z: fz,
+      sx: bs,
+      sy: bs * 0.75,
+      sz: bs,
+      color: bloomColors[i % 5],
+    });
   }
+  addInstancedMeshes(ctx, new T.DodecahedronGeometry(0.75, 1), createMaterial({ color: 0xffffff, roughness: 0.94 }), bushItems, false, true);
+  addInstancedMeshes(ctx, new T.CylinderGeometry(0.03, 0.04, 1.4, 5), createMaterial({ color: 0x3f6e33, roughness: 0.9 }), stemItems, false, false);
+  addInstancedMeshes(ctx, new T.DodecahedronGeometry(0.28, 0), createMaterial({ color: 0xffffff, roughness: 0.62 }), bloomItems, false, false);
 
   const tireGeo = track(new T.TorusGeometry(0.275, 0.035, 8, 18));
   const rimGeo = track(new T.TorusGeometry(0.24, 0.012, 6, 18));
@@ -186,7 +184,7 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
     if (len < 0.001) {
       return;
     }
-    const mesh = new T.Mesh(new T.CylinderGeometry(radius, radius, len, 6), mat);
+    const mesh = new T.Mesh(track(new T.CylinderGeometry(radius, radius, len, 6)), mat);
     mesh.position.set((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2, (p1[2] + p2[2]) / 2);
     mesh.quaternion.setFromUnitVectors(
       new T.Vector3(0, 1, 0),
@@ -211,15 +209,7 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
       sp.rotation.z = (s * Math.PI) / 3;
       parent.add(sp);
     }
-    const hub = mkMesh(
-      new T.CylinderGeometry(0.025, 0.025, 0.08, 8),
-      mat,
-      wx,
-      wy,
-      0,
-      false,
-      false,
-    );
+    const hub = mkMesh(new T.CylinderGeometry(0.025, 0.025, 0.08, 8), mat, wx, wy, 0, false, false);
     hub.rotation.x = Math.PI / 2;
     parent.add(hub);
   }
@@ -262,132 +252,55 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
     addTube(pivot, [hb[0], hb[1], -0.038], [fx, wheelY, -0.038], 0.015, fMat);
     addTube(pivot, [hb[0], hb[1], 0.038], [fx, wheelY, 0.038], 0.015, fMat);
 
-    const crank = mkMesh(
-      new T.CylinderGeometry(0.065, 0.065, 0.02, 12),
-      trimMat,
-      bb[0],
-      bb[1],
-      0.04,
-      false,
-      false,
-    );
+    const crank = mkMesh(new T.CylinderGeometry(0.065, 0.065, 0.02, 12), trimMat, bb[0], bb[1], 0.04, false, false);
     crank.rotation.x = Math.PI / 2;
     pivot.add(crank);
 
     const seat = mkMesh(
       new T.BoxGeometry(0.22, 0.055, 0.13),
-      createMaterial({
-        color: opts.bagSeat ? 0xd9e0e6 : 0x2a2623,
-        roughness: opts.bagSeat ? 0.5 : 0.75,
-      }),
+      createMaterial({ color: opts.bagSeat ? 0xd9e0e6 : 0x2a2623, roughness: opts.bagSeat ? 0.5 : 0.75 }),
       saddlePos[0] - 0.01,
       saddlePos[1] + 0.025,
       0,
       false,
       false,
     );
-    const handle = mkMesh(
-      new T.CylinderGeometry(0.015, 0.015, 0.48, 8),
-      trimMat,
-      stemTop[0] - 0.01,
-      stemTop[1] + 0.01,
-      0,
-      false,
-      false,
-    );
+    const handle = mkMesh(new T.CylinderGeometry(0.015, 0.015, 0.48, 8), trimMat, stemTop[0] - 0.01, stemTop[1] + 0.01, 0, false, false);
     handle.rotation.x = Math.PI / 2;
     const gripMat = createMaterial({ color: 0x242629, roughness: 0.9 });
-    const gripL = mkMesh(
-      new T.CylinderGeometry(0.02, 0.02, 0.11, 8),
-      gripMat,
-      stemTop[0] - 0.01,
-      stemTop[1] + 0.01,
-      -0.2,
-      false,
-      false,
-    );
+    const gripL = mkMesh(new T.CylinderGeometry(0.02, 0.02, 0.11, 8), gripMat, stemTop[0] - 0.01, stemTop[1] + 0.01, -0.2, false, false);
     gripL.rotation.x = Math.PI / 2;
-    const gripR = mkMesh(
-      new T.CylinderGeometry(0.02, 0.02, 0.11, 8),
-      gripMat,
-      stemTop[0] - 0.01,
-      stemTop[1] + 0.01,
-      0.2,
-      false,
-      false,
-    );
+    const gripR = mkMesh(new T.CylinderGeometry(0.02, 0.02, 0.11, 8), gripMat, stemTop[0] - 0.01, stemTop[1] + 0.01, 0.2, false, false);
     gripR.rotation.x = Math.PI / 2;
     pivot.add(seat, handle, gripL, gripR);
 
     if (opts.basket) {
       addTube(pivot, [hb[0], hb[1], 0], [0.49, 0.72, 0], 0.012, trimMat, false);
-      const bsk = mkMesh(
-        new T.BoxGeometry(0.25, 0.2, 0.3),
-        createMaterial({ color: 0x3b424a, metalness: 0.5, roughness: 0.45 }),
-        0.46,
-        0.8,
-        0,
-        true,
-        false,
-      );
-      const btl = mkMesh(
-        new T.CylinderGeometry(0.032, 0.032, 0.16, 8),
-        createMaterial({ color: 0x9cd1e6, transparent: true, opacity: 0.78 }),
-        0.46,
-        0.92,
-        -0.05,
-        false,
-        false,
-      );
+      const bsk = mkMesh(new T.BoxGeometry(0.25, 0.2, 0.3), createMaterial({ color: 0x3b424a, metalness: 0.5, roughness: 0.45 }), 0.46, 0.8, 0, true, false);
+      const btl = mkMesh(new T.CylinderGeometry(0.032, 0.032, 0.16, 8), createMaterial({ color: 0x9cd1e6, transparent: true, opacity: 0.78 }), 0.46, 0.92, -0.05, false, false);
       pivot.add(bsk, btl);
     }
     if (opts.rack) {
-      const rk = mkMesh(
-        new T.BoxGeometry(0.36, 0.035, 0.18),
-        createMaterial({ color: 0x2e3339, metalness: 0.5 }),
-        -0.46,
-        0.66,
-        0,
-        false,
-        false,
-      );
+      const rk = mkMesh(new T.BoxGeometry(0.36, 0.035, 0.18), createMaterial({ color: 0x2e3339, metalness: 0.5 }), -0.46, 0.66, 0, false, false);
       addTube(pivot, [rx, wheelY, -0.05], [-0.56, 0.65, -0.06], 0.01, trimMat, false);
       addTube(pivot, [rx, wheelY, 0.05], [-0.56, 0.65, 0.06], 0.01, trimMat, false);
       pivot.add(rk);
     }
     if (opts.crate) {
-      const box = mkMesh(
-        new T.BoxGeometry(0.3, 0.16, 0.24),
-        createMaterial({ color: 0x3d5c85, roughness: 0.7 }),
-        -0.46,
-        0.75,
-        0,
-        true,
-        false,
-      );
+      const box = mkMesh(new T.BoxGeometry(0.3, 0.16, 0.24), createMaterial({ color: 0x3d5c85, roughness: 0.7 }), -0.46, 0.75, 0, true, false);
       pivot.add(box);
     }
     if (opts.lock) {
-      const lk = mkMesh(
-        new T.TorusGeometry(0.14, 0.02, 6, 14),
-        createMaterial({ color: 0xb34332, roughness: 0.65 }),
-        -0.54,
-        0.38,
-        0.1,
-        false,
-        false,
-      );
+      const lk = mkMesh(new T.TorusGeometry(0.14, 0.02, 6, 14), createMaterial({ color: 0xb34332, roughness: 0.65 }), -0.54, 0.38, 0.1, false, false);
       lk.rotation.y = 0.4;
       pivot.add(lk);
     }
     if (opts.kickstand) {
       const leanAngle = opts.lean ?? 0.08;
-
       const footZ = Math.tan(leanAngle) * 0.3 + 0.16;
       addTube(pivot, [-0.14, 0.27, 0.04], [-0.18, 0.015, footZ], 0.012, trimMat, true);
       pivot.rotation.x = leanAngle;
     } else if (opts.lean) {
-
       pivot.rotation.x = opts.lean;
     }
 
@@ -421,37 +334,10 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
   addBike(6.25, -6.45, 2.95, 0x706c75, { dusty: true, lock: true, lean: 0.16 });
   addBike(6.18, -5.65, 2.7, 0x875c4a, { dusty: true, bagSeat: true, lean: 0.25 });
 
-  addBox(
-    3.6,
-    0.65,
-    1.75,
-    createMaterial({ color: 0xc8ced1, roughness: 0.35, metalness: 0.45 }),
-    -4.8,
-    0.45,
-    -4.5,
-    true,
-  );
-  addBox(
-    1.8,
-    0.52,
-    1.55,
-    createMaterial({ color: 0xc8ced1, roughness: 0.35, metalness: 0.45 }),
-    -4.6,
-    1.0,
-    -4.5,
-    true,
-  );
-  addBox(
-    1.6,
-    0.45,
-    0.55,
-    createMaterial({ map: tex.wood('#9c7248', '#704f2f') }),
-    4.5,
-    0.35,
-    6.5,
-    true,
-  );
-  addCylinder(0.18, 0.2, 0.06, 10, createMaterial({ color: 0xd69656 }), 6.2, 0.06, 5.8);
+  buildSedanCar(ctx, -4.6, 0.06, -4.5, Math.PI / 2, 0xd4dadd, true);
+  buildParkBench(ctx, 4.5, 0.06, 6.5, 0, true);
+  addCylinder(0.22, 0.24, 0.07, 12, createMaterial({ color: 0xd69656, roughness: 0.6 }), 6.2, 0.09, 5.8);
+  addCylinder(0.16, 0.18, 0.04, 10, createMaterial({ color: 0x705136 }), 6.2, 0.12, 5.8);
 
   const haz = tex.hazard();
   const rampConc = createMaterial({ color: 0x5c6166, roughness: 0.9 });
@@ -471,20 +357,12 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
     true,
   ).rotation.x = 0.26;
   for (let r = 0; r < 8; r++) {
-    addBox(
-      4.2,
-      0.04,
-      0.14,
-      createMaterial({ color: 0xd9ba43 }),
-      0,
-      0.02 - r * 0.17,
-      -10.3 - r * 0.65,
-      false,
-    );
+    addBox(4.2, 0.04, 0.14, createMaterial({ color: 0xd9ba43 }), 0, 0.02 - r * 0.17, -10.3 - r * 0.65, false);
   }
   addBox(0.22, 0.45, 6.0, createMaterial({ map: haz }), -2.25, -0.45, -13.1, false).rotation.x = 0.26;
   addBox(0.22, 0.45, 6.0, createMaterial({ map: haz }), 2.25, -0.45, -13.1, false).rotation.x = 0.26;
   addBox(4.75, 2.8, 0.25, createMaterial({ color: 0x15181c }), 0, 0.15, -16.2, false);
+  addCylinder(0.32, 0.32, 0.08, 16, createMaterial({ color: 0xd66f28, metalness: 0.7, roughness: 0.15 }), 2.2, 2.1, -10.1).rotation.y = -0.4;
   addSign(
     3.6,
     0.72,
@@ -497,17 +375,9 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
   const leaves: { m: ReturnType<typeof addMesh>; s: number; p: number }[] = [];
   const lGeo = new T.PlaneGeometry(0.14, 0.09);
   const lMat = createMaterial({ color: 0x84ad58, side: T.DoubleSide });
-  for (let i = 0; i < 24; i++) {
+  for (let i = 0; i < 20; i++) {
     leaves.push({
-      m: addMesh(
-        lGeo,
-        lMat,
-        (Math.random() - 0.5) * 16,
-        1 + Math.random() * 4,
-        (Math.random() - 0.5) * 16,
-        false,
-        false,
-      ),
+      m: addMesh(lGeo, lMat, (Math.random() - 0.5) * 16, 1 + Math.random() * 4, (Math.random() - 0.5) * 16, false, false),
       s: 0.35 + Math.random() * 0.4,
       p: Math.random() * 6,
     });
@@ -517,7 +387,7 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
   updaters.push((dt, t) => {
     windShake = Math.max(0, windShake - dt * 0.6);
     canopies.forEach((c) => {
-      c.m.rotation.z = Math.sin(t * 1.2 + c.p) * (0.03 + windShake * 0.08);
+      c.m.rotation.z = Math.sin(t * 1.2 + c.p) * (0.02 + windShake * 0.05);
     });
     leaves.forEach((l) => {
       l.m.position.y -= dt * l.s;
@@ -550,36 +420,18 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
     onLot(x, z) || (Math.abs(x) < 2.35 && z < -10.0) ? 'concrete' : 'grass',
   );
 
-  addInteract(
-    'park_bike_lock',
-    V(-8.45, 0.8, 7.6),
-    '看一眼锁在树上的旧单车',
-    '车轮上挂着一把红漆链条锁',
-    () => {
-      sfx.play('chime');
-      showWhisper('后轮拿红锁死死锁在香樟树干上，车座套着褪色防雨袋，看着好久没动过了。');
-    },
-  );
-  addInteract(
-    'park_bike_basket',
-    V(-6.1, 0.8, 1.8),
-    '看看刚停稳的通勤单车',
-    '车脚撑支得稳稳的，主人在附近住，天天骑着出门',
-    () => {
-      sfx.play('paper');
-      showWhisper('车铃和链条擦得发亮，车筐里放着半瓶水、一张刚买菜的小票和几片新落的香樟叶。');
-    },
-  );
-  addInteract(
-    'park_bike_pile',
-    V(6.2, 0.8, -6.45),
-    '看看铁架边堆着的几辆闲置单车',
-    '斜靠成一排，车座蒙了防雨袋和灰',
-    () => {
-      sfx.play('chime');
-      showWhisper('几辆老式单车挤在生锈的铁架边互相倚着，旁边的蓝车倒是天天在骑。');
-    },
-  );
+  addInteract('park_bike_lock', V(-8.45, 0.8, 7.6), '看一眼锁在树上的旧单车', '车轮上挂着一把红漆链条锁', () => {
+    sfx.play('chime');
+    showWhisper('后轮拿红锁死死锁在香樟树干上，车座套着褪色防雨袋，看着好久没动过了。');
+  });
+  addInteract('park_bike_basket', V(-6.1, 0.8, 1.8), '看看刚停稳的通勤单车', '车脚撑支得稳稳的，主人在附近住，天天骑着出门', () => {
+    sfx.play('paper');
+    showWhisper('车铃和链条擦得发亮，车筐里放着半瓶水、一张刚买菜的小票和几片新落的香樟叶。');
+  });
+  addInteract('park_bike_pile', V(6.2, 0.8, -6.45), '看看铁架边堆着的几辆闲置单车', '斜靠成一排，车座蒙了防雨袋和灰', () => {
+    sfx.play('chime');
+    showWhisper('几辆老式单车挤在生锈的铁架边互相倚着，旁边的蓝车倒是天天在骑。');
+  });
   addInteract('park_bench', V(4.5, 0.6, 6.5), '坐在树荫木椅上听风', '让树冠再晃一会儿', () => {
     windShake = 1;
     sfx.play('grass');
@@ -590,24 +442,15 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
     player.onGround = true;
     setSitTimer(() => {
       player.height = 1.65;
-      player.pos.y = Math.max(
-        player.pos.y,
-        getHeight(player.pos.x, player.pos.z, player.pos.y - 1.65) + 1.65,
-      );
+      player.pos.y = Math.max(player.pos.y, getHeight(player.pos.x, player.pos.z, player.pos.y - 1.65) + 1.65);
     }, 2000);
     showWhisper('树冠筛下碎碎的光斑，四周高高低低的大花全在风里晃。');
   });
-  addInteract(
-    'park_cat',
-    V(6.2, 0.25, 5.8),
-    '看看灌木丛边的小猫食盆',
-    '放了一小把干猫粮',
-    () => {
-      sfx.play('cat');
-      showWhisper('花丛里窜出半条橘色尾巴，咪了一声，蹲回去继续吃。');
-    },
-  );
-  addInteract('park_car', V(-4.5, 0.8, -4.5), '看看停在树下的白车', '挡风玻璃落了一层香樟花', () => {
+  addInteract('park_cat', V(6.2, 0.25, 5.8), '看看灌木丛边的小猫食盆', '放了一小把干猫粮', () => {
+    sfx.play('cat');
+    showWhisper('花丛里窜出半条橘色尾巴，咪了一声，蹲回去继续吃。');
+  });
+  addInteract('park_car', V(-4.6, 0.8, -4.5), '看看停在树下的白车', '挡风玻璃落了一层香樟花', () => {
     sfx.play('chime');
     showWhisper('车顶落满了细碎的绿叶和花瓣，车主大概几天没开了。');
   });

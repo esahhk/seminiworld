@@ -1,5 +1,7 @@
 import type { SceneContext } from './sceneContext';
 import type { SceneInitResult } from '../types/game';
+import { addInstancedMeshes, buildSedanCar } from '../engine/propKit';
+import type { InstanceTransform } from '../engine/propKit';
 
 export function buildGarageScene(ctx: SceneContext): SceneInitResult {
   const {
@@ -31,50 +33,51 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
     setSurfaceFn,
   } = ctx;
 
-  scene.background = new T.Color(0x343c45);
-  scene.fog = new T.FogExp2(0x343c45, 0.012);
-  scene.add(new T.HemisphereLight(0xd8e5f0, 0x67707a, 1.25));
-  scene.add(new T.AmbientLight(0x9caab8, 1.1));
-  const tube1 = new T.PointLight(0xeef6fa, 1.65, 28);
-  tube1.position.set(0, 3.2, -4);
+  scene.background = new T.Color(0x3a434d);
+  scene.fog = new T.FogExp2(0x3a434d, 0.011);
+  scene.add(new T.HemisphereLight(0xe4eff8, 0x707982, 1.45));
+  scene.add(new T.AmbientLight(0xaab8c6, 1.15));
+
+  const tube1 = new T.PointLight(0xf0f7fc, 1.8, 30);
+  tube1.position.set(-4.5, 3.2, 2);
   scene.add(tube1);
-  const tube2 = new T.PointLight(0xf2d7a4, 1.45, 26);
-  tube2.position.set(-6, 3.2, 5);
+  const tube2 = new T.PointLight(0xf4deb0, 1.75, 30);
+  tube2.position.set(4.5, 3.2, -3);
   scene.add(tube2);
-  const tube3 = new T.PointLight(0xeef6fa, 1.45, 26);
-  tube3.position.set(6, 3.2, 5);
-  scene.add(tube3);
-  const tube4 = new T.PointLight(0xffe7b8, 1.5, 24);
-  tube4.position.set(0, 3.8, -12.5);
-  scene.add(tube4);
-  const tube5 = new T.PointLight(0xeef6fa, 1.35, 24);
-  tube5.position.set(-6, 3.2, -5);
-  scene.add(tube5);
-  const tube6 = new T.PointLight(0xeef6fa, 1.35, 24);
-  tube6.position.set(6, 3.2, -5);
-  scene.add(tube6);
+  const tubeRamp = new T.PointLight(0xffe9be, 1.6, 24);
+  tubeRamp.position.set(0, 3.6, -12.5);
+  scene.add(tubeRamp);
+  const garElevLamp = new T.PointLight(0xffcb78, 1.0, 8);
+  garElevLamp.position.set(8.4, 2.65, 13.0);
+  scene.add(garElevLamp);
+
   const lampMat = createMaterial({
     color: 0xffffff,
-    emissive: 0xeaf4fa,
-    emissiveIntensity: 1.45,
+    emissive: 0xeef7fc,
+    emissiveIntensity: 1.55,
   });
-  for (const [lx, lz] of [
-    [0, -4],
-    [-6, 5],
-    [6, 5],
-    [-6, -5],
-    [6, -5],
-    [0, -11.5],
-  ]) {
-    addBox(2.4, 0.08, 0.24, lampMat, lx, 3.55, lz, false, false, false);
+  const housingMat = createMaterial({ color: 0xb2bac2, metalness: 0.5, roughness: 0.4 });
+  const lampItems: InstanceTransform[] = [];
+  const housingItems: InstanceTransform[] = [];
+  for (const lx of [-6, 0, 6]) {
+    for (const lz of [-8, 0, 7]) {
+      lampItems.push({ x: lx, y: 3.53, z: lz });
+      housingItems.push({ x: lx, y: 3.58, z: lz });
+    }
   }
-  const gTex = tex.concrete('#6f747b', 0.16, 'gar');
+  lampItems.push({ x: 0, y: 3.53, z: -11.5 });
+  housingItems.push({ x: 0, y: 3.58, z: -11.5 });
+  addInstancedMeshes(ctx, new T.BoxGeometry(2.4, 0.06, 0.2), lampMat, lampItems, false, false);
+  addInstancedMeshes(ctx, new T.BoxGeometry(2.5, 0.05, 0.28), housingMat, housingItems, false, false);
+
+  const bump = tex.bumpNoise('gar_b', 28);
+  const gTex = tex.concrete('#757a82', 0.16, 'gar');
   gTex.repeat.set(6, 6);
   addBox(
     24,
     0.2,
     24,
-    createMaterial({ map: gTex, roughness: 0.52, metalness: 0.08 }),
+    createMaterial({ map: gTex, bumpMap: bump, bumpScale: 0.015, roughness: 0.48, metalness: 0.08 }),
     0,
     -0.1,
     0,
@@ -82,17 +85,22 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
     false,
     true,
   );
-  addBox(
-    24,
-    0.3,
-    24,
-    createMaterial({ color: 0x5c626a, roughness: 0.92 }),
-    0,
-    3.7,
-    0,
-    false,
-  );
-  const wallMat = createMaterial({ color: 0x767c84, roughness: 0.88 });
+  addBox(24, 0.3, 24, createMaterial({ color: 0x626870, roughness: 0.9 }), 0, 3.7, 0, false);
+
+  const bayLineMat = createMaterial({
+    color: 0xe6ecf0,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
+  });
+  for (const bx of [6.8, 9.6, -6.4, -9.2]) {
+    addBox(0.1, 0.012, 5.0, bayLineMat, bx, 0.008, -6.2, false, false, false);
+  }
+  const wheelStopMat = createMaterial({ map: tex.hazard('gar_ws'), roughness: 0.7 });
+  addBox(1.85, 0.11, 0.16, wheelStopMat, 8.2, 0.055, -8.1, false);
+  addBox(1.85, 0.11, 0.16, wheelStopMat, -7.8, 0.055, -9.8, false);
+
+  const wallMat = createMaterial({ color: 0x7c828a, bumpMap: bump, bumpScale: 0.01, roughness: 0.86 });
   addBox(9.6, 3.8, 0.3, wallMat, -7.2, 1.9, -12, true);
   addBox(9.6, 3.8, 0.3, wallMat, 7.2, 1.9, -12, true);
   addBox(0.3, 3.8, 24, wallMat, -12, 1.9, 0, true);
@@ -101,21 +109,19 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
   addBox(2.4, 3.8, 0.3, wallMat, 10.8, 1.9, 12, true);
   addBox(2.6, 0.9, 0.3, wallMat, 8.4, 3.35, 12, true);
 
-  const steelMat = createMaterial({
-    color: 0x535a61,
-    metalness: 0.6,
-    roughness: 0.5,
-  });
+  const steelMat = createMaterial({ color: 0x535a61, metalness: 0.65, roughness: 0.42 });
   addBox(2.6, 0.12, 2.2, steelMat, 8.4, 0.04, 13.0, false, true, true);
   addBox(2.6, 0.16, 2.2, steelMat, 8.4, 2.95, 13.0, false);
   addBox(2.6, 3.0, 0.2, steelMat, 8.4, 1.5, 14.1, true);
   addBox(0.2, 3.0, 2.2, steelMat, 7.2, 1.5, 13.0, true);
   addBox(0.2, 3.0, 2.2, steelMat, 9.6, 1.5, 13.0, true);
+  addCylinder(0.025, 0.025, 1.8, 8, createMaterial({ color: 0xc29e58, metalness: 0.78 }), 8.4, 0.95, 13.94, false).rotation.z = Math.PI / 2;
+
   const garElevL = addBox(
     1.12,
     2.8,
     0.12,
-    createMaterial({ color: 0x6c747d, metalness: 0.55, roughness: 0.45 }),
+    createMaterial({ color: 0x767f88, metalness: 0.58, roughness: 0.38 }),
     7.84,
     1.4,
     11.95,
@@ -125,22 +131,15 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
     1.12,
     2.8,
     0.12,
-    createMaterial({ color: 0x6c747d, metalness: 0.55, roughness: 0.45 }),
+    createMaterial({ color: 0x767f88, metalness: 0.58, roughness: 0.38 }),
     8.96,
     1.4,
     11.95,
     true,
   );
-  const garElevLamp = new T.PointLight(0xffcb78, 0.9, 7);
-  garElevLamp.position.set(8.4, 2.65, 13.0);
-  scene.add(garElevLamp);
   const garElevBulb = addMesh(
     new T.SphereGeometry(0.1, 8, 8),
-    createMaterial({
-      color: 0xffc86b,
-      emissive: 0xff9b24,
-      emissiveIntensity: 0.6,
-    }),
+    createMaterial({ color: 0xffc86b, emissive: 0xff9b24, emissiveIntensity: 0.6 }),
     8.4,
     2.95,
     11.82,
@@ -156,39 +155,17 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
     11.82,
     Math.PI,
   );
-  addBox(
-    0.26,
-    0.4,
-    0.1,
-    createMaterial({ color: 0x3b4046 }),
-    6.85,
-    1.25,
-    11.82,
-    false,
-  );
+  addBox(0.26, 0.4, 0.1, createMaterial({ color: 0x3b4046 }), 6.85, 1.25, 11.82, false);
   const callBtnLed = addMesh(
     new T.SphereGeometry(0.045, 8, 8),
-    createMaterial({
-      color: 0xff9933,
-      emissive: 0xff6600,
-      emissiveIntensity: 0.25,
-    }),
+    createMaterial({ color: 0xff9933, emissive: 0xff6600, emissiveIntensity: 0.25 }),
     6.85,
     1.25,
     11.75,
     false,
     false,
   );
-  addBox(
-    0.22,
-    0.35,
-    0.1,
-    createMaterial({ color: 0x3b4046 }),
-    7.36,
-    1.25,
-    13.0,
-    false,
-  );
+  addBox(0.22, 0.35, 0.1, createMaterial({ color: 0x3b4046 }), 7.36, 1.25, 13.0, false);
 
   const haz = tex.hazard();
   const rampMat = createMaterial({ color: 0x62676d, roughness: 0.85 });
@@ -199,7 +176,7 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
     4.75,
     0.22,
     6.6,
-    createMaterial({ map: tex.concrete('#676b70', 0.2, 'ramp_f') }),
+    createMaterial({ map: tex.concrete('#6a6f75', 0.2, 'ramp_f') }),
     0,
     0.85,
     -13.2,
@@ -211,46 +188,15 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
   for (let r = 0; r < 9; r++) {
     const rz = -10.5 - r * 0.62;
     const ry = 0.08 + r * 0.18;
-    addBox(
-      4.2,
-      0.04,
-      0.14,
-      createMaterial({ color: 0xd9ba43 }),
-      0,
-      ry,
-      rz,
-      false,
-    );
+    addBox(4.2, 0.04, 0.14, createMaterial({ color: 0xd9ba43 }), 0, ry, rz, false);
   }
-  addBox(
-    0.22,
-    0.45,
-    6.2,
-    createMaterial({ map: haz }),
-    -2.25,
-    1.15,
-    -13.2,
-    false,
-  ).rotation.x = 0.28;
-  addBox(
-    0.22,
-    0.45,
-    6.2,
-    createMaterial({ map: haz }),
-    2.25,
-    1.15,
-    -13.2,
-    false,
-  ).rotation.x = 0.28;
+  addBox(0.22, 0.45, 6.2, createMaterial({ map: haz }), -2.25, 1.15, -13.2, false).rotation.x = 0.28;
+  addBox(0.22, 0.45, 6.2, createMaterial({ map: haz }), 2.25, 1.15, -13.2, false).rotation.x = 0.28;
   addBox(
     4.8,
     3.6,
     0.25,
-    createMaterial({
-      color: 0xb8ccd6,
-      emissive: 0x69828f,
-      emissiveIntensity: 0.55,
-    }),
+    createMaterial({ color: 0xc2d5df, emissive: 0x738e9c, emissiveIntensity: 0.6 }),
     0,
     2.6,
     -16.4,
@@ -259,12 +205,7 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
   addSign(
     3.2,
     0.72,
-    tex.sign(
-      '↑ 地面出口 往小区停车场',
-      '#d8c892',
-      '#1e2022',
-      '顺坡道走上去直达地面',
-    ),
+    tex.sign('↑ 地面出口 往小区停车场', '#d8c892', '#1e2022', '顺坡道走上去直达地面'),
     0,
     3.15,
     -11.82,
@@ -276,89 +217,31 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
     [-5, 4],
     [5, 4],
   ]) {
-    addBox(
-      0.75,
-      2.6,
-      0.75,
-      createMaterial({ color: 0x72767a, roughness: 0.9 }),
-      cx,
-      2.3,
-      cz,
-      true,
-    );
-    addBox(
-      0.77,
-      1.0,
-      0.77,
-      createMaterial({ map: haz, roughness: 0.75 }),
-      cx,
-      0.5,
-      cz,
-      false,
-    );
+    addBox(0.75, 2.6, 0.75, createMaterial({ color: 0x72767a, roughness: 0.9 }), cx, 2.3, cz, true);
+    addBox(0.77, 1.0, 0.77, createMaterial({ map: haz, roughness: 0.75 }), cx, 0.5, cz, false);
+    addBox(0.84, 0.14, 0.84, createMaterial({ color: 0x454a50 }), cx, 3.5, cz, false);
   }
-  addSign(
-    0.7,
-    0.7,
-    tex.sign('B2 08', '#d4ad33', '#1a1a18', '消防通道勿停'),
-    -5,
-    1.8,
-    -3.6,
-  );
+  addSign(0.7, 0.7, tex.sign('B2 08', '#d4ad33', '#1a1a18', '消防通道勿停'), -5, 1.8, -3.6);
   addBox(5.5, 0.08, 0.35, createMaterial({ map: haz }), 0, 0.04, 0, false);
-  addCylinder(
-    0.14,
-    0.14,
-    22,
-    8,
-    createMaterial({ color: 0x6c737a, metalness: 0.4 }),
-    -3,
-    3.35,
-    0,
-  ).rotation.x = Math.PI / 2;
-  addCylinder(
-    0.1,
-    0.1,
-    22,
-    8,
-    createMaterial({ color: 0x9c4232, metalness: 0.3 }),
-    3,
-    3.4,
-    0,
-  ).rotation.x = Math.PI / 2;
-  addBox(
-    0.65,
-    0.9,
-    0.22,
-    createMaterial({ color: 0xa82e24 }),
-    5.4,
-    1.35,
-    -4,
-    false,
-  );
-  const carMat = createMaterial({
-    color: 0x3b4d5c,
-    roughness: 0.35,
-    metalness: 0.5,
-  });
-  addBox(1.85, 0.7, 4.2, carMat, 8.2, 0.55, -5.5, true);
-  addBox(1.6, 0.55, 2.1, carMat, 8.2, 1.15, -5.3, true);
+
+  addBox(0.55, 0.36, 22, createMaterial({ color: 0x767f88, metalness: 0.55, roughness: 0.35 }), -3, 3.4, 0, false);
+  addCylinder(0.1, 0.1, 22, 8, createMaterial({ color: 0xa64432, metalness: 0.35 }), 3, 3.4, 0).rotation.x = Math.PI / 2;
+  addCylinder(0.08, 0.08, 22, 8, createMaterial({ color: 0x4f7894, metalness: 0.4 }), 3.35, 3.4, 0).rotation.x = Math.PI / 2;
+  addBox(0.65, 0.92, 0.24, createMaterial({ color: 0xa82e24, roughness: 0.4 }), 5.4, 1.35, -4, false);
+  addBox(0.42, 0.48, 0.04, createMaterial({ color: 0x99bdcf, transparent: true, opacity: 0.45 }), 5.4, 1.5, -3.87, false);
+
+  const sedanMain = buildSedanCar(ctx, 8.2, 0, -5.5, 0, 0x3b4d5c, true);
+  buildSedanCar(ctx, -7.8, 0, -7.2, Math.PI, 0x7c858e, true);
+
   const carLight = new T.SpotLight(0xfff2cf, 0, 18, 0.5, 0.6);
-  carLight.position.set(8.2, 0.65, -3.3);
+  carLight.position.set(8.2, 0.68, -3.25);
   carLight.target.position.set(8.2, 0.2, 6);
   scene.add(carLight);
   scene.add(carLight.target);
+
   const gateGeo = new T.BoxGeometry(3.8, 0.1, 0.1);
   gateGeo.translate(1.8, 0, 0);
-  const gateArm = addMesh(
-    gateGeo,
-    createMaterial({ map: haz }),
-    -8.5,
-    1.0,
-    2,
-    true,
-    false,
-  );
+  const gateArm = addMesh(gateGeo, createMaterial({ map: haz }), -8.5, 1.0, 2, true, false);
   const gateCol = {
     minX: -8.5,
     maxX: -4.9,
@@ -370,16 +253,9 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
     active: true,
   };
   colliders.push(gateCol);
-  addBox(
-    0.4,
-    1.2,
-    0.4,
-    createMaterial({ color: 0xc98b2c }),
-    -8.7,
-    0.6,
-    2,
-    true,
-  );
+  addBox(0.4, 1.2, 0.4, createMaterial({ color: 0xc98b2c }), -8.7, 0.6, 2, true);
+  addBox(0.44, 0.12, 0.44, createMaterial({ color: 0x3b4046 }), -8.7, 1.24, 2, false);
+
   const spawnedInElev = !!state.pendingSpawn && state.pendingSpawn.pos.z > 11.5;
   let gateUp = false;
   let flicker = false;
@@ -405,28 +281,21 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
       sfx.play('door');
       showWhisper('走进轿厢后，电梯门自动合拢；按 [E] 选择楼层或重新开门。');
     }
-    gateArm.rotation.z +=
-      ((gateUp ? 1.15 : 0) - gateArm.rotation.z) * Math.min(1, dt * 5);
+    gateArm.rotation.z += ((gateUp ? 1.15 : 0) - gateArm.rotation.z) * Math.min(1, dt * 5);
     gateCol.active = gateArm.rotation.z < 0.55;
     if (flicker) {
-      tube1.intensity = Math.sin(t * 37) > 0.86 ? 0.4 : 1.25;
+      tube1.intensity = Math.sin(t * 37) > 0.86 ? 0.55 : 1.8;
     }
     const targetLx = freightOpen ? 6.8 : 7.84;
     const targetRx = freightOpen ? 10.0 : 8.96;
-    garElevL.position.x +=
-      (targetLx - garElevL.position.x) * Math.min(1, dt * 4.5);
-    garElevR.position.x +=
-      (targetRx - garElevR.position.x) * Math.min(1, dt * 4.5);
+    garElevL.position.x += (targetLx - garElevL.position.x) * Math.min(1, dt * 4.5);
+    garElevR.position.x += (targetRx - garElevR.position.x) * Math.min(1, dt * 4.5);
     syncColX(garElevL, 0.56);
     syncColX(garElevR, 0.56);
     (
       garElevBulb.material as InstanceType<typeof T.MeshStandardMaterial>
     ).emissiveIntensity = freightOpen ? 1.3 : 0.5 + Math.sin(t * 14) * 0.2;
-    if (
-      !exitedToPark &&
-      Math.abs(player.pos.x) < 2.2 &&
-      player.pos.z <= -14.8
-    ) {
+    if (!exitedToPark && Math.abs(player.pos.x) < 2.2 && player.pos.z <= -14.8) {
       exitedToPark = true;
       const pi = sceneIdxById('park_lot');
       if (pi !== -1) {
@@ -549,7 +418,8 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
   );
   addInteract('gar_car', V(7.1, 0.9, -4.5), '敲敲停着的旧轿车', '闪一下车大灯', () => {
     carOn = !carOn;
-    carLight.intensity = carOn ? 2.4 : 0;
+    carLight.intensity = carOn ? 2.6 : 0;
+    sedanMain.headLightMat.emissiveIntensity = carOn ? 1.8 : 0.05;
     sfx.play('chime');
     showWhisper(
       carOn ? '大灯啪地照亮潮湿的地面，水洼反着光。' : '车灯熄灭，水泥墙面退回阴影里。',
@@ -562,7 +432,7 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
     '切换头顶灯管接触模式',
     () => {
       flicker = !flicker;
-      tube1.intensity = 1.25;
+      tube1.intensity = 1.8;
       sfx.play('switch');
       showWhisper(
         flicker ? '灯管接触不良，又开始吱吱地跳闪。' : '白光稳稳亮着，整个地下车库亮堂了不少。',

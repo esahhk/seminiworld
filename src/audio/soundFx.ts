@@ -5,7 +5,7 @@ export class SoundFX {
   private ambGain: GainNode | null = null;
   private ambSrc: AudioBufferSourceNode | null = null;
   private ambFilter: BiquadFilterNode | null = null;
-  private _pendingSceneId: SceneId | null = null;
+  private _pendingSceneId: SceneId | 'city' | null = null;
   private _lastPlay: Record<string, number> = {};
   private audioOn = true;
 
@@ -71,7 +71,7 @@ export class SoundFX {
     }
   }
 
-  setAmbient(sceneId: SceneId): void {
+  setAmbient(sceneId: SceneId | 'city'): void {
     this._pendingSceneId = sceneId;
     if (this.audioOn && !this.ctx) {
       this.init();
@@ -90,6 +90,7 @@ export class SoundFX {
     const cfg: [number, number] =
       (
         {
+          city: [380, 0.032],
           platform: [520, 0.08],
           hellstone: [160, 0.09],
           office: [240, 0.025],
@@ -107,7 +108,7 @@ export class SoundFX {
           studio: [380, 0.018],
           cave: [130, 0.055],
           backyard: [640, 0.03],
-        } as Record<SceneId, [number, number]>
+        } as Record<SceneId | 'city', [number, number]>
       )[sceneId] || [300, 0.03];
     this.ambFilter.frequency.setTargetAtTime(cfg[0], now, 0.4);
     this.ambGain.gain.setTargetAtTime(cfg[1], now, 0.4);
@@ -237,6 +238,12 @@ export class SoundFX {
       tone(520, 0.22, 'sine', 0.05, 680);
     } else if (type === 'click') {
       tone(1040, 0.04, 'sine', 0.05, 760);
+    } else if (type === 'ignition') {
+      tone(64, 0.26, 'sawtooth', 0.07, 118);
+      window.setTimeout(() => tone(92, 0.22, 'triangle', 0.05, 74), 120);
+    } else if (type === 'horn') {
+      tone(215, 0.28, 'sawtooth', 0.055);
+      tone(272, 0.28, 'sawtooth', 0.045);
     } else {
       tone(460, 0.1, 'sine', 0.06);
     }
@@ -247,7 +254,6 @@ export class SoundFX {
       this.ambSrc?.stop();
       this.ctx?.close();
     } catch {
-
     }
     this.ctx = null;
     this.ambSrc = null;

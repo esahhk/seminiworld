@@ -1,5 +1,6 @@
 import type { SceneContext } from './sceneContext';
 import type { SceneInitResult } from '../types/game';
+import { buildHospitalBed, buildOfficeChair, buildParkBench, buildPottedPlant } from '../engine/propKit';
 
 export function buildInfirmaryScene(ctx: SceneContext): SceneInitResult {
   const {
@@ -32,35 +33,42 @@ export function buildInfirmaryScene(ctx: SceneContext): SceneInitResult {
   sun.position.set(10, 12, 4);
   sun.castShadow = true;
   scene.add(sun);
-  const l1 = new T.PointLight(0xffffff, 0.75, 14);
+  const l1 = new T.PointLight(0xffffff, 0.78, 14);
   l1.position.set(0, 3.2, 4);
   scene.add(l1);
-  const l2 = new T.PointLight(0xffffff, 0.75, 14);
+  const l2 = new T.PointLight(0xffffff, 0.78, 14);
   l2.position.set(4.5, 3.2, -0.5);
   scene.add(l2);
-  const l3 = new T.PointLight(0xffffff, 0.75, 14);
+  const l3 = new T.PointLight(0xffffff, 0.78, 14);
   l3.position.set(4.5, 3.2, -7.8);
   scene.add(l3);
 
+  const bump = tex.bumpNoise('inf_b', 20);
   const flMat = createMaterial({
     map: tex.tiles('#dde5df', '#d2dcd5', '#b7c4bb', 5, 'inf_f'),
-    roughness: 0.5,
+    bumpMap: bump,
+    bumpScale: 0.005,
+    roughness: 0.48,
   });
-  const wMat = createMaterial({
-    color: 0xeef3ef,
-    roughness: 0.9,
-  });
-  const wMint = createMaterial({
-    color: 0xd8e5dc,
-    roughness: 0.9,
-  });
+  const wMat = createMaterial({ color: 0xeef3ef, roughness: 0.88 });
+  const wMint = createMaterial({ color: 0xd8e5dc, roughness: 0.88 });
+  const dadoRailMat = createMaterial({ color: 0x9bb8a7, roughness: 0.55 });
+  const ledStripMat = createMaterial({ color: 0xffffff, emissive: 0xe8f5ed, emissiveIntensity: 0.95 });
+
   addBox(4, 0.2, 20, flMat, 0, -0.1, 0, true, false, true);
   addBox(6, 0.2, 4, flMat, 5, -0.1, -0.5, true, false, true);
   addBox(6, 0.2, 4.5, flMat, 5, -0.1, -7.75, true, false, true);
   addBox(4, 0.2, 20, wMat, 0, 3.6, 0, false);
   addBox(6, 0.2, 4, wMat, 5, 3.6, -0.5, false);
   addBox(6, 0.2, 4.5, wMat, 5, 3.6, -7.75, false);
+  for (const lz of [6.5, 1.0, -4.5, -8.5]) {
+    addBox(1.4, 0.04, 0.32, ledStripMat, 0, 3.49, lz, false, false, false);
+  }
+  addBox(1.8, 0.04, 0.36, ledStripMat, 5.0, 3.49, -0.5, false, false, false);
+  addBox(1.8, 0.04, 0.36, ledStripMat, 5.0, 3.49, -7.75, false, false, false);
+
   addBox(0.2, 3.6, 20, wMint, -2.0, 1.8, 0, true);
+  addBox(0.06, 0.14, 19.6, dadoRailMat, -1.87, 1.08, 0, false);
   addBox(4.2, 3.6, 0.2, wMat, 0, 1.8, 10, true);
   addBox(10.2, 3.6, 0.2, wMat, 3.0, 1.8, -10, true);
   addBox(0.2, 3.6, 8.5, wMat, 2.0, 1.8, 5.75, true);
@@ -75,18 +83,18 @@ export function buildInfirmaryScene(ctx: SceneContext): SceneInitResult {
   addBox(0.2, 3.6, 4.2, wMat, 8.0, 1.8, -0.5, true);
   addBox(0.2, 3.6, 4.7, wMat, 8.0, 1.8, -7.75, true);
 
+  addBox(1.64, 2.6, 0.22, createMaterial({ color: 0x5c4734 }), 0, 1.3, 9.88, false);
   addBox(
     1.5,
     2.5,
     0.14,
-    createMaterial({
-      map: tex.wood('#8c623d', '#634224'),
-    }),
+    createMaterial({ map: tex.wood('#8c623d', '#634224') }),
     0,
     1.25,
     9.84,
     true,
   );
+  addBox(0.18, 0.04, 0.06, createMaterial({ color: 0xc2b698, metalness: 0.75 }), 0.45, 1.16, 9.75, false);
   addSign(
     1.5,
     0.72,
@@ -97,18 +105,7 @@ export function buildInfirmaryScene(ctx: SceneContext): SceneInitResult {
     Math.PI,
   );
 
-  addBox(
-    0.55,
-    0.45,
-    2.4,
-    createMaterial({
-      map: tex.wood('#c4a47c', '#9d7e58'),
-    }),
-    -1.45,
-    0.23,
-    4.2,
-    true,
-  );
+  buildParkBench(ctx, -1.45, 0, 4.2, Math.PI / 2, true);
   addSign(
     1.8,
     0.9,
@@ -118,65 +115,57 @@ export function buildInfirmaryScene(ctx: SceneContext): SceneInitResult {
     5.5,
     Math.PI / 2,
   );
+
+  const deskWood = createMaterial({ map: tex.wood('#c4a47c', '#9d7e58') });
+  const steelMat = createMaterial({ color: 0xbcc4c8, metalness: 0.65, roughness: 0.3 });
+  addBox(1.56, 0.06, 0.84, deskWood, 5.6, 0.74, -1.6, true);
+  addBox(0.48, 0.68, 0.74, deskWood, 6.1, 0.36, -1.6, true);
+  for (const [lx, lz] of [[4.9, -1.94], [4.9, -1.26]]) {
+    addBox(0.05, 0.7, 0.05, steelMat, lx, 0.35, lz, false);
+  }
+  addBox(0.32, 0.03, 0.4, createMaterial({ color: 0x3b6e56 }), 5.55, 0.78, -1.55, false);
+  addCylinder(0.055, 0.055, 0.14, 10, createMaterial({ color: 0xe6ecea, transparent: true, opacity: 0.7 }), 5.2, 0.84, -1.4);
+  buildOfficeChair(ctx, 5.45, 0, -0.82, 0.25, 0x456e5c, true);
+  buildPottedPlant(ctx, 6.08, 0.76, -1.7, 0.65, 0x8a5b3e);
+
+  addBox(1.16, 1.78, 0.46, createMaterial({ color: 0xeaf0ec, roughness: 0.38 }), 7.3, 0.89, -1.9, true);
   addBox(
-    1.5,
-    0.75,
-    0.8,
-    createMaterial({
-      map: tex.wood('#c4a47c', '#9d7e58'),
-    }),
-    5.6,
-    0.38,
-    -1.6,
-    true,
-  );
-  addCylinder(
-    0.06,
-    0.06,
-    0.14,
-    10,
-    createMaterial({
-      color: 0xe6ecea,
-      transparent: true,
-      opacity: 0.7,
-    }),
-    5.2,
-    0.82,
-    -1.4,
-  );
-  addBox(
-    1.1,
-    1.7,
-    0.45,
-    createMaterial({
-      color: 0xeaf0ec,
-      roughness: 0.4,
-    }),
+    0.98,
+    0.84,
+    0.04,
+    createMaterial({ color: 0xaad4dc, transparent: true, opacity: 0.38 }),
     7.3,
-    0.85,
-    -1.9,
-    true,
+    1.28,
+    -1.66,
+    false,
   );
-  addSign(
-    0.7,
-    1.15,
-    tex.sign('E Ǝ Ш M', '#f9faf7', '#202220', '五米视力表'),
-    3.6,
-    1.85,
-    -2.38,
-  );
-  addBox(
-    0.18,
-    1.9,
-    0.25,
-    createMaterial({
-      color: 0xf3efe4,
-    }),
-    7.82,
-    0.95,
-    0.4,
-    true,
-  );
+  const pillCols = [0xd46a4e, 0x5299c2, 0xf0c954, 0x5aa878, 0xe8e4d8];
+  for (let row = 0; row < 2; row++) {
+    for (let col = 0; col < 5; col++) {
+      addCylinder(
+        0.04,
+        0.04,
+        0.13,
+        8,
+        createMaterial({ color: pillCols[(row + col) % pillCols.length] }),
+        6.92 + col * 0.18,
+        1.0 + row * 0.35,
+        -1.82,
+        false,
+      );
+    }
+  }
+  addBox(0.75, 0.04, 0.46, steelMat, 3.6, 0.84, -1.2, false);
+  for (const [cx, cz] of [[3.28, -1.38], [3.92, -1.38], [3.28, -1.02], [3.92, -1.02]]) {
+    addCylinder(0.02, 0.02, 0.82, 6, steelMat, cx, 0.42, cz, false);
+  }
+  addBox(0.28, 0.04, 0.18, steelMat, 3.55, 0.88, -1.2, false);
+
+  addBox(0.76, 1.22, 0.05, createMaterial({ color: 0x3b4440 }), 3.6, 1.85, -2.4, false);
+  addSign(0.7, 1.15, tex.sign('E Ǝ Ш M', '#f9faf7', '#202220', '五米视力表'), 3.6, 1.85, -2.36);
+
+  addBox(0.46, 0.08, 0.56, steelMat, 7.66, 0.04, 0.4, false);
+  addBox(0.18, 1.9, 0.25, createMaterial({ color: 0xf3efe4 }), 7.82, 0.95, 0.4, true);
   addSign(
     0.22,
     1.6,
@@ -186,85 +175,24 @@ export function buildInfirmaryScene(ctx: SceneContext): SceneInitResult {
     0.4,
     -Math.PI / 2,
   );
-  addCylinder(
-    0.14,
-    0.11,
-    0.18,
-    8,
-    createMaterial({
-      color: 0x8a5b3e,
-    }),
-    6.05,
-    0.85,
-    -1.65,
-  );
-  addMesh(
-    new T.ConeGeometry(0.12, 0.32, 6),
-    createMaterial({
-      color: 0x4e8a4c,
-    }),
-    6.05,
-    1.04,
-    -1.65,
-  );
-  addBox(
-    2.0,
-    0.55,
-    1.05,
-    createMaterial({
-      color: 0xf4f4f0,
-      roughness: 0.8,
-    }),
-    6.2,
-    0.28,
-    -8.8,
-    true,
-  );
-  addBox(
-    0.45,
-    0.16,
-    0.75,
-    createMaterial({
-      color: 0xffffff,
-    }),
-    6.9,
-    0.62,
-    -8.8,
-    false,
-  );
-  addBox(
-    2.0,
-    0.55,
-    1.05,
-    createMaterial({
-      color: 0xf4f4f0,
-      roughness: 0.8,
-    }),
-    6.2,
-    0.28,
-    -6.7,
-    true,
-  );
-  addBox(
-    0.45,
-    0.16,
-    0.75,
-    createMaterial({
-      color: 0xffffff,
-    }),
-    6.9,
-    0.62,
-    -6.7,
-    false,
-  );
+
+  buildHospitalBed(ctx, 6.2, 0, -8.8, 0, true);
+  buildHospitalBed(ctx, 6.2, 0, -6.7, 0, true);
+
+  addBox(0.46, 0.66, 0.44, createMaterial({ color: 0xebf0ed }), 7.45, 0.33, -7.75, true);
+  addCylinder(0.06, 0.07, 0.18, 10, createMaterial({ color: 0xd0e6ec, transparent: true, opacity: 0.65 }), 7.45, 0.76, -7.75);
+
+  addCylinder(0.22, 0.24, 0.04, 12, steelMat, 7.25, 0.02, -9.55, false);
+  addCylinder(0.018, 0.018, 1.85, 8, steelMat, 7.25, 0.95, -9.55, false);
+  addBox(0.24, 0.03, 0.03, steelMat, 7.15, 1.86, -9.55, false);
+  addCylinder(0.045, 0.045, 0.16, 8, createMaterial({ color: 0xd9f0f7, transparent: true, opacity: 0.7 }), 7.05, 1.72, -9.55, false);
+
+  addCylinder(0.03, 0.03, 3.8, 8, steelMat, 4.6, 2.52, -7.75, false).rotation.x = Math.PI / 2;
   const curtain = addBox(
     0.05,
     2.2,
     3.6,
-    createMaterial({
-      color: 0xa8cbb9,
-      roughness: 0.95,
-    }),
+    createMaterial({ color: 0xa8cbb9, roughness: 0.95 }),
     4.6,
     1.35,
     -7.75,

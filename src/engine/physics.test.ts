@@ -8,6 +8,7 @@ import {
 } from './physics';
 import { SCENES_META, sceneIdxById } from '../data/scenesMeta';
 import { BOOKS } from '../data/books';
+import { CITY_LANDMARKS } from '../scenes/city';
 
 test('resolveMove clamps player inside bounds', () => {
   const bounds = { minX: -7.2, maxX: 7.2, minZ: -7.2, maxZ: 7.2 };
@@ -94,6 +95,15 @@ test('SCENES_META contains all 17 scenes with unique IDs and collectibles', () =
     assert.ok(m.name.length > 0);
     assert.ok(m.item.length > 0);
     assert.ok(m.desc.length > 0);
+  }
+});
+
+test('CITY_LANDMARKS maps all 17 scenes inside the miniature city grid', () => {
+  assert.equal(CITY_LANDMARKS.length, 17);
+  const lmIds = new Set(CITY_LANDMARKS.map((l) => l.id));
+  assert.equal(lmIds.size, 17);
+  for (const meta of SCENES_META) {
+    assert.ok(lmIds.has(meta.id));
   }
 });
 

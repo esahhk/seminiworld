@@ -1,4 +1,4 @@
-import type * as THREE from 'three';
+import type * as THREE from 'three/webgpu';
 
 export type SceneId =
   | 'platform'
@@ -34,7 +34,15 @@ export type SurfaceType =
 
 export type PerfMode = 'high' | 'fast';
 export type TouchMode = 'auto' | '1' | '0';
-export type PanelId = 'scenes' | 'col' | 'set' | null;
+export type PanelId = 'col' | 'set' | null;
+
+export interface VehicleHudState {
+  inCity: boolean;
+  summoned: boolean;
+  driving: boolean;
+  speedKmh: number;
+  gear: 'P' | 'D' | 'R';
+}
 
 export interface SceneMeta {
   id: SceneId;
@@ -131,6 +139,7 @@ export interface SceneInitResult {
 
 export interface SharedGameState {
   sceneIdx: number;
+  inCity: boolean;
   collected: Set<SceneId>;
   resScale: number;
   perf: PerfMode;
@@ -148,9 +157,10 @@ export interface SharedGameState {
 }
 
 export interface EngineCallbacks {
-  onSceneLoaded: (idx: number, name: string, whisper: string) => void;
+  onSceneLoaded: (idx: number, name: string, whisper: string, inCity?: boolean) => void;
   onWhisper: (text: string, duration?: number) => void;
   onCollect: (id: SceneId, item: string, desc: string) => void;
+  onVehicleState: (state: VehicleHudState) => void;
   onOpenModal: (
     title: string,
     body: string,
@@ -176,6 +186,10 @@ export interface EngineCallbacks {
 
 export interface GameEngineHandle {
   loadScene: (idx: number) => void;
+  enterCityHub: (focusSceneId?: SceneId) => void;
+  summonTruck: () => void;
+  toggleDrive: () => void;
+  honkTruck: () => void;
   setRes: (scale: number) => void;
   setPerf: (perf: PerfMode) => void;
   setFov: (fov: number) => void;

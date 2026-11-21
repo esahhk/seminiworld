@@ -1,5 +1,7 @@
 import type { SceneContext } from './sceneContext';
 import type { SceneInitResult } from '../types/game';
+import { addInstancedMeshes } from '../engine/propKit';
+import type { InstanceTransform } from '../engine/propKit';
 
 export function buildCaveScene(ctx: SceneContext): SceneInitResult {
   const {
@@ -10,7 +12,6 @@ export function buildCaveScene(ctx: SceneContext): SceneInitResult {
     tex,
     sfx,
     V,
-    track,
     mkMesh,
     addMesh,
     addBox,
@@ -34,8 +35,8 @@ export function buildCaveScene(ctx: SceneContext): SceneInitResult {
   } = ctx;
 
   scene.background = new T.Color(0x1b2630);
-  scene.fog = new T.FogExp2(0x1e2c36, 0.022);
-  scene.add(new T.HemisphereLight(0x88b4c9, 0x3b444a, 1.05));
+  scene.fog = new T.FogExp2(0x1e2c36, 0.021);
+  scene.add(new T.HemisphereLight(0x88b4c9, 0x3b444a, 1.1));
   scene.add(new T.AmbientLight(0x526b7a, 0.72));
 
   const lantern = new T.PointLight(0xffc078, 2.3, 18);
@@ -54,26 +55,35 @@ export function buildCaveScene(ctx: SceneContext): SceneInitResult {
   northFill.position.set(0, 3.8, -8.2);
   scene.add(northFill);
 
+  const bump = tex.bumpNoise('cave_b', 34);
   const rockTex = tex.concrete('#54606b', 0.24, 'cave_limestone');
   rockTex.repeat.set(3, 8);
   const rockMat = createMaterial({
     map: rockTex,
+    bumpMap: bump,
+    bumpScale: 0.025,
     roughness: 0.9,
     metalness: 0.06,
   });
   const wetRockMat = createMaterial({
     map: tex.concrete('#465460', 0.2, 'cave_wet'),
-    roughness: 0.42,
+    bumpMap: bump,
+    bumpScale: 0.018,
+    roughness: 0.4,
     metalness: 0.14,
   });
   const shelfRockMat = createMaterial({
     color: 0x5c6973,
+    bumpMap: bump,
+    bumpScale: 0.02,
     roughness: 0.85,
   });
   const floorTex = tex.concrete('#4d575f', 0.22, 'cave_fl');
   floorTex.repeat.set(2, 9);
   const floorMat = createMaterial({
     map: floorTex,
+    bumpMap: bump,
+    bumpScale: 0.015,
     roughness: 0.62,
     metalness: 0.08,
   });
@@ -88,11 +98,50 @@ export function buildCaveScene(ctx: SceneContext): SceneInitResult {
   addBox(2.5, 6.2, 1.2, rockMat, 2.55, 3.0, -11.4, true, false, true);
   addBox(2.9, 3.1, 1.2, rockMat, 0, 4.6, -11.4, true, false, true);
 
-  const ribGeo = track(new T.BoxGeometry(0.95, 5.8, 1.8));
-  const archGeo = track(new T.BoxGeometry(6.6, 0.85, 1.1));
-  const stalactiteGeo = track(new T.ConeGeometry(0.22, 1.45, 6));
-  const stalagmiteGeo = track(new T.ConeGeometry(0.24, 1.1, 6));
-  const crystalGeo = track(new T.OctahedronGeometry(0.26, 0));
+  const ribItems: InstanceTransform[] = [];
+  const archItems: InstanceTransform[] = [];
+  const stalactiteItems: InstanceTransform[] = [];
+  const stalagmiteItems: InstanceTransform[] = [];
+  for (let i = 0; i < 12; i++) {
+    const rz = -9.5 + i * 2.2;
+    const bulgeL = (i % 3 === 0 ? 0.35 : 0.12) + Math.sin(i * 1.7) * 0.12;
+    const bulgeR = (i % 2 === 0 ? 0.32 : 0.1) + Math.cos(i * 1.3) * 0.12;
+    ribItems.push({ x: -2.95 + bulgeL, y: 2.9, z: rz, ry: Math.sin(i) * 0.14 });
+    ribItems.push({ x: 2.95 - bulgeR, y: 2.9, z: rz, ry: -Math.cos(i) * 0.14 });
+    if (i % 2 === 0) {
+      archItems.push({ x: 0, y: 5.45 - (i % 4 === 0 ? 0.25 : 0), z: rz, rz: Math.sin(i * 2.1) * 0.04 });
+    }
+    for (const side of [-1, 1] as const) {
+      const scaleY = 0.65 + ((i * 7 + (side > 0 ? 3 : 0)) % 5) * 0.2;
+      stalactiteItems.push({
+        x: side * (1.75 + (i % 2) * 0.45),
+        y: 5.65 - (1.45 * scaleY) / 2,
+        z: rz + 0.35 * side,
+        rx: Math.PI,
+        sx: 0.85,
+        sy: scaleY,
+        sz: 0.85,
+      });
+    }
+    if (i % 3 === 1) {
+      stalagmiteItems.push({ x: -2.35, y: 0.55, z: rz });
+    }
+    if (i % 4 === 2 && rz > 2.5) {
+      stalagmiteItems.push({ x: 2.35, y: 0.68, z: rz, sx: 0.9, sy: 1.25, sz: 0.9 });
+    }
+  }
+  addInstancedMeshes(ctx, new T.BoxGeometry(0.95, 5.8, 1.8), rockMat, ribItems, false, true);
+  addInstancedMeshes(ctx, new T.BoxGeometry(6.6, 0.85, 1.1), wetRockMat, archItems, false, false);
+  addInstancedMeshes(ctx, new T.ConeGeometry(0.22, 1.45, 7), shelfRockMat, stalactiteItems, false, false);
+  addInstancedMeshes(ctx, new T.ConeGeometry(0.24, 1.1, 7), wetRockMat, stalagmiteItems, false, false);
+
+  const plankMat = createMaterial({ map: tex.wood('#6b5038', '#473322', 'cave_walk'), roughness: 0.92 });
+  const plankItems: InstanceTransform[] = [];
+  for (let pz = -7.8; pz <= 11.4; pz += 0.68) {
+    plankItems.push({ x: -0.75, y: 0.025, z: pz, ry: Math.sin(pz) * 0.03 });
+  }
+  addInstancedMeshes(ctx, new T.BoxGeometry(1.38, 0.04, 0.52), plankMat, plankItems, false, true);
+
   const crystalMat = createMaterial({
     color: 0x7bdcf0,
     emissive: 0x2f8fa3,
@@ -100,52 +149,13 @@ export function buildCaveScene(ctx: SceneContext): SceneInitResult {
     roughness: 0.22,
     metalness: 0.2,
   });
-
-  for (let i = 0; i < 12; i++) {
-    const rz = -9.5 + i * 2.2;
-    const bulgeL = (i % 3 === 0 ? 0.35 : 0.12) + Math.sin(i * 1.7) * 0.12;
-    const bulgeR = (i % 2 === 0 ? 0.32 : 0.1) + Math.cos(i * 1.3) * 0.12;
-
-    const ribL = new T.Mesh(ribGeo, i % 2 === 0 ? rockMat : wetRockMat);
-    ribL.position.set(-2.95 + bulgeL, 2.9, rz);
-    ribL.rotation.y = Math.sin(i) * 0.14;
-    ribL.receiveShadow = true;
-    scene.add(ribL);
-
-    const ribR = new T.Mesh(ribGeo, i % 2 === 1 ? rockMat : wetRockMat);
-    ribR.position.set(2.95 - bulgeR, 2.9, rz);
-    ribR.rotation.y = -Math.cos(i) * 0.14;
-    ribR.receiveShadow = true;
-    scene.add(ribR);
-
-    if (i % 2 === 0) {
-      const arch = new T.Mesh(archGeo, rockMat);
-      arch.position.set(0, 5.45 - (i % 4 === 0 ? 0.25 : 0), rz);
-      arch.rotation.z = Math.sin(i * 2.1) * 0.04;
-      scene.add(arch);
-    }
-
-    for (const side of [-1, 1] as const) {
-      const st = new T.Mesh(stalactiteGeo, shelfRockMat);
-      const scaleY = 0.65 + ((i * 7 + (side > 0 ? 3 : 0)) % 5) * 0.2;
-      st.scale.set(0.85, scaleY, 0.85);
-      st.position.set(side * (1.75 + (i % 2) * 0.45), 5.65 - (1.45 * scaleY) / 2, rz + 0.35 * side);
-      st.rotation.x = Math.PI;
-      scene.add(st);
-    }
-
-    if (i % 3 === 1) {
-      const sm = new T.Mesh(stalagmiteGeo, wetRockMat);
-      sm.position.set(-2.35, 0.55, rz);
-      scene.add(sm);
-    }
-    if (i % 4 === 2 && rz > 2.5) {
-      const smR = new T.Mesh(stalagmiteGeo, wetRockMat);
-      smR.scale.set(0.9, 1.25, 0.9);
-      smR.position.set(2.35, 0.68, rz);
-      scene.add(smR);
-    }
-  }
+  const crystalItems: InstanceTransform[] = [
+    { x: 2.1, y: 0.35, z: -5.8, rx: 0.2, ry: 0.6, rz: 0.15, sx: 1.15, sy: 1.15, sz: 1.15 },
+    { x: 2.28, y: 0.26, z: -5.45, rx: 0.1, ry: 1.4, rz: -0.1, sx: 0.72, sy: 0.72, sz: 0.72 },
+    { x: 1.88, y: 0.24, z: -6.05, rx: -0.15, ry: 2.1, rz: 0.2, sx: 0.65, sy: 0.65, sz: 0.65 },
+    { x: -2.15, y: 0.32, z: -4.4, rx: 0.25, ry: 0.9, rz: 0.12, sx: 0.85, sy: 0.85, sz: 0.85 },
+  ];
+  addInstancedMeshes(ctx, new T.OctahedronGeometry(0.26, 0), crystalMat, crystalItems, false, false);
 
   const guideGlowMat = createMaterial({
     color: 0xffe0a8,
@@ -162,8 +172,9 @@ export function buildCaveScene(ctx: SceneContext): SceneInitResult {
     new T.PlaneGeometry(1.55, 8.6),
     createMaterial({
       color: 0x2e8fa3,
+      map: tex.waterSurface(),
       emissive: 0x1a5f70,
-      emissiveIntensity: 0.68,
+      emissiveIntensity: 0.62,
       roughness: 0.12,
       metalness: 0.18,
     }),
@@ -175,46 +186,24 @@ export function buildCaveScene(ctx: SceneContext): SceneInitResult {
   );
   poolSurface.rotation.x = -Math.PI / 2;
 
-  for (const [cx, cy, cz, sc] of [
-    [2.1, 0.35, -5.8, 1.15],
-    [2.28, 0.26, -5.45, 0.72],
-    [1.88, 0.24, -6.05, 0.65],
-    [-2.15, 0.32, -4.4, 0.85],
-  ] as [number, number, number, number][]) {
-    const cr = new T.Mesh(crystalGeo, crystalMat);
-    cr.scale.setScalar(sc);
-    cr.position.set(cx, cy, cz);
-    cr.rotation.set(0.2, cx * 2, 0.15);
-    scene.add(cr);
-  }
-
   addBox(0.68, 0.36, 0.68, shelfRockMat, -1.65, 0.18, 2.5, true, false, true);
+  addCylinder(0.15, 0.16, 0.04, 10, createMaterial({ color: 0x2f353b, metalness: 0.6 }), -1.65, 0.38, 2.5, false, false);
   addCylinder(
+    0.11,
     0.13,
-    0.16,
-    0.3,
+    0.26,
     10,
-    createMaterial({
-      color: 0xe3a84f,
-      emissive: 0xff9230,
-      emissiveIntensity: 0.9,
-    }),
+    createMaterial({ color: 0xe3a84f, emissive: 0xff9230, emissiveIntensity: 0.92 }),
     -1.65,
-    0.51,
+    0.53,
     2.5,
     false,
     false,
   );
+  addCylinder(0.16, 0.12, 0.06, 10, createMaterial({ color: 0x2f353b, metalness: 0.6 }), -1.65, 0.68, 2.5, false, false);
 
-  const brassMat = createMaterial({
-    color: 0xc29e58,
-    metalness: 0.72,
-    roughness: 0.3,
-  });
-  const stoneFrameMat = createMaterial({
-    color: 0x6f797e,
-    roughness: 0.85,
-  });
+  const brassMat = createMaterial({ color: 0xc29e58, metalness: 0.72, roughness: 0.28 });
+  const stoneFrameMat = createMaterial({ color: 0x6f797e, roughness: 0.85 });
   const elevDoorZ = -11.1;
   addBox(0.22, 3.2, 0.22, brassMat, -1.35, 1.6, elevDoorZ, false, false, false);
   addBox(0.22, 3.2, 0.22, brassMat, 1.35, 1.6, elevDoorZ, false, false, false);
@@ -258,6 +247,8 @@ export function buildCaveScene(ctx: SceneContext): SceneInitResult {
   const cBack = mkMesh(new T.BoxGeometry(2.4, 2.9, 0.14), cWallMat, 0, 1.48, -1.15, false, false);
   const cLeft = mkMesh(new T.BoxGeometry(0.14, 2.9, 2.3), cWallMat, -1.18, 1.48, 0, false, false);
   const cRight = mkMesh(new T.BoxGeometry(0.14, 2.9, 2.3), cWallMat, 1.18, 1.48, 0, false, false);
+  const cRail = mkMesh(new T.CylinderGeometry(0.025, 0.025, 1.8, 8), brassMat, 0, 0.96, -1.04, false, false);
+  cRail.rotation.z = Math.PI / 2;
   const cDoor = mkMesh(
     new T.BoxGeometry(2.15, 2.72, 0.1),
     createMaterial({
@@ -274,11 +265,7 @@ export function buildCaveScene(ctx: SceneContext): SceneInitResult {
   );
   const cBulb = mkMesh(
     new T.SphereGeometry(0.1, 10, 10),
-    createMaterial({
-      color: 0xffdfb0,
-      emissive: 0xffc670,
-      emissiveIntensity: 0.72,
-    }),
+    createMaterial({ color: 0xffdfb0, emissive: 0xffc670, emissiveIntensity: 0.72 }),
     0,
     2.78,
     0,
@@ -287,7 +274,7 @@ export function buildCaveScene(ctx: SceneContext): SceneInitResult {
   );
   const elevLight = new T.PointLight(0xffdfb0, 0.95, 8);
   elevLight.position.set(0, 2.65, 0);
-  elevCabin.add(cFloor, cCeil, cBack, cLeft, cRight, cDoor, cBulb, elevLight);
+  elevCabin.add(cFloor, cCeil, cBack, cLeft, cRight, cRail, cDoor, cBulb, elevLight);
   elevCabin.position.set(0, 0, elevDoorZ - 1.2);
   scene.add(elevCabin);
 
@@ -306,7 +293,6 @@ export function buildCaveScene(ctx: SceneContext): SceneInitResult {
   let lanternHigh = true;
   let elevOpen = spawnedInElev;
   let elevPending = false;
-
   let wasOutsideCabin = !spawnedInElev;
   let autoClosedInCabin = false;
 
@@ -380,7 +366,6 @@ export function buildCaveScene(ctx: SceneContext): SceneInitResult {
       wasOutsideCabin = true;
       autoClosedInCabin = false;
     } else if (wasOutsideCabin && elevOpen && !autoClosedInCabin && !elevPending) {
-
       elevOpen = false;
       autoClosedInCabin = true;
       sfx.play('click');

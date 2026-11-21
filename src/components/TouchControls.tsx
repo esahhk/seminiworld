@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 interface TouchControlsProps {
   visible: boolean;
   paused: boolean;
+  driving?: boolean;
   onJoyChange: (x: number, y: number) => void;
   onTouchActive: () => void;
   onJump: () => void;
@@ -12,6 +13,7 @@ interface TouchControlsProps {
 export function TouchControls({
   visible,
   paused,
+  driving = false,
   onJoyChange,
   onTouchActive,
   onJump,
@@ -130,7 +132,7 @@ export function TouchControls({
       <button
         type="button"
         id="touch-jump"
-        aria-label="跳跃"
+        aria-label={driving ? '手刹' : '跳跃'}
         onTouchStart={(e) => {
           e.stopPropagation();
           lastTouchRef.current = Date.now();
@@ -145,12 +147,12 @@ export function TouchControls({
           onJump();
         }}
       >
-        跳跃
+        {driving ? '手刹' : '跳跃'}
       </button>
       <button
         type="button"
         id="touch-act"
-        aria-label="互动"
+        aria-label={driving ? '下车' : '互动'}
         onTouchStart={(e) => {
           e.stopPropagation();
           lastTouchRef.current = Date.now();
@@ -165,7 +167,7 @@ export function TouchControls({
           onInteract();
         }}
       >
-        互动
+        {driving ? '下车' : '互动'}
       </button>
     </div>
   );

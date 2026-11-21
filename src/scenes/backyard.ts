@@ -1,5 +1,6 @@
 import type { SceneContext } from './sceneContext';
 import type { SceneInitResult } from '../types/game';
+import { addInstancedMeshes, buildCamphorTree } from '../engine/propKit';
 
 export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
   const {
@@ -10,7 +11,6 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
     tex,
     sfx,
     V,
-    track,
     mkMesh,
     addMesh,
     addBox,
@@ -39,32 +39,17 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
   dawnSun.position.set(-10, 18, 9);
   dawnSun.castShadow = true;
   scene.add(dawnSun);
-  const softFill = new T.PointLight(0xe6f2f8, 0.75, 22);
+  const softFill = new T.PointLight(0xe6f2f8, 0.85, 24);
   softFill.position.set(0, 4.2, -1.5);
   scene.add(softFill);
 
   const grassTex = tex.grass('#53734a', '#3f5c37');
   grassTex.repeat.set(8, 8);
-  addBox(
-    48,
-    0.2,
-    48,
-    createMaterial({ map: grassTex, roughness: 0.95 }),
-    0,
-    -0.25,
-    0,
-    true,
-    false,
-    true,
-  );
+  addBox(48, 0.2, 48, createMaterial({ map: grassTex, roughness: 0.95 }), 0, -0.25, 0, true, false, true);
 
   addMesh(
-    new T.PlaneGeometry(18, 12),
-    createMaterial({
-      color: 0x5c858f,
-      roughness: 0.14,
-      metalness: 0.15,
-    }),
+    new T.PlaneGeometry(20, 12),
+    createMaterial({ color: 0x4f7d87, roughness: 0.1, metalness: 0.25 }),
     0,
     -0.12,
     9.5,
@@ -72,14 +57,31 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
     false,
   ).rotation.x = -Math.PI / 2;
 
+  const lilyMat = createMaterial({ color: 0x4d7d47, roughness: 0.6 });
+  for (const [lx, lz, ls] of [[-2.4, 6.4, 0.34], [2.1, 7.2, 0.28], [-1.2, 8.8, 0.38], [3.4, 6.2, 0.3]]) {
+    addCylinder(ls, ls, 0.02, 12, lilyMat, lx, -0.1, lz, false);
+  }
+
   const facadeMat = createMaterial({
     map: tex.concrete('#cdd3d0', 0.12, 'by_wall'),
-    roughness: 0.85,
+    bumpMap: tex.bumpNoise('by_b', 18),
+    bumpScale: 0.012,
+    roughness: 0.84,
   });
+  const trimStone = createMaterial({ color: 0xb6bebb, roughness: 0.72 });
   addBox(9.2, 5.2, 0.4, facadeMat, -5.95, 2.5, -7.25, true);
   addBox(9.2, 5.2, 0.4, facadeMat, 5.95, 2.5, -7.25, true);
   addBox(3.0, 2.2, 0.4, facadeMat, 0, 4.0, -7.25, true);
   addBox(22, 0.35, 3.6, createMaterial({ color: 0xadb5b2, roughness: 0.8 }), 0, 5.25, -8.8, false);
+  for (const px of [-7.8, -4.5, -2.0, 2.0, 4.5, 7.8]) {
+    addBox(0.38, 5.0, 0.16, trimStone, px, 2.5, -7.02, false);
+    addBox(0.48, 0.24, 0.22, trimStone, px, 4.95, -7.02, false);
+  }
+  const winGlass = createMaterial({ color: 0x9ac0ce, transparent: true, opacity: 0.48, roughness: 0.12 });
+  for (const wx of [-6.1, 6.1]) {
+    addBox(1.8, 2.8, 0.12, trimStone, wx, 2.2, -7.02, false);
+    addBox(1.55, 2.55, 0.08, winGlass, wx, 2.2, -7.0, false);
+  }
 
   const marbleTex = tex.tiles('#dce0dc', '#d2d8d5', '#a8b0ad', 2, 'by_marble');
   marbleTex.repeat.set(1, 6);
@@ -87,11 +89,7 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
     1.8,
     0.16,
     9.2,
-    createMaterial({
-      map: marbleTex,
-      roughness: 0.2,
-      metalness: 0.14,
-    }),
+    createMaterial({ map: marbleTex, roughness: 0.2, metalness: 0.14 }),
     0,
     -0.02,
     -2.5,
@@ -105,11 +103,9 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
   addBox(1.45, 0.46, 9.2, curbMat, 1.62, 0.21, -2.5, true);
   addBox(4.7, 0.46, 0.55, curbMat, 0, 0.21, 2.15, true);
 
-  const brassMat = createMaterial({
-    color: 0xb89652,
-    metalness: 0.72,
-    roughness: 0.3,
-  });
+  const brassMat = createMaterial({ color: 0xb89652, metalness: 0.78, roughness: 0.26 });
+  const bollardMat = createMaterial({ color: 0x3b4244, metalness: 0.55, roughness: 0.4 });
+  const bollardGlowMat = createMaterial({ color: 0xf4faf0, emissive: 0xdce8d5, emissiveIntensity: 0.9 });
   for (let pz = -6.5; pz <= 2.0; pz += 1.7) {
     addCylinder(0.025, 0.028, 0.76, 8, brassMat, -0.88, 0.44, pz, false);
     addCylinder(0.025, 0.028, 0.76, 8, brassMat, 0.88, 0.44, pz, false);
@@ -120,99 +116,37 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
 
   for (const lz of [-5.8, -2.5, 0.8]) {
     for (const lx of [-1.1, 1.1]) {
-      const gl = new T.PointLight(0xeef5ea, 0.32, 3.6);
-      gl.position.set(lx, 0.5, lz);
-      scene.add(gl);
-      addCylinder(
-        0.08,
-        0.08,
-        0.03,
-        10,
-        createMaterial({
-          color: 0xf4faf0,
-          emissive: 0xdce8d5,
-          emissiveIntensity: 0.75,
-        }),
-        lx,
-        0.45,
-        lz,
-        false,
-        false,
-      );
+      addCylinder(0.06, 0.075, 0.22, 10, bollardMat, lx, 0.55, lz, false, false);
+      addCylinder(0.065, 0.065, 0.06, 10, bollardGlowMat, lx, 0.67, lz, false, false);
+      addCylinder(0.08, 0.02, 0.05, 10, bollardMat, lx, 0.72, lz, false, false);
     }
   }
 
-  const fernMat = createMaterial({ color: 0x456d3e, roughness: 0.52, metalness: 0.08 });
-  const ivyMat = createMaterial({ color: 0x3b6036, roughness: 0.5 });
-  const hydBlue = createMaterial({ color: 0x9ab4dc, roughness: 0.48 });
-  const hydWhite = createMaterial({ color: 0xedf2ef, roughness: 0.45 });
-  const dewMat = createMaterial({ color: 0xf0f8ff, roughness: 0.1, metalness: 0.25 });
-  const bushGeos = [
-    track(new T.DodecahedronGeometry(0.28, 0)),
-    track(new T.DodecahedronGeometry(0.36, 0)),
-    track(new T.DodecahedronGeometry(0.44, 0)),
-  ];
-  const hydGeo = track(new T.DodecahedronGeometry(0.14, 1));
-  const dewGeo = track(new T.SphereGeometry(0.028, 6, 6));
-  for (let i = 0; i < 34; i++) {
+  const bushItems: { x: number; y: number; z: number; sx: number; sy: number; sz: number; color: number }[] = [];
+  const flItems: { x: number; y: number; z: number; rx: number; rz: number; color: number }[] = [];
+  const dewItems: { x: number; y: number; z: number }[] = [];
+  for (let i = 0; i < 36; i++) {
     const side = i % 2 === 0 ? -1 : 1;
     const fx = side * (1.06 + Math.random() * 1.15);
-    const fz = -6.7 + (i / 34) * 8.4;
-    addMesh(
-      bushGeos[i % 3],
-      i % 3 === 0 ? ivyMat : fernMat,
-      fx,
-      0.56,
-      fz,
-      false,
-      true,
-    );
+    const fz = -6.7 + (i / 36) * 8.4;
+    const sc = 0.85 + (i % 3) * 0.22;
+    bushItems.push({ x: fx, y: 0.56, z: fz, sx: sc, sy: sc, sz: sc, color: i % 3 === 0 ? 0x3b6036 : 0x456d3e });
     if (i % 2 === 0) {
-      const fl = addMesh(
-        hydGeo,
-        i % 4 === 0 ? hydBlue : hydWhite,
-        fx - side * 0.14,
-        0.78,
-        fz,
-        false,
-        false,
-      );
-      fl.rotation.z = side * 0.25;
-      addMesh(
-        dewGeo,
-        dewMat,
-        fx - side * 0.14,
-        0.88,
-        fz,
-        false,
-        false,
-      );
+      flItems.push({ x: fx - side * 0.14, y: 0.78, z: fz, rx: 0, rz: side * 0.25, color: i % 4 === 0 ? 0x9ab4dc : 0xedf2ef });
+      dewItems.push({ x: fx - side * 0.14, y: 0.88, z: fz });
     }
   }
+  addInstancedMeshes(ctx, new T.DodecahedronGeometry(0.32, 0), createMaterial({ color: 0xffffff, roughness: 0.55 }), bushItems, false, true);
+  addInstancedMeshes(ctx, new T.DodecahedronGeometry(0.14, 1), createMaterial({ color: 0xffffff, roughness: 0.45 }), flItems, false, false);
+  addInstancedMeshes(ctx, new T.SphereGeometry(0.028, 6, 6), createMaterial({ color: 0xf0f8ff, roughness: 0.1, metalness: 0.25 }), dewItems, false, false);
 
-  const hedgeMat = createMaterial({ color: 0x42633c, roughness: 0.9 });
-  const trunkMat = createMaterial({ map: tex.wood('#614b38', '#453425') });
-  for (const [tx, tz] of [
-    [-7.5, -2.5],
-    [7.5, -2.0],
-    [-9.5, 4.5],
-    [9.2, 5.2],
-    [-6.5, 14.5],
-    [6.8, 15.0],
-  ]) {
-    addCylinder(0.22, 0.3, 3.4, 8, trunkMat, tx, 1.5, tz, false);
-    addMesh(new T.DodecahedronGeometry(2.1, 1), hedgeMat, tx, 3.6, tz, false);
+  for (const [tx, tz] of [[-7.5, -2.5], [7.5, -2.0], [-9.5, 4.5], [9.2, 5.2], [-6.5, 14.5], [6.8, 15.0]]) {
+    buildCamphorTree(ctx, tx, -0.15, tz, 0.9, false);
   }
 
   const sunCone = addMesh(
     new T.CylinderGeometry(1.1, 2.3, 6.6, 16, 1, true),
-    createMaterial({
-      color: 0xf2f8fc,
-      transparent: true,
-      opacity: 0.08,
-      side: T.DoubleSide,
-      depthWrite: false,
-    }),
+    createMaterial({ color: 0xf2f8fc, transparent: true, opacity: 0.08, side: T.DoubleSide, depthWrite: false }),
     -0.4,
     2.8,
     -2.2,
@@ -221,15 +155,7 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
   );
   sunCone.rotation.z = -0.24;
 
-  addSign(
-    1.8,
-    0.7,
-    tex.sign('博物馆后院 · 清晨小路', '#e4ebe6', '#2e4037', '露水未干 · 轻步慢行'),
-    0,
-    1.32,
-    1.78,
-    Math.PI,
-  );
+  addSign(1.8, 0.7, tex.sign('博物馆后院 · 清晨小路', '#e4ebe6', '#2e4037', '露水未干 · 轻步慢行'), 0, 1.32, 1.78, Math.PI);
 
   addBox(0.22, 3.1, 0.22, brassMat, -1.35, 1.55, -7.1, false);
   addBox(0.22, 3.1, 0.22, brassMat, 1.35, 1.55, -7.1, false);
@@ -238,71 +164,23 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
   addBox(0.16, 3.1, 2.5, facadeMat, 1.35, 1.55, -8.35, true);
   addBox(2.8, 3.1, 0.16, facadeMat, 0, 1.55, -9.55, true);
 
-  addBox(0.2, 0.36, 0.08, brassMat, 1.65, 1.25, -7.02, false);
+  addBox(0.22, 0.38, 0.08, brassMat, 1.65, 1.25, -7.02, false);
+  addCylinder(0.03, 0.03, 0.03, 8, createMaterial({ color: 0xffe4a0, emissive: 0xffc65c, emissiveIntensity: 1.0 }), 1.65, 1.3, -6.97);
   addBox(0.98, 0.48, 0.04, brassMat, 2.08, 1.88, -7.02, false);
-  addSign(
-    0.92,
-    0.44,
-    tex.sign('1F · 后院', '#c9a661', '#211a10', 'B2 车库 / B4 溶洞'),
-    2.08,
-    1.88,
-    -6.98,
-  );
+  addSign(0.92, 0.44, tex.sign('1F · 后院', '#c9a661', '#211a10', 'B2 车库 / B4 溶洞'), 2.08, 1.88, -6.98);
 
   const elevCabin = new T.Group();
-  const cFloor = mkMesh(
-    new T.BoxGeometry(2.4, 0.12, 2.3),
-    createMaterial({ map: marbleTex, roughness: 0.25 }),
-    0,
-    0.06,
-    0,
-    false,
-    true,
-  );
-  const cCeil = mkMesh(
-    new T.BoxGeometry(2.4, 0.14, 2.3),
-    createMaterial({ color: 0xd8dfd8, roughness: 0.7 }),
-    0,
-    2.92,
-    0,
-    false,
-    false,
-  );
-  const cBack = mkMesh(
-    new T.BoxGeometry(2.4, 2.9, 0.14),
-    createMaterial({ color: 0xc2cbc6, roughness: 0.65 }),
-    0,
-    1.48,
-    -1.15,
-    false,
-    false,
-  );
-  const cLeft = mkMesh(
-    new T.BoxGeometry(0.14, 2.9, 2.3),
-    createMaterial({ color: 0xc2cbc6, roughness: 0.65 }),
-    -1.18,
-    1.48,
-    0,
-    false,
-    false,
-  );
-  const cRight = mkMesh(
-    new T.BoxGeometry(0.14, 2.9, 2.3),
-    createMaterial({ color: 0xc2cbc6, roughness: 0.65 }),
-    1.18,
-    1.48,
-    0,
-    false,
-    false,
-  );
+  const cFloor = mkMesh(new T.BoxGeometry(2.4, 0.12, 2.3), createMaterial({ map: marbleTex, roughness: 0.25 }), 0, 0.06, 0, false, true);
+  const cCeil = mkMesh(new T.BoxGeometry(2.4, 0.14, 2.3), createMaterial({ color: 0xd8dfd8, roughness: 0.7 }), 0, 2.92, 0, false, false);
+  const cBack = mkMesh(new T.BoxGeometry(2.4, 2.9, 0.14), createMaterial({ color: 0xc2cbc6, roughness: 0.65 }), 0, 1.48, -1.15, false, false);
+  const cLeft = mkMesh(new T.BoxGeometry(0.14, 2.9, 2.3), createMaterial({ color: 0xc2cbc6, roughness: 0.65 }), -1.18, 1.48, 0, false, false);
+  const cRight = mkMesh(new T.BoxGeometry(0.14, 2.9, 2.3), createMaterial({ color: 0xc2cbc6, roughness: 0.65 }), 1.18, 1.48, 0, false, false);
+  const cRail = mkMesh(new T.CylinderGeometry(0.025, 0.025, 2.1, 8), brassMat, 0, 0.92, -1.02, false, false);
+  cRail.rotation.z = Math.PI / 2;
+  const cPanel = mkMesh(new T.BoxGeometry(0.05, 0.42, 0.22), brassMat, 1.09, 1.25, 0.72, false, false);
   const cDoor = mkMesh(
     new T.BoxGeometry(2.15, 2.72, 0.1),
-    createMaterial({
-      color: 0xdce6e4,
-      transparent: true,
-      opacity: 0.62,
-      roughness: 0.35,
-    }),
+    createMaterial({ color: 0xdce6e4, transparent: true, opacity: 0.62, roughness: 0.35 }),
     0,
     1.42,
     1.15,
@@ -311,32 +189,20 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
   );
   const cBulb = mkMesh(
     new T.SphereGeometry(0.09, 10, 10),
-    createMaterial({
-      color: 0xffdfb0,
-      emissive: 0xffc670,
-      emissiveIntensity: 0.45,
-    }),
+    createMaterial({ color: 0xffdfb0, emissive: 0xffc670, emissiveIntensity: 0.45 }),
     0,
     2.78,
     0,
     false,
     false,
   );
-  const elevLight = new T.PointLight(0xffdfb0, 0.4, 6);
+  const elevLight = new T.PointLight(0xffdfb0, 0.5, 6);
   elevLight.position.set(0, 2.65, 0);
-  elevCabin.add(cFloor, cCeil, cBack, cLeft, cRight, cDoor, cBulb, elevLight);
+  elevCabin.add(cFloor, cCeil, cBack, cLeft, cRight, cRail, cPanel, cDoor, cBulb, elevLight);
   elevCabin.position.set(0, -0.02, -8.3);
   scene.add(elevCabin);
 
-  const doorCol = {
-    minX: -1.15,
-    maxX: 1.15,
-    minZ: -7.18,
-    maxZ: -7.02,
-    minY: 0,
-    maxY: 2.85,
-    active: false,
-  };
+  const doorCol = { minX: -1.15, maxX: 1.15, minZ: -7.18, maxZ: -7.02, minY: 0, maxY: 2.85, active: false };
   colliders.push(doorCol);
 
   let elevOpen = true;
@@ -424,24 +290,13 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
       }
       elevOpen = !elevOpen;
       sfx.play('click');
-      showWhisper(
-        elevOpen ? '磨砂玻璃门轻咔滑开，走进去后门会自动关上。' : '玻璃门轻轻合拢。',
-      );
+      showWhisper(elevOpen ? '磨砂玻璃门轻咔滑开，走进去后门会自动关上。' : '玻璃门轻轻合拢。');
     },
-    {
-      radius: 0.9,
-      getLabel: () => (elevOpen ? '关闭后院小电梯门' : '打开后院小电梯门'),
-    },
+    { radius: 0.9, getLabel: () => (elevOpen ? '关闭后院小电梯门' : '打开后院小电梯门') },
   );
-  addInteract(
-    'by_elev_in',
-    V(0, 1.45, -7.55),
-    '按下轿厢楼层按键',
-    '选择前往 B2 车库、B4 洞穴或开关门',
-    openFloorSelector,
-    { radius: 1.4 },
-  );
-
+  addInteract('by_elev_in', V(0, 1.45, -7.55), '按下轿厢楼层按键', '选择前往 B2 车库、B4 洞穴或开关门', openFloorSelector, {
+    radius: 1.4,
+  });
   addInteract('by_flowers', V(-0.9, 0.7, -3.0), '俯身看看沾着露水的绣球与蕨叶', '摸一把清晨石沿', () => {
     sfx.play('grass');
     showWhisper('花瓣微微低着头，指尖一碰就滑下几滴凉丝丝的早露。');

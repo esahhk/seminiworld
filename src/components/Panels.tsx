@@ -3,7 +3,6 @@ import type { PanelId, PerfMode, SceneId, TouchMode } from '../types/game';
 
 interface PanelsProps {
   activePanel: PanelId;
-  sceneIdx: number;
   collected: Set<SceneId>;
   resScale: number;
   perf: PerfMode;
@@ -12,7 +11,6 @@ interface PanelsProps {
   fov: number;
   immersive: boolean;
   onClose: () => void;
-  onSelectScene: (idx: number) => void;
   onInspectCollectible: (title: string, body: string) => void;
   onChangeRes: (val: number) => void;
   onChangePerf: (val: PerfMode) => void;
@@ -24,7 +22,6 @@ interface PanelsProps {
 
 export function Panels({
   activePanel,
-  sceneIdx,
   collected,
   resScale,
   perf,
@@ -33,7 +30,6 @@ export function Panels({
   fov,
   immersive,
   onClose,
-  onSelectScene,
   onInspectCollectible,
   onChangeRes,
   onChangePerf,
@@ -49,31 +45,6 @@ export function Panels({
 
   return (
     <>
-      <div className={`panel${activePanel === 'scenes' ? ' open' : ''}`} id="panel-scenes">
-        <h3>
-          <span>切换世界（点击直达）</span>
-          <button type="button" className="btn" onClick={onClose}>
-            关闭
-          </button>
-        </h3>
-        <div className="scene-grid" id="scene-grid">
-          {visibleEntries.map(({ m, idx }, order) => (
-            <button
-              key={m.id}
-              type="button"
-              className={`sc-item${idx === sceneIdx ? ' cur' : ''}`}
-              onClick={() => {
-                onSelectScene(idx);
-                onClose();
-              }}
-            >
-              <span className="sc-num">{String(order + 1).padStart(2, '0')}</span>
-              <span>{m.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
       <div className={`panel${activePanel === 'col' ? ' open' : ''}`} id="panel-col">
         <h3>
           <span>

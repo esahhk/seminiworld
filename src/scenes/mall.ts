@@ -1,5 +1,6 @@
 import type { SceneContext } from './sceneContext';
 import type { SceneInitResult } from '../types/game';
+import { buildPottedPlant, buildWoodChair } from '../engine/propKit';
 
 export function buildMallScene(ctx: SceneContext): SceneInitResult {
   const {
@@ -29,28 +30,30 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
   } = ctx;
 
   scene.background = new T.Color(0xe6dfd3);
-  scene.fog = new T.Fog(0xe6dfd3, 20, 65);
-  scene.add(new T.HemisphereLight(0xfffaf0, 0x998c7a, 0.9));
-  const warmSpot = new T.PointLight(0xffcb85, 1.5, 20);
+  scene.fog = new T.Fog(0xe6dfd3, 20, 68);
+  scene.add(new T.HemisphereLight(0xfffaf0, 0x998c7a, 0.92));
+
+  const warmSpot = new T.PointLight(0xffcb85, 1.45, 22);
   warmSpot.position.set(0, 3.8, -5);
   scene.add(warmSpot);
-  const counterBackLightL = new T.PointLight(0xffe1b0, 1.15, 14);
+  const counterBackLightL = new T.PointLight(0xffe1b0, 1.1, 14);
   counterBackLightL.position.set(-3.2, 3.8, -6.8);
   scene.add(counterBackLightL);
-  const counterBackLightR = new T.PointLight(0xffe1b0, 1.15, 14);
+  const counterBackLightR = new T.PointLight(0xffe1b0, 1.1, 14);
   counterBackLightR.position.set(3.2, 3.8, -6.8);
   scene.add(counterBackLightR);
   const stairLight = new T.PointLight(0xdcebf7, 0.95, 14);
   stairLight.position.set(10.7, 6.2, -3.5);
   scene.add(stairLight);
 
+  const bump = tex.bumpNoise('mall_b', 24);
   const flTex = tex.tiles('#e0d9cc', '#d2cabd', '#b6ae9f', 4, 'mall_fl');
   flTex.repeat.set(8, 8);
   addBox(
     26,
     0.2,
     24,
-    createMaterial({ map: flTex, roughness: 0.35, metalness: 0.05 }),
+    createMaterial({ map: flTex, bumpMap: bump, bumpScale: 0.008, roughness: 0.34, metalness: 0.05 }),
     0,
     -0.1,
     0,
@@ -58,19 +61,21 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
     false,
     true,
   );
-  addBox(
-    26,
-    0.3,
-    24,
-    createMaterial({ color: 0xf2eee6, roughness: 0.8 }),
-    0,
-    8.5,
-    0,
-    false,
-  );
+  addBox(26, 0.3, 24, createMaterial({ color: 0xf2eee6, roughness: 0.8 }), 0, 8.5, 0, false);
+
+  const pendCordMat = createMaterial({ color: 0x26292e });
+  const pendShadeMat = createMaterial({ color: 0xc95a3d, roughness: 0.45 });
+  const pendBulbMat = createMaterial({ color: 0xfff0cc, emissive: 0xffc66e, emissiveIntensity: 1.2 });
+  for (const px of [-7, -2.5, 2.5, 7]) {
+    addCylinder(0.015, 0.015, 2.2, 6, pendCordMat, px, 7.2, 2.5, false, false);
+    addCylinder(0.08, 0.24, 0.22, 12, pendShadeMat, px, 6.05, 2.5, false, false);
+    addMesh(new T.SphereGeometry(0.07, 8, 8), pendBulbMat, px, 5.95, 2.5, false, false);
+  }
 
   const upperConc = createMaterial({
     map: tex.concrete('#9ea2a6', 0.14, 'mall_up'),
+    bumpMap: bump,
+    bumpScale: 0.012,
   });
   const glassRailMat = createMaterial({
     color: 0x88a8b5,
@@ -80,13 +85,16 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
   });
   const railMetalMat = createMaterial({
     color: 0x5c636b,
-    metalness: 0.6,
-    roughness: 0.35,
+    metalness: 0.62,
+    roughness: 0.32,
   });
 
   addBox(21.7, 0.28, 8.5, upperConc, -2.05, 4.88, -7.75, false, true, true);
   addBox(21.7, 1.05, 0.1, glassRailMat, -2.05, 5.52, -3.55, true);
   addBox(21.7, 0.06, 0.12, railMetalMat, -2.05, 6.06, -3.55, false);
+  for (let px = -12.0; px <= 8.5; px += 2.05) {
+    addBox(0.06, 1.06, 0.06, railMetalMat, px, 5.52, -3.55, false);
+  }
 
   addBox(3.8, 0.28, 4.0, upperConc, 10.7, 4.88, -3.85, false, true, true);
   addBox(0.1, 1.05, 1.75, glassRailMat, 8.85, 5.52, -2.72, true);
@@ -105,111 +113,42 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
 
   for (let i = 0; i < 10; i++) {
     const lh = 0.25 + i * 0.25;
-    addBox(
-      1.6,
-      lh,
-      0.52,
-      upperConc,
-      9.92,
-      lh / 2,
-      -1.6 + i * 0.5,
-      false,
-      true,
-      true,
-    );
+    addBox(1.6, lh, 0.52, upperConc, 9.92, lh / 2, -1.6 + i * 0.5, false, true, true);
     const uh = 0.38;
-    addBox(
-      1.65,
-      uh,
-      0.56,
-      upperConc,
-      11.68,
-      2.62 + i * 0.25 - 0.07,
-      2.65 - i * 0.5,
-      false,
-      true,
-      true,
-    );
+    addBox(1.65, uh, 0.56, upperConc, 11.68, 2.62 + i * 0.25 - 0.07, 2.65 - i * 0.5, false, true, true);
   }
 
   const railLower = addBox(0.06, 0.08, 5.2, railMetalMat, 10.64, 2.15, 0.65, false);
   railLower.rotation.x = -0.46;
   const railUpper = addBox(0.06, 0.08, 5.2, railMetalMat, 10.88, 4.65, 0.4, false);
   railUpper.rotation.x = 0.46;
-  addBox(
-    3.8,
-    3.2,
-    0.2,
-    createMaterial({ color: 0xc2c5c9 }),
-    10.7,
-    6.4,
-    -5.8,
-    true,
-  );
-  addBox(
-    1.5,
-    2.4,
-    0.14,
-    createMaterial({ color: 0x6e757c, metalness: 0.3 }),
-    10.7,
-    6.2,
-    -5.68,
-    false,
-  );
+
+  addBox(3.8, 3.2, 0.2, createMaterial({ color: 0xc2c5c9 }), 10.7, 6.4, -5.8, true);
+  addBox(1.72, 2.52, 0.16, createMaterial({ color: 0x4b525a, metalness: 0.45 }), 10.7, 6.26, -5.7, false);
+  addBox(1.5, 2.4, 0.14, createMaterial({ color: 0x6e757c, metalness: 0.35 }), 10.7, 6.2, -5.66, false);
+  addBox(0.18, 0.05, 0.06, railMetalMat, 11.2, 6.08, -5.58, false);
   addSign(
     1.8,
     0.72,
     tex.sign('写字楼 · 楼上', '#eef2f5', '#2c343d', '会议室 / 茶水间在里'),
     10.7,
     7.75,
-    -5.66,
-  );
-  addBox(
-    1.1,
-    0.85,
-    1.1,
-    createMaterial({ color: 0x9c7248 }),
-    11.6,
-    0.425,
-    1.8,
-    true,
-  );
-  addBox(
-    0.85,
-    0.65,
-    0.85,
-    createMaterial({ color: 0x8a643d }),
-    11.6,
-    1.15,
-    1.8,
-    false,
-  );
-  addCylinder(
-    0.24,
-    0.2,
-    0.42,
-    8,
-    createMaterial({ color: 0x4b7ea8 }),
-    11.6,
-    0.21,
-    -0.2,
+    -5.64,
   );
 
-  addBox(
-    8.5,
-    1.05,
-    1.2,
-    createMaterial({ color: 0xc94f35, roughness: 0.55 }),
-    0,
-    0.52,
-    -5.5,
-    true,
-  );
+  addBox(1.1, 0.85, 1.1, createMaterial({ map: tex.wood('#9c7248', '#73502f') }), 11.6, 0.425, 1.8, true);
+  addBox(0.85, 0.65, 0.85, createMaterial({ map: tex.wood('#8a643d', '#5c4024') }), 11.6, 1.15, 1.8, false);
+  addCylinder(0.24, 0.2, 0.44, 10, createMaterial({ color: 0x4b7ea8, roughness: 0.4 }), 11.6, 0.22, -0.2);
+
+  addBox(8.5, 1.05, 1.2, createMaterial({ color: 0xc94f35, roughness: 0.55 }), 0, 0.52, -5.5, true);
+  for (let fx = -3.8; fx <= 3.8; fx += 0.95) {
+    addBox(0.82, 0.86, 0.05, createMaterial({ map: tex.wood('#8c5d3a', '#664023') }), fx, 0.52, -4.88, false);
+  }
   addBox(
     8.7,
     0.1,
-    1.35,
-    createMaterial({ color: 0xf2ebe0, roughness: 0.3 }),
+    1.36,
+    createMaterial({ color: 0xf2ebe0, bumpMap: bump, bumpScale: 0.005, roughness: 0.28 }),
     0,
     1.08,
     -5.5,
@@ -217,26 +156,9 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
   );
   const shopWallTex = tex.tiles('#e2d9cb', '#d8cebe', '#bfb3a0', 4, 'mall_bw');
   shopWallTex.repeat.set(4, 2);
-  addBox(
-    8.5,
-    4.2,
-    0.3,
-    createMaterial({ map: shopWallTex, roughness: 0.65 }),
-    0,
-    2.1,
-    -8.2,
-    true,
-  );
-  addBox(
-    8.5,
-    1.05,
-    0.34,
-    createMaterial({ map: tex.wood('#8c5d3a', '#664023', 'mall_wain'), roughness: 0.7 }),
-    0,
-    0.525,
-    -8.18,
-    false,
-  );
+  addBox(8.5, 4.2, 0.3, createMaterial({ map: shopWallTex, roughness: 0.62 }), 0, 2.1, -8.2, true);
+  addBox(8.5, 1.05, 0.34, createMaterial({ map: tex.wood('#8c5d3a', '#664023', 'mall_wain'), roughness: 0.7 }), 0, 0.525, -8.18, false);
+  addBox(5.4, 1.48, 0.14, createMaterial({ color: 0x1c1714 }), 0, 3.1, -8.04, false);
   addSign(
     5.2,
     1.35,
@@ -248,165 +170,62 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
     ),
     0,
     3.1,
-    -7.98,
+    -7.95,
   );
-  addBox(
-    2.2,
-    0.85,
-    1.0,
-    createMaterial({ color: 0x8c9296, metalness: 0.65, roughness: 0.35 }),
-    -1.6,
-    0.45,
-    -7.2,
-    true,
-  );
-  addBox(
-    1.1,
-    1.35,
-    0.8,
-    createMaterial({ color: 0x4b5157, metalness: 0.5 }),
-    3.1,
-    0.68,
-    -7.1,
-    true,
-  );
-  addBox(
-    0.55,
-    0.08,
-    0.48,
-    createMaterial({ color: 0xf2f0e8 }),
-    -2.75,
-    1.16,
-    -5.3,
-    false,
-  );
-  addBox(
-    0.32,
-    0.03,
-    0.08,
-    createMaterial({ color: 0x9aa1a6, metalness: 0.7 }),
-    -2.4,
-    1.15,
-    -5.3,
-    false,
-  );
-  addBox(
-    0.52,
-    0.9,
-    0.06,
-    createMaterial({ color: 0xd9dde0 }),
-    2.9,
-    1.25,
-    -5.4,
-    false,
-  );
-  const patty = addCylinder(
-    0.18,
-    0.18,
-    0.06,
-    12,
-    createMaterial({ color: 0x5a2e1c, roughness: 0.85 }),
-    -1.6,
-    0.92,
-    -7.2,
-  );
+  addSign(1.8, 0.85, tex.sign('今日现烤热销', '#2b2420', '#ffe399', '双层牛肉 · 现炸薯饼'), -3.15, 2.25, -8.0, 0);
+  addSign(1.8, 0.85, tex.sign('冰饮套餐组合', '#2b2420', '#9ee6ff', '加 ¥6 配冰美式或可乐'), 3.15, 2.25, -8.0, 0);
+
+  const hoodSteel = createMaterial({ color: 0xadb4b9, metalness: 0.72, roughness: 0.28 });
+  addBox(2.5, 0.48, 1.15, hoodSteel, -1.6, 2.38, -7.2, false);
+  addBox(1.8, 0.6, 0.6, hoodSteel, -1.6, 2.9, -7.4, false);
+  addBox(2.2, 0.85, 1.0, createMaterial({ color: 0x8c9296, metalness: 0.65, roughness: 0.35 }), -1.6, 0.45, -7.2, true);
+  addBox(0.95, 0.85, 0.9, hoodSteel, 0.1, 0.45, -7.2, true);
+  addBox(0.75, 0.08, 0.7, createMaterial({ color: 0x3b4046 }), 0.1, 0.9, -7.2, false);
+  addBox(1.1, 1.55, 0.8, createMaterial({ color: 0x4b5157, metalness: 0.55 }), 3.1, 0.78, -7.1, true);
+  addBox(0.05, 0.6, 0.04, hoodSteel, 2.68, 0.95, -6.68, false);
+
+  addBox(0.55, 0.08, 0.48, createMaterial({ color: 0xf2f0e8 }), -2.75, 1.16, -5.3, false);
+  addBox(0.32, 0.03, 0.08, createMaterial({ color: 0x9aa1a6, metalness: 0.75 }), -2.4, 1.15, -5.3, false);
+  addBox(0.52, 0.9, 0.06, createMaterial({ color: 0xd9dde0 }), 2.9, 1.25, -5.4, false);
+
+  addBox(0.34, 0.06, 0.38, createMaterial({ color: 0x262b30 }), -1.9, 1.16, -5.4, false);
+  addBox(0.06, 0.24, 0.32, createMaterial({ color: 0x202428 }), -1.9, 1.32, -5.4, false);
+  addBox(0.07, 0.18, 0.28, createMaterial({ color: 0x62b4e6, emissive: 0x2a668a, emissiveIntensity: 0.4 }), -1.89, 1.33, -5.4, false);
+
+  addBox(0.42, 0.58, 0.42, hoodSteel, 2.35, 1.42, -5.5, false);
+  addBox(0.44, 0.12, 0.44, createMaterial({ color: 0xc93b2b }), 2.35, 1.66, -5.5, false);
+
+  const patty = addCylinder(0.18, 0.18, 0.06, 12, createMaterial({ color: 0x5a2e1c, roughness: 0.85 }), -1.6, 0.92, -7.2);
   let sizzleOn = false;
-  addCylinder(
-    0.11,
-    0.14,
-    0.08,
-    12,
-    createMaterial({ color: 0xe0c170, metalness: 0.8, roughness: 0.2 }),
-    1.8,
-    1.17,
-    -5.2,
-  );
-  addBox(
-    0.66,
-    0.04,
-    0.4,
-    createMaterial({ color: 0xb8482f }),
-    0.6,
-    1.15,
-    -5.3,
-    false,
-  );
-  addCylinder(
-    0.13,
-    0.12,
-    0.12,
-    12,
-    createMaterial({ color: 0xd99c52 }),
-    0.46,
-    1.22,
-    -5.3,
-  );
-  addBox(
-    0.14,
-    0.14,
-    0.08,
-    createMaterial({ color: 0xc93b2b }),
-    0.72,
-    1.23,
-    -5.3,
-    false,
-  );
+  addCylinder(0.11, 0.14, 0.08, 12, createMaterial({ color: 0xe0c170, metalness: 0.82, roughness: 0.2 }), 1.8, 1.17, -5.2);
+  addBox(0.66, 0.04, 0.4, createMaterial({ color: 0xb8482f }), 0.6, 1.15, -5.3, false);
+  addCylinder(0.13, 0.12, 0.05, 12, createMaterial({ color: 0xd99c52 }), 0.46, 1.19, -5.3);
+  addCylinder(0.13, 0.13, 0.03, 12, createMaterial({ color: 0x54301f }), 0.46, 1.23, -5.3);
+  addCylinder(0.14, 0.12, 0.05, 12, createMaterial({ color: 0xd99c52 }), 0.46, 1.27, -5.3);
+  addBox(0.14, 0.14, 0.08, createMaterial({ color: 0xc93b2b }), 0.72, 1.23, -5.3, false);
+
   const fryMat = createMaterial({ color: 0xf0c246, roughness: 0.75 });
   for (let f = 0; f < 5; f++) {
-    const fr = addBox(
-      0.022,
-      0.14,
-      0.022,
-      fryMat,
-      0.67 + f * 0.024,
-      1.33,
-      -5.3 + (f % 2) * 0.015,
-      false,
-    );
+    const fr = addBox(0.022, 0.14, 0.022, fryMat, 0.67 + f * 0.024, 1.33, -5.3 + (f % 2) * 0.015, false);
     fr.rotation.z = (f - 2) * 0.08;
   }
   const hashMat = createMaterial({ color: 0xd99938, roughness: 0.88 });
   addBox(0.16, 0.04, 0.1, hashMat, 0.8, 1.19, -5.2, false);
   addBox(0.16, 0.04, 0.1, hashMat, 0.82, 1.23, -5.2, false).rotation.y = 0.2;
-  addBox(
-    0.85,
-    0.12,
-    0.52,
-    createMaterial({ color: 0xcfd4d8, metalness: 0.6 }),
-    -0.65,
-    1.19,
-    -5.35,
-    false,
-  );
+  addBox(0.85, 0.12, 0.52, createMaterial({ color: 0xcfd4d8, metalness: 0.62 }), -0.65, 1.19, -5.35, false);
   for (let i = 0; i < 4; i++) {
     addBox(0.18, 0.045, 0.11, hashMat, -0.88 + i * 0.16, 1.27, -5.28, false);
   }
-  const eggTray = addBox(
-    0.14,
-    0.16,
-    0.09,
-    createMaterial({ color: 0xd13e2c }),
-    -0.45,
-    1.33,
-    -5.45,
-    false,
-  );
+  const eggTray = addBox(0.14, 0.16, 0.09, createMaterial({ color: 0xd13e2c }), -0.45, 1.33, -5.45, false);
   const eggFries: ReturnType<typeof addBox>[] = [];
   for (let f = 0; f < 6; f++) {
-    eggFries.push(
-      addBox(0.024, 0.16, 0.024, fryMat, -0.5 + f * 0.02, 1.44, -5.45, false),
-    );
+    eggFries.push(addBox(0.024, 0.16, 0.024, fryMat, -0.5 + f * 0.02, 1.44, -5.45, false));
   }
   const eggHash = addBox(
     0.24,
     0.06,
     0.15,
-    createMaterial({
-      color: 0xe6ad3e,
-      emissive: 0x5c3b08,
-      emissiveIntensity: 0.25,
-      roughness: 0.8,
-    }),
+    createMaterial({ color: 0xe6ad3e, emissive: 0x5c3b08, emissiveIntensity: 0.25, roughness: 0.8 }),
     -0.68,
     1.28,
     -5.46,
@@ -414,87 +233,23 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
   );
 
   for (const x of [-7, 7]) {
-    addBox(
-      1.5,
-      0.75,
-      1.2,
-      createMaterial({ map: tex.wood('#a67c52', '#7c5935') }),
-      x,
-      0.38,
-      2.5,
-      true,
-    );
-    addBox(
-      0.55,
-      0.45,
-      1.1,
-      createMaterial({ color: 0xbd563d }),
-      x - 1.2,
-      0.23,
-      2.5,
-      true,
-    );
-    addBox(
-      0.55,
-      0.45,
-      1.1,
-      createMaterial({ color: 0xbd563d }),
-      x + 1.2,
-      0.23,
-      2.5,
-      true,
-    );
-    addBox(
-      0.45,
-      0.03,
-      0.32,
-      createMaterial({ color: 0xb8482f }),
-      x,
-      0.77,
-      2.5,
-      false,
-    );
-    addBox(
-      0.14,
-      0.13,
-      0.07,
-      createMaterial({ color: 0xc93b2b }),
-      x - 0.1,
-      0.84,
-      2.5,
-      false,
-    );
+    addBox(1.5, 0.08, 1.2, createMaterial({ map: tex.wood('#a67c52', '#7c5935') }), x, 0.72, 2.5, true);
+    addCylinder(0.08, 0.1, 0.7, 10, railMetalMat, x, 0.35, 2.5);
+    addCylinder(0.32, 0.34, 0.04, 12, railMetalMat, x, 0.02, 2.5);
+    buildWoodChair(ctx, x - 1.05, 0, 2.5, -Math.PI / 2, '#946a42', 0xbd563d);
+    buildWoodChair(ctx, x + 1.05, 0, 2.5, Math.PI / 2, '#946a42', 0xbd563d);
+
+    addBox(0.45, 0.03, 0.32, createMaterial({ color: 0xb8482f }), x, 0.77, 2.5, false);
+    addBox(0.14, 0.13, 0.07, createMaterial({ color: 0xc93b2b }), x - 0.1, 0.84, 2.5, false);
     addBox(0.15, 0.04, 0.09, hashMat, x + 0.1, 0.81, 2.48, false);
+    addCylinder(0.04, 0.03, 0.14, 10, createMaterial({ color: 0xf4f0e8 }), x + 0.14, 0.84, 2.6, false);
   }
-  addBox(
-    0.65,
-    1.05,
-    0.65,
-    createMaterial({ color: 0x7c7468 }),
-    5.2,
-    0.52,
-    -3.8,
-    true,
-  );
-  for (const px of [-8, 8]) {
-    addCylinder(
-      0.45,
-      0.35,
-      0.65,
-      10,
-      createMaterial({ color: 0x857869 }),
-      px,
-      0.32,
-      -3,
-    );
-    addMesh(
-      new T.DodecahedronGeometry(0.95, 1),
-      createMaterial({ color: 0x4b7043, roughness: 0.85 }),
-      px,
-      1.5,
-      -3,
-    );
-  }
+  addBox(0.65, 1.05, 0.65, createMaterial({ color: 0x7c7468 }), 5.2, 0.52, -3.8, true);
+  addBox(0.55, 0.04, 0.55, createMaterial({ color: 0x9c8f7d }), 5.2, 1.06, -3.8, false);
+  addBox(0.4, 0.2, 0.04, railMetalMat, 5.2, 0.78, -3.46, false);
+  buildPottedPlant(ctx, -8.2, 0, -3.0, 1.55, 0x857869);
+  buildPottedPlant(ctx, 8.2, 0, -3.0, 1.55, 0x857869);
+
   let orderCount = 83;
   let eggStep = 0;
   let eggSpin = 0;
@@ -519,13 +274,7 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
     if (x >= 8.8 && x <= 12.6 && z >= -5.6 && z <= -1.85 && standingY >= 4.4) {
       return 5.0;
     }
-    if (
-      x >= 10.76 &&
-      x <= 12.6 &&
-      z >= -1.85 &&
-      z <= 2.95 &&
-      standingY >= 2.0
-    ) {
+    if (x >= 10.76 && x <= 12.6 && z >= -1.85 && z <= 2.95 && standingY >= 2.0) {
       const st = Math.floor((2.9 - z) / 0.5);
       const h = 2.75 + Math.min(9, Math.max(0, st)) * 0.25;
       if (h <= standingY + 0.55) {
@@ -535,13 +284,7 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
     if (x >= 9.0 && x <= 12.6 && z > 2.95 && z <= 5.2 && standingY >= 1.9) {
       return 2.5;
     }
-    if (
-      x >= 9.0 &&
-      x <= 10.74 &&
-      z >= -1.9 &&
-      z <= 2.95 &&
-      standingY < 2.7
-    ) {
+    if (x >= 9.0 && x <= 10.74 && z >= -1.9 && z <= 2.95 && standingY < 2.7) {
       const st = Math.floor((z + 1.85) / 0.5);
       const h = 0.25 + Math.min(9, Math.max(0, st)) * 0.25;
       if (h <= standingY + 0.55) {

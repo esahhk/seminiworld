@@ -1,5 +1,7 @@
 import type { SceneContext } from './sceneContext';
 import type { SceneInitResult } from '../types/game';
+import { addInstancedMeshes, buildStreetLamp } from '../engine/propKit';
+import type { InstanceTransform } from '../engine/propKit';
 
 export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
   const {
@@ -29,18 +31,22 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
 
   scene.background = new T.Color(0x1b212b);
   scene.fog = new T.Fog(0x1b212b, 20, 66);
-  scene.add(new T.AmbientLight(0x526178, 0.78));
-  const storeLight = new T.PointLight(0xfff1d6, 1.45, 16);
+  scene.add(new T.HemisphereLight(0x6d7d96, 0x26292e, 0.88));
+  const storeLight = new T.PointLight(0xfff1d6, 1.5, 16);
   storeLight.position.set(-8.0, 3.1, 0);
   scene.add(storeLight);
+  const streetMainLight = new T.PointLight(0xffbe6e, 1.5, 28);
+  streetMainLight.position.set(-1.25, 4.4, 0);
+  scene.add(streetMainLight);
 
+  const bump = tex.bumpNoise('cv_b', 22);
   const asp = tex.concrete('#43474c', 0.22, 'rw_asp');
   asp.repeat.set(4, 10);
   addBox(
     3.4,
     0.24,
     34,
-    createMaterial({ map: tex.concrete('#6b6f75', 0.16, 'cv_walk') }),
+    createMaterial({ map: tex.concrete('#6b6f75', 0.16, 'cv_walk'), bumpMap: bump, bumpScale: 0.012 }),
     -3.3,
     0.0,
     0,
@@ -48,83 +54,19 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
     false,
     true,
   );
-  addBox(
-    12,
-    0.3,
-    34,
-    createMaterial({ map: asp, roughness: 0.88 }),
-    4.4,
-    -0.15,
-    0,
-    true,
-    false,
-    true,
-  );
-  addBox(
-    5.8,
-    0.26,
-    28,
-    createMaterial({ color: 0x45372a, roughness: 1 }),
-    1.3,
-    -0.35,
-    0,
-    true,
-    false,
-    true,
-  );
-  addCylinder(
-    0.26,
-    0.26,
-    26,
-    10,
-    createMaterial({ color: 0x467294 }),
-    1.3,
-    -0.15,
-    0,
-  ).rotation.x = Math.PI / 2;
+  addBox(12, 0.3, 34, createMaterial({ map: asp, roughness: 0.88 }), 4.4, -0.15, 0, true, false, true);
+  addBox(5.8, 0.26, 28, createMaterial({ color: 0x45372a, roughness: 1 }), 1.3, -0.35, 0, true, false, true);
+  addCylinder(0.26, 0.26, 26, 10, createMaterial({ color: 0x467294 }), 1.3, -0.15, 0).rotation.x = Math.PI / 2;
 
-  const poleMat = createMaterial({ color: 0x383e45, metalness: 0.6 });
-  const bulbMat = createMaterial({
-    color: 0xfff0cc,
-    emissive: 0xffb85c,
-    emissiveIntensity: 1.5,
-  });
   for (const lz of [-11.5, -3.8, 3.8, 11.5]) {
-    addCylinder(0.08, 0.11, 4.8, 8, poleMat, -2.1, 2.4, lz, true);
-    addBox(0.95, 0.08, 0.08, poleMat, -1.65, 4.75, lz, false);
-    addBox(0.36, 0.1, 0.22, bulbMat, -1.25, 4.68, lz, false);
-    const sl = new T.PointLight(0xffbe6e, 1.15, 15);
-    sl.position.set(-1.25, 4.4, lz);
-    scene.add(sl);
+    buildStreetLamp(ctx, -2.1, 0.12, lz, 0, true);
   }
 
   const plankTex = tex.wood('#b88e5a', '#876338', 'rw_pl');
   for (const pz of [-11.0, -6.5, -2.0, 7.0, 11.5]) {
-    addBox(
-      2.5,
-      0.16,
-      4.3,
-      createMaterial({ map: plankTex, roughness: 0.85 }),
-      0.0,
-      0.08,
-      pz,
-      false,
-      true,
-      true,
-    );
+    addBox(2.5, 0.16, 4.3, createMaterial({ map: plankTex, roughness: 0.85 }), 0.0, 0.08, pz, false, true, true);
   }
-  addBox(
-    2.5,
-    0.16,
-    4.3,
-    createMaterial({ map: plankTex, roughness: 0.85 }),
-    0.0,
-    0.08,
-    2.5,
-    false,
-    true,
-    true,
-  );
+  addBox(2.5, 0.16, 4.3, createMaterial({ map: plankTex, roughness: 0.85 }), 0.0, 0.08, 2.5, false, true, true);
   const sx = state.roadBridge ? 2.55 : 5.4;
   const sy = state.roadBridge ? 0.08 : 0.22;
   const sz = state.roadBridge ? 2.5 : -2.2;
@@ -154,14 +96,18 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
     to: V(0, 0, 0),
   };
 
+  const coneItems: InstanceTransform[] = [];
+  const coneBaseItems: InstanceTransform[] = [];
   for (const cz of [-13.2, -8.5, -4.0, 0.2, 4.8, 9.2, 13.4]) {
-    addMesh(
-      new T.ConeGeometry(0.25, 0.75, 10),
-      createMaterial({ color: 0xe36222 }),
-      3.8,
-      0.38,
-      cz,
-    );
+    coneItems.push({ x: 3.8, y: 0.38, z: cz });
+    coneBaseItems.push({ x: 3.8, y: 0.03, z: cz });
+  }
+  addInstancedMeshes(ctx, new T.ConeGeometry(0.24, 0.72, 10), createMaterial({ color: 0xe36222 }), coneItems, true, false);
+  addInstancedMeshes(ctx, new T.BoxGeometry(0.48, 0.06, 0.48), createMaterial({ color: 0x26292d }), coneBaseItems, false, true);
+
+  for (const bz of [-10.8, -1.8, 7.2]) {
+    addBox(0.32, 0.64, 2.2, createMaterial({ color: 0xd97828 }), 4.35, 0.32, bz, false);
+    addBox(0.34, 0.14, 2.22, createMaterial({ color: 0xebe8dc }), 4.35, 0.44, bz, false);
   }
   const warnLamp = new T.PointLight(0xff9b26, 1.25, 9);
   warnLamp.position.set(3.8, 1.2, 4.8);
@@ -182,7 +128,9 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
     9.0,
     createMaterial({
       map: tex.tiles('#e6e2d8', '#dad5c9', '#b5b0a4', 5, 'cv_f'),
-      roughness: 0.45,
+      bumpMap: bump,
+      bumpScale: 0.004,
+      roughness: 0.42,
     }),
     -8.0,
     0.04,
@@ -195,7 +143,7 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
   addBox(7.0, 3.6, 0.2, createMaterial({ color: 0xf0ece1 }), -8.0, 1.8, 4.5, true);
   addBox(0.2, 3.6, 9.0, createMaterial({ color: 0xe8e3d7 }), -11.5, 1.8, 0, true);
   addBox(7.0, 0.2, 9.0, createMaterial({ color: 0xf4f2eb }), -8.0, 3.6, 0, false);
-  const winGlassMat = createMaterial({ color: 0x9ac1d4, transparent: true, opacity: 0.35 });
+  const winGlassMat = createMaterial({ color: 0x9ac1d4, transparent: true, opacity: 0.34 });
   addBox(0.14, 3.6, 3.1, winGlassMat, -4.5, 1.8, -2.95, true);
   addBox(0.14, 3.6, 3.1, winGlassMat, -4.5, 1.8, 2.95, true);
   addBox(0.14, 0.8, 2.8, winGlassMat, -4.5, 3.2, 0, false);
@@ -213,10 +161,10 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
     0,
     Math.PI / 2,
   );
-
   addBox(0.24, 0.2, 9.2, createMaterial({ color: 0x1f5e48 }), -4.42, 3.74, 0, false);
   addBox(0.24, 0.08, 9.2, createMaterial({ color: 0xd97a38 }), -4.42, 3.6, 0, false);
   addBox(0.9, 0.04, 1.7, createMaterial({ color: 0x353b42, roughness: 0.95 }), -4.98, 0.16, 0, false);
+
   const ceilingStripMat = createMaterial({
     color: 0xfff8ea,
     emissive: 0xffe4b8,
@@ -228,17 +176,8 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
 
   const fridgeCaseMat = createMaterial({ color: 0xd8e8eb, roughness: 0.35 });
   const fridgeInnerMat = createMaterial({ color: 0xeaf4f7, roughness: 0.4 });
-  const fridgeGlassMat = createMaterial({
-    color: 0xc2e6f2,
-    transparent: true,
-    opacity: 0.24,
-    roughness: 0.08,
-  });
-  const fridgeShelfGlowMat = createMaterial({
-    color: 0xe6f8ff,
-    emissive: 0xbfeaff,
-    emissiveIntensity: 0.9,
-  });
+  const fridgeGlassMat = createMaterial({ color: 0xc2e6f2, transparent: true, opacity: 0.24, roughness: 0.08 });
+  const fridgeShelfGlowMat = createMaterial({ color: 0xe6f8ff, emissive: 0xbfeaff, emissiveIntensity: 0.9 });
   const fridgeLight = new T.PointLight(0xd9f5ff, 0.95, 9);
   fridgeLight.position.set(-10.2, 2.0, 0);
   scene.add(fridgeLight);
@@ -251,14 +190,11 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
   addBox(0.72, 0.24, 5.2, fridgeCaseMat, -11.0, 0.24, 0, false);
   addBox(0.08, 0.08, 4.9, fridgeShelfGlowMat, -10.75, 2.08, 0, false);
   for (const divZ of [-1.25, 0, 1.25]) {
-    addBox(0.68, 1.85, 0.06, createMaterial({ color: 0x9aa9b2, metalness: 0.4 }), -10.98, 1.2, divZ, false);
+    addBox(0.68, 1.85, 0.06, createMaterial({ color: 0x9aa9b2, metalness: 0.45 }), -10.98, 1.2, divZ, false);
   }
-  const bottleMats = [
-    createMaterial({ color: 0x3b8c5e }),
-    createMaterial({ color: 0xc94238 }),
-    createMaterial({ color: 0x3469a6 }),
-    createMaterial({ color: 0xe0a434 }),
-  ];
+
+  const bottlePalette = [0x3b8c5e, 0xc94238, 0x3469a6, 0xe0a434];
+  const bottleItems: InstanceTransform[] = [];
   for (const sy of [0.55, 0.96, 1.38, 1.78]) {
     addBox(0.5, 0.04, 4.92, fridgeCaseMat, -10.98, sy, 0, false);
     for (let bi = 0; bi < 16; bi++) {
@@ -266,23 +202,25 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
       if (Math.abs(bz + 1.25) < 0.08 || Math.abs(bz) < 0.08 || Math.abs(bz - 1.25) < 0.08) {
         continue;
       }
-      addCylinder(
-        0.055,
-        0.058,
-        0.24,
-        8,
-        bottleMats[(bi + Math.round(sy * 3)) % bottleMats.length],
-        -10.85,
-        sy + 0.14,
-        bz,
-        false,
-      );
+      bottleItems.push({
+        x: -10.85,
+        y: sy + 0.14,
+        z: bz,
+        color: bottlePalette[(bi + Math.round(sy * 3)) % bottlePalette.length],
+      });
     }
   }
-
+  addInstancedMeshes(
+    ctx,
+    new T.CylinderGeometry(0.055, 0.058, 0.24, 8),
+    createMaterial({ roughness: 0.28 }),
+    bottleItems,
+    false,
+    false,
+  );
   addBox(0.04, 1.82, 4.9, fridgeGlassMat, -10.64, 1.2, 0, false);
   for (const hz of [-1.42, -1.08, -0.17, 0.17, 1.08, 1.42]) {
-    addBox(0.04, 0.36, 0.04, createMaterial({ color: 0xbac3c9, metalness: 0.7 }), -10.59, 1.25, hz, false);
+    addBox(0.04, 0.36, 0.04, createMaterial({ color: 0xbac3c9, metalness: 0.72 }), -10.59, 1.25, hz, false);
   }
 
   addBox(0.9, 0.96, 3.0, createMaterial({ color: 0xc98447, roughness: 0.62 }), -6.5, 0.56, -2.6, true);
@@ -309,39 +247,34 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
   addBox(0.28, 0.08, 0.36, createMaterial({ color: 0x2d3238 }), -6.42, 1.12, -1.65, false);
   addBox(0.06, 0.24, 0.32, createMaterial({ color: 0x252a30 }), -6.42, 1.28, -1.65, false);
   addBox(0.07, 0.18, 0.26, createMaterial({ color: 0x5da9d9, emissive: 0x255778, emissiveIntensity: 0.6 }), -6.41, 1.29, -1.65, false);
+  addBox(0.26, 0.38, 0.32, createMaterial({ color: 0x262b30, metalness: 0.55 }), -6.56, 1.26, -1.24, false);
+  addCylinder(0.11, 0.09, 0.14, 10, createMaterial({ color: 0x3b4046 }), -6.56, 1.5, -1.24, false);
 
   const shelfColMat = createMaterial({ color: 0xdad4c8, roughness: 0.65 });
   addBox(3.4, 1.6, 0.6, createMaterial({ visible: false }), -8.2, 0.8, 1.6, true);
   addBox(3.36, 1.56, 0.08, shelfColMat, -8.2, 0.9, 1.6, false);
   addBox(3.36, 0.18, 0.58, createMaterial({ color: 0x454a4f }), -8.2, 0.2, 1.6, false);
-  const snackMats = [
-    createMaterial({ color: 0xd9563f }),
-    createMaterial({ color: 0xe3b13b }),
-    createMaterial({ color: 0x4b9468 }),
-    createMaterial({ color: 0x4c79b8 }),
-    createMaterial({ color: 0xe8e2d3 }),
-  ];
+  const snackPalette = [0xd9563f, 0xe3b13b, 0x4b9468, 0x4c79b8, 0xe8e2d3];
+  const snackItems: InstanceTransform[] = [];
   for (const ty of [0.46, 0.82, 1.18, 1.54]) {
     addBox(3.4, 0.04, 0.62, shelfColMat, -8.2, ty, 1.6, false);
     addBox(3.42, 0.035, 0.63, createMaterial({ color: 0x1f5e48 }), -8.2, ty, 1.6, false);
     for (let si = 0; si < 9; si++) {
       const sxPos = -9.65 + si * 0.36;
-      const sm = snackMats[(si + Math.round(ty * 4)) % snackMats.length];
-      addBox(0.22, 0.24, 0.18, sm, sxPos, ty + 0.14, 1.42, false);
-      addBox(0.22, 0.24, 0.18, snackMats[(si + 2) % snackMats.length], sxPos, ty + 0.14, 1.78, false);
+      snackItems.push({ x: sxPos, y: ty + 0.14, z: 1.42, color: snackPalette[(si + Math.round(ty * 4)) % 5] });
+      snackItems.push({ x: sxPos, y: ty + 0.14, z: 1.78, color: snackPalette[(si + 2) % 5] });
     }
   }
-
-  addBox(
-    0.45,
-    0.08,
-    2.4,
-    createMaterial({ map: tex.wood('#9c7248', '#704f2f') }),
-    -4.95,
-    0.92,
-    2.6,
+  addInstancedMeshes(
+    ctx,
+    new T.BoxGeometry(0.22, 0.24, 0.18),
+    createMaterial({ roughness: 0.65 }),
+    snackItems,
+    false,
     false,
   );
+
+  addBox(0.45, 0.08, 2.4, createMaterial({ map: tex.wood('#9c7248', '#704f2f') }), -4.95, 0.92, 2.6, false);
   addBox(0.45, 0.95, 2.4, createMaterial({ visible: false }), -4.95, 0.48, 2.6, true);
   for (const lz of [1.55, 3.65]) {
     addCylinder(0.03, 0.03, 0.82, 8, createMaterial({ color: 0x383d42, metalness: 0.6 }), -4.95, 0.5, lz, false);
@@ -376,8 +309,7 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
     if (pAnim.active && spareCol) {
       spareCol.active = false;
       pAnim.t = Math.min(1, pAnim.t + dt / 0.4);
-      const e =
-        pAnim.t < 0.5 ? 2 * pAnim.t * pAnim.t : 1 - Math.pow(-2 * pAnim.t + 2, 2) / 2;
+      const e = pAnim.t < 0.5 ? 2 * pAnim.t * pAnim.t : 1 - Math.pow(-2 * pAnim.t + 2, 2) / 2;
       sparePlank.position.lerpVectors(pAnim.from, pAnim.to, e);
       sparePlank.position.y += Math.sin(pAnim.t * Math.PI) * 0.55;
       if (pAnim.t >= 1) {

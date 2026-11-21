@@ -19,6 +19,7 @@ import type {
   SceneId,
   SharedGameState,
   TouchMode,
+  VehicleHudState,
 } from './types/game';
 
 interface GlCanvasProps {
@@ -37,6 +38,7 @@ export default function App() {
 
   const stateRef = useRef<SharedGameState>({
     sceneIdx: 0,
+    inCity: false,
     collected: new Set<SceneId>(),
     resScale: 1,
     perf: 'high',
@@ -54,6 +56,14 @@ export default function App() {
   });
 
   const [sceneIdx, setSceneIdx] = useState(0);
+  const [inCity, setInCity] = useState(false);
+  const [vehicleState, setVehicleState] = useState<VehicleHudState>({
+    inCity: false,
+    summoned: false,
+    driving: false,
+    speedKmh: 0,
+    gear: 'P',
+  });
   const [whisperText, setWhisperText] = useState('');
   const [whisperVisible, setWhisperVisible] = useState(false);
   const [collected, setCollected] = useState<Set<SceneId>>(() => new Set());
@@ -290,6 +300,7 @@ export default function App() {
     onSceneLoaded: () => {},
     onWhisper: () => {},
     onCollect: () => {},
+    onVehicleState: () => {},
     onOpenModal: () => {},
     onUpdateModalText: () => {},
     onCloseModal: () => {},
@@ -304,8 +315,9 @@ export default function App() {
   });
 
   callbacksRef.current = {
-    onSceneLoaded: (idx, _name, whisper) => {
+    onSceneLoaded: (idx, _name, whisper, cityMode = false) => {
       setSceneIdx(idx);
+      setInCity(cityMode);
       showWhisper(whisper, 4200);
     },
     onWhisper: showWhisper,
@@ -313,6 +325,9 @@ export default function App() {
       setCollected(new Set(stateRef.current.collected));
       showWhisper(`拾得「${item}」：${desc}`, 4500);
       void id;
+    },
+    onVehicleState: (vs) => {
+      setVehicleState(vs);
     },
     onOpenModal: openModal,
     onUpdateModalText: updateModalText,
@@ -386,6 +401,21 @@ export default function App() {
     [closeModal, releaseInputForOverlay],
   );
 
+  const handleEnterCity = useCallback(() => {
+    closeModal();
+    closePanels();
+    releaseInputForOverlay();
+    if (engineRef.current) {
+      if (stateRef.current.inCity) {
+        engineRef.current.loadScene(stateRef.current.sceneIdx);
+      } else {
+        engineRef.current.enterCityHub();
+      }
+    }
+    setPromptHit(false);
+    setPromptText('');
+  }, [closeModal, closePanels, releaseInputForOverlay]);
+
   const handlePrevScene = useCallback(() => {
     if (engineRef.current) {
       engineRef.current.loadScene(stateRef.current.sceneIdx - 1);
@@ -415,24 +445,6 @@ export default function App() {
     setPromptHit(false);
     setPromptText('');
   }, [closeModal, closePanels]);
-
-  const handleSelectScene = useCallback(
-    (idx: number) => {
-      if (engineRef.current) {
-        engineRef.current.loadScene(idx);
-      } else {
-        const total = SCENES_META.length;
-        const nextIdx = ((idx % total) + total) % total;
-        stateRef.current.sceneIdx = nextIdx;
-        setSceneIdx(nextIdx);
-        closeModal();
-        closePanels();
-      }
-      setPromptHit(false);
-      setPromptText('');
-    },
-    [closeModal, closePanels],
-  );
 
   const handleReset = useCallback(() => {
     closeModal();
@@ -519,6 +531,8 @@ export default function App() {
       <HudOverlay
         sceneIdx={sceneIdx}
         sceneName={curMeta.name}
+        inCity={inCity}
+        vehicle={vehicleState}
         whisperText={whisperText}
         whisperVisible={whisperVisible}
         collectedCount={collected.size}
@@ -530,6 +544,10 @@ export default function App() {
         minimapRef={minimapRef}
         onPrevScene={handlePrevScene}
         onNextScene={handleNextScene}
+        onEnterCity={handleEnterCity}
+        onSummonTruck={() => engineRef.current?.summonTruck()}
+        onToggleDrive={() => engineRef.current?.toggleDrive()}
+        onHonkTruck={() => engineRef.current?.honkTruck()}
         onTogglePanel={handleTogglePanel}
         onReset={handleReset}
         onToggleImmersive={toggleImmersive}
@@ -539,6 +557,7 @@ export default function App() {
       <TouchControls
         visible={touchVisible}
         paused={modal !== null || activePanel !== null}
+        driving={vehicleState.driving}
         onJoyChange={handleJoyChange}
         onTouchActive={handleTouchActive}
         onJump={handleTouchJump}
@@ -547,7 +566,6 @@ export default function App() {
 
       <Panels
         activePanel={activePanel}
-        sceneIdx={sceneIdx}
         collected={collected}
         resScale={resScale}
         perf={perf}
@@ -556,7 +574,6 @@ export default function App() {
         fov={fov}
         immersive={immersive}
         onClose={closePanels}
-        onSelectScene={handleSelectScene}
         onInspectCollectible={(title, body) => openModal(title, body)}
         onChangeRes={(v) => {
           setResScale(v);
