@@ -63,6 +63,8 @@ export default function App() {
     driving: false,
     speedKmh: 0,
     gear: 'P',
+    steerDeg: 0,
+    handbrake: false,
   });
   const [whisperText, setWhisperText] = useState('');
   const [whisperVisible, setWhisperVisible] = useState(false);
@@ -548,6 +550,10 @@ export default function App() {
         onSummonTruck={() => engineRef.current?.summonTruck()}
         onToggleDrive={() => engineRef.current?.toggleDrive()}
         onHonkTruck={() => engineRef.current?.honkTruck()}
+        onShiftGear={(g) => engineRef.current?.shiftGear(g)}
+        onDriveSteer={(v) => engineRef.current?.setDriveSteer(v)}
+        onDrivePedal={(p, pressed) => engineRef.current?.setDrivePedal(p, pressed)}
+        onDriveHandbrake={(pressed) => engineRef.current?.setDriveHandbrake(pressed)}
         onTogglePanel={handleTogglePanel}
         onReset={handleReset}
         onToggleImmersive={toggleImmersive}

@@ -15,6 +15,7 @@ import type {
   SceneId,
   SharedGameState,
   SurfaceType,
+  TruckGear,
 } from '../types/game';
 import { computeMovementDelta, resolveMove, selectBestInteractable } from './physics';
 import { createTexCache, type TexCache } from './texCache';
@@ -203,6 +204,11 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
   let chasePitchOff = 0.24;
   let lastVehEmitMs = 0;
   let handbrakeHeld = false;
+  let driveSteer = 0;
+  let driveGas = false;
+  let driveBrake = false;
+  let parkedGasWarnMs = 0;
+  let citySunLight: THREE.DirectionalLight | null = null;
 
   let targetInter: Interactable | null = null;
   let lastPromptHit = false;
@@ -330,7 +336,7 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
     const m = createMaterial({
       map: texMap,
       roughness: 0.65,
-      side: THREE.DoubleSide,
+      side: THREE.FrontSide,
       polygonOffset: true,
       polygonOffsetFactor: -4,
       polygonOffsetUnits: -4,
@@ -341,6 +347,52 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
       mesh.rotation.x = rx;
     }
     return mesh;
+  }
+
+  function addDoubleSign(
+    w: number,
+    h: number,
+    texMap: THREE.Texture,
+    x: number,
+    y: number,
+    z: number,
+    ry = 0,
+    frameHex = 0x262d36,
+  ): THREE.Group {
+    const grp = new THREE.Group();
+    grp.position.set(x, y, z);
+    grp.rotation.y = ry;
+    const frameMat = createMaterial({
+      color: frameHex,
+      metalness: 0.52,
+      roughness: 0.42,
+    });
+    const board = mkMesh(
+      new THREE.BoxGeometry(w + 0.08, h + 0.08, 0.06),
+      frameMat,
+      0,
+      0,
+      0,
+      true,
+      true,
+    );
+    const faceMat = createMaterial({
+      map: texMap,
+      roughness: 0.58,
+      side: THREE.FrontSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -3,
+      polygonOffsetUnits: -3,
+    });
+    const faceGeo = track(new THREE.PlaneGeometry(w, h));
+    const front = new THREE.Mesh(faceGeo, faceMat);
+    front.position.set(0, 0, 0.034);
+    const back = new THREE.Mesh(faceGeo, faceMat);
+    back.position.set(0, 0, -0.034);
+    back.rotation.y = Math.PI;
+    grp.add(board, front, back);
+    scene.add(grp);
+    return grp;
   }
 
   function syncColX(mesh: THREE.Mesh, halfW: number): void {
@@ -397,23 +449,23 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
 
   function emitVehicleState(force = false): void {
     const now = performance.now();
-    if (!force && now - lastVehEmitMs < 110) {
+    if (!force && now - lastVehEmitMs < 85) {
       return;
     }
     lastVehEmitMs = now;
     const speed = truckState ? truckState.speed : 0;
     const speedKmh = Math.round(Math.abs(speed) * 3.6);
-    const gear: 'P' | 'D' | 'R' = !driving
-      ? 'P'
-      : speed < -0.15
-        ? 'R'
-        : 'D';
+    const gear: TruckGear = driving && truckState ? truckState.gear : 'P';
+    const steerDeg = truckState ? Math.round((-truckState.steerAngle / 0.56) * 420) : 0;
+    const hbActive = Boolean(keys['Space']) || handbrakeHeld;
     callbacksRef.current.onVehicleState({
       inCity: state.inCity,
       summoned: truckState !== null,
       driving,
       speedKmh,
       gear,
+      steerDeg,
+      handbrake: hbActive,
     });
   }
 
@@ -557,22 +609,30 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
     truckBoardInter = null;
     driving = false;
     handbrakeHeld = false;
+    driveSteer = 0;
+    driveGas = false;
+    driveBrake = false;
+    citySunLight = null;
     state.zoomActive = false;
   }
 
   function setupShadows(wideCity = false): void {
-    if (isSoftwareGl || state.perf === 'fast') {
-      return;
-    }
-    const isSmallScreen = window.innerWidth <= 900;
-    const shadowRes = isSmallScreen ? 1024 : 2048;
+    citySunLight = null;
     scene.traverse((obj) => {
       const light = obj as THREE.DirectionalLight;
       if (light.isDirectionalLight && light.castShadow) {
+        if (wideCity) {
+          citySunLight = light;
+        }
+        if (isSoftwareGl || state.perf === 'fast') {
+          return;
+        }
+        const isSmallScreen = window.innerWidth <= 900;
+        const shadowRes = wideCity ? 1024 : isSmallScreen ? 1024 : 2048;
         light.shadow.mapSize.set(shadowRes, shadowRes);
         light.shadow.camera.near = 0.5;
-        light.shadow.camera.far = wideCity ? 145 : 65;
-        const d = wideCity ? 52 : 16;
+        light.shadow.camera.far = wideCity ? 160 : 65;
+        const d = wideCity ? 38 : 16;
         light.shadow.camera.left = -d;
         light.shadow.camera.right = d;
         light.shadow.camera.top = d;
@@ -581,7 +641,7 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
         light.shadow.normalBias = 0.025;
       }
       const spot = obj as THREE.SpotLight;
-      if (spot.isSpotLight && spot.castShadow) {
+      if (!isSoftwareGl && state.perf !== 'fast' && spot.isSpotLight && spot.castShadow) {
         spot.shadow.mapSize.set(1024, 1024);
         spot.shadow.bias = -0.0004;
         spot.shadow.normalBias = 0.02;
@@ -605,6 +665,7 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
       addBox,
       addCylinder,
       addSign,
+      addDoubleSign,
       syncColX,
       syncColZ,
       createMaterial,
@@ -731,6 +792,9 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
     }
     if (!driving) {
       driving = true;
+      if (truckState.gear === 'P') {
+        truckState.gear = 'D';
+      }
       chaseYawOff = 0;
       chasePitchOff = 0.24;
       _chaseCamPos.set(
@@ -741,13 +805,17 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
       clearHover();
       sfx.play('ignition');
       callbacksRef.current.onWhisper(
-        '已进入驾驶室：W/S 油门倒车 · A/D 转向 · 空格手刹 · H 鸣笛 · E 下车',
+        '已进入驾驶室：D/R/N/P 切挡 · 左手方向盘/左右键 · 右手油门刹车 · E 下车',
         4200,
       );
     } else {
       driving = false;
       handbrakeHeld = false;
+      driveSteer = 0;
+      driveGas = false;
+      driveBrake = false;
       truckState.speed *= 0.15;
+      truckState.gear = 'P';
       const sideX = -Math.cos(truckState.yaw) * 2.2;
       const sideZ = Math.sin(truckState.yaw) * 2.2;
       const [ex, ez] = resolveMove(
@@ -765,10 +833,33 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
       camera.fov = state.fov;
       camera.updateProjectionMatrix();
       sfx.play('door');
-      callbacksRef.current.onWhisper('已下车，走入身旁建筑光环可按 [E] 进入场景。', 3200);
+      callbacksRef.current.onWhisper('已挂 P 档下车，走入建筑光环可按 [E] 进入场景。', 3200);
     }
     applyTruckVisuals();
     emitVehicleState(true);
+  }
+
+  function shiftGear(gear: TruckGear): void {
+    if (!state.inCity || !truckState) {
+      return;
+    }
+    if (truckState.gear !== gear) {
+      truckState.gear = gear;
+      sfx.play('switch');
+      emitVehicleState(true);
+    }
+  }
+
+  function stepGear(dir: -1 | 1): void {
+    if (!driving || !truckState) {
+      return;
+    }
+    const order: TruckGear[] = ['P', 'R', 'N', 'D'];
+    const idx = order.indexOf(truckState.gear);
+    const next = Math.max(0, Math.min(order.length - 1, idx + dir));
+    if (next !== idx) {
+      shiftGear(order[next]);
+    }
   }
 
   function honkTruck(): void {
@@ -820,6 +911,7 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
     player.vel.set(0, 0, 0);
     player.pitch = 0;
     camera.fov = state.fov;
+    camera.far = 220;
     camera.updateProjectionMatrix();
     if (!isSoftwareGl && renderer.initialized) {
       void renderer.compileAsync(scene, camera).catch(() => {});
@@ -841,7 +933,7 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
 
     heightFn = () => 0;
     surfaceFn = () => 'concrete';
-    bounds = { minX: -64, maxX: 64, minZ: -64, maxZ: 64 };
+    bounds = { minX: -136, maxX: 136, minZ: -136, maxZ: 136 };
 
     let info;
     try {
@@ -860,6 +952,7 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
     player.vel.set(0, 0, 0);
     player.pitch = 0;
     camera.fov = state.fov;
+    camera.far = 360;
     camera.updateProjectionMatrix();
     if (!isSoftwareGl && renderer.initialized) {
       void renderer.compileAsync(scene, camera).catch(() => {});
@@ -874,6 +967,9 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
     lookTouchId = null;
     dragging = false;
     handbrakeHeld = false;
+    driveSteer = 0;
+    driveGas = false;
+    driveBrake = false;
     joyVec.x = 0;
     joyVec.y = 0;
   }
@@ -953,6 +1049,21 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
     if (e.code === 'KeyH' && !e.repeat && state.inCity && truckState) {
       e.preventDefault();
       honkTruck();
+    }
+    if (driving && !e.repeat) {
+      if (e.code === 'Digit1') {
+        shiftGear('P');
+      } else if (e.code === 'Digit2') {
+        shiftGear('R');
+      } else if (e.code === 'Digit3') {
+        shiftGear('N');
+      } else if (e.code === 'Digit4') {
+        shiftGear('D');
+      } else if (e.code === 'KeyQ') {
+        stepGear(-1);
+      } else if (e.code === 'KeyZ') {
+        stepGear(1);
+      }
     }
     if (e.code === 'Space') {
       e.preventDefault();
@@ -1180,23 +1291,37 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
   }
 
   const mmCtx = minimapCanvas ? minimapCanvas.getContext('2d') : null;
+  let lastMapX = 99999;
+  let lastMapZ = 99999;
+  let lastMapYaw = 99999;
   function drawMinimap(now: number): void {
-    if (!mmCtx || now - lastMapMs < 42) {
+    if (!mmCtx || now - lastMapMs < 48) {
+      return;
+    }
+    if (
+      now - lastMapMs < 240 &&
+      Math.abs(player.pos.x - lastMapX) < 0.12 &&
+      Math.abs(player.pos.z - lastMapZ) < 0.12 &&
+      Math.abs(player.yaw - lastMapYaw) < 0.03
+    ) {
       return;
     }
     lastMapMs = now;
+    lastMapX = player.pos.x;
+    lastMapZ = player.pos.z;
+    lastMapYaw = player.yaw;
     mmCtx.clearRect(0, 0, 128, 128);
-    mmCtx.fillStyle = 'rgba(22,24,28,0.75)';
+    mmCtx.fillStyle = 'rgba(18,20,24,0.84)';
     mmCtx.fillRect(0, 0, 128, 128);
-    const scale = state.inCity ? 1.45 : 3.6;
-    const range = state.inCity ? 48 : 12;
+    const scale = state.inCity ? 0.58 : 3.6;
+    const range = state.inCity ? 112 : 12;
     const cx = 64;
     const cy = 64;
 
     if (state.inCity) {
-      mmCtx.fillStyle = 'rgba(72,78,86,0.55)';
-      for (const r of [-36, 0, 36]) {
-        const w = r === 0 ? 9.4 : 8.4;
+      mmCtx.fillStyle = 'rgba(72,78,86,0.58)';
+      for (const r of [-96, -48, 0, 48, 96]) {
+        const w = r === 0 ? 11.2 : 9.6;
         mmCtx.fillRect(cx + (r - w / 2 - player.pos.x) * scale, 0, w * scale, 128);
         mmCtx.fillRect(0, cy + (r - w / 2 - player.pos.z) * scale, 128, w * scale);
       }
@@ -1227,7 +1352,7 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
       mmCtx.arc(
         cx + (it.pos.x - player.pos.x) * scale,
         cy + (it.pos.z - player.pos.z) * scale,
-        2.6,
+        state.inCity ? 2.1 : 2.6,
         0,
         Math.PI * 2,
       );
@@ -1268,26 +1393,30 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
       }
 
       if (driving && truckState && truckRig) {
-        let th = 0;
-        let st = 0;
-        if (keys['KeyW'] || keys['ArrowUp']) {
-          th += 1;
-        }
-        if (keys['KeyS'] || keys['ArrowDown']) {
-          th -= 1;
-        }
+        const gasPressed = Boolean(keys['KeyW'] || keys['ArrowUp'] || driveGas);
+        const brakePressed = Boolean(keys['KeyS'] || keys['ArrowDown'] || driveBrake);
+        let st = driveSteer;
         if (keys['KeyA'] || keys['ArrowLeft']) {
           st += 1;
         }
         if (keys['KeyD'] || keys['ArrowRight']) {
           st -= 1;
         }
-        th -= joyVec.y;
-        st -= joyVec.x;
+        st = Math.max(-1, Math.min(1, st));
+
+        if (truckState.gear === 'P' && gasPressed && now - parkedGasWarnMs > 2600) {
+          parkedGasWarnMs = now;
+          callbacksRef.current.onWhisper('当前处于 [P] 驻车档，请点击或按 2/4 切换至 R / D 档再踩油门。', 2600);
+        }
 
         truckState = stepTruckPhysics(
           truckState,
-          { throttle: th, steer: st, handbrake: Boolean(keys['Space']) || handbrakeHeld },
+          {
+            gas: gasPressed ? 1 : 0,
+            brake: brakePressed ? 1 : 0,
+            steer: st,
+            handbrake: Boolean(keys['Space']) || handbrakeHeld,
+          },
           bounds,
           colliders,
           dt,
@@ -1301,8 +1430,8 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
           chaseYawOff *= Math.exp(-2.4 * dt);
         }
         const camYaw = truckState.yaw + chaseYawOff;
-        const camDist = 9.2 + Math.min(2.0, Math.abs(truckState.speed) * 0.08);
-        const camHeight = 3.9 + chasePitchOff * 4.2;
+        const camDist = 9.4 + Math.min(2.4, Math.abs(truckState.speed) * 0.08);
+        const camHeight = 4.0 + chasePitchOff * 4.2;
         _chaseDesired.set(
           Math.max(bounds.minX + 1.5, Math.min(bounds.maxX - 1.5, truckState.x + Math.sin(camYaw) * camDist)),
           Math.max(1.4, camHeight),
@@ -1318,7 +1447,7 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
         );
         camera.lookAt(_chaseLookTarget);
 
-        const targetFov = state.fov + Math.min(7.5, Math.abs(truckState.speed) * 0.34);
+        const targetFov = state.fov + Math.min(8.5, Math.abs(truckState.speed) * 0.34);
         if (Math.abs(camera.fov - targetFov) > 0.05) {
           camera.fov += (targetFov - camera.fov) * damp;
           camera.updateProjectionMatrix();
@@ -1409,6 +1538,14 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
         camera.rotation.x = player.pitch;
         findInteractable();
         drawMinimap(now);
+      }
+
+      if (citySunLight && state.inCity && renderer.shadowMap.enabled) {
+        const snapX = Math.round(player.pos.x * 0.5) * 2;
+        const snapZ = Math.round(player.pos.z * 0.5) * 2;
+        citySunLight.target.position.set(snapX, 0, snapZ);
+        citySunLight.position.set(snapX + 42, 58, snapZ + 32);
+        citySunLight.target.updateMatrixWorld();
       }
     }
 
@@ -1591,6 +1728,21 @@ export function createGameEngine(opts: GameEngineInitOptions): GameEngineHandle 
     summonTruck,
     toggleDrive,
     honkTruck,
+    shiftGear,
+    setDriveSteer(v: number) {
+      driveSteer = Math.max(-1, Math.min(1, v));
+    },
+    setDrivePedal(pedal: 'gas' | 'brake', pressed: boolean) {
+      if (pedal === 'gas') {
+        driveGas = pressed;
+      } else {
+        driveBrake = pressed;
+      }
+    },
+    setDriveHandbrake(pressed: boolean) {
+      handbrakeHeld = pressed;
+      emitVehicleState(true);
+    },
     setRes(scale: number) {
       state.resScale = scale;
       resize();

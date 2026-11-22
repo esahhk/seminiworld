@@ -16,7 +16,7 @@ export function buildPlatformScene(ctx: SceneContext): SceneInitResult {
     addMesh,
     addBox,
     addCylinder,
-    addSign,
+    addDoubleSign,
     createMaterial,
     addInteract,
     addCollectible,
@@ -138,24 +138,52 @@ export function buildPlatformScene(ctx: SceneContext): SceneInitResult {
 
   buildParkBench(ctx, 3.2, 0, 4.2, 0, true);
 
-  addCylinder(0.04, 0.04, 0.65, 8, steelMat, -3.72, 0.8, -7.75);
-  addCylinder(0.04, 0.04, 0.65, 8, steelMat, -2.28, 0.8, -7.75);
-  addSign(1.5, 0.75, tex.sign('高空注意阵风', '#d9c37a', '#24221d', '天台 214m', true), -3, 1.28, -7.72);
+  addCylinder(0.04, 0.04, 0.88, 8, steelMat, -3.76, 0.9, -7.74);
+  addCylinder(0.04, 0.04, 0.88, 8, steelMat, -2.24, 0.9, -7.74);
+  addDoubleSign(
+    1.6,
+    0.78,
+    tex.sign('高空注意阵风', '#1d242b', '#f5dfb0', '天台观测平台 · 214m', true, 1.6 / 0.78),
+    -3,
+    1.38,
+    -7.74,
+    0,
+    0x3b444c,
+  );
 
   const cityWinTex = tex.facadeWindows('#5f6d7a', '#fff0c4', 'plat_sky');
-  const cityMat = createMaterial({ map: cityWinTex, roughness: 0.78 });
+  const cityMat = createMaterial({ map: cityWinTex, roughness: 0.76 });
+  const roofCapMat = createMaterial({ color: 0x3b4249, roughness: 0.65 });
+  const towerBeaconMat = createMaterial({ color: 0xe8483c, emissive: 0xc92c22, emissiveIntensity: 1.0 });
   const towerItems: { x: number; y: number; z: number; sx: number; sy: number; sz: number }[] = [];
-  for (let i = 0; i < 42; i++) {
-    const ang = (i / 42) * Math.PI * 2 + (i % 3) * 0.14;
-    const dist = 24 + (i % 5) * 14;
+  const tierItems: { x: number; y: number; z: number; sx: number; sy: number; sz: number }[] = [];
+  const capItems: { x: number; y: number; z: number; sx: number; sy: number; sz: number }[] = [];
+  const beaconItems: { x: number; y: number; z: number }[] = [];
+  for (let i = 0; i < 44; i++) {
+    const ang = (i / 44) * Math.PI * 2 + (i % 3) * 0.14;
+    const dist = 24 + (i % 5) * 15;
     const bx = Math.cos(ang) * dist;
     const bz = Math.sin(ang) * dist;
-    const bh = 14 + ((i * 19) % 34);
-    const bw = 6 + (i % 4) * 2.2;
-    const bd = 6 + ((i + 2) % 4) * 2.1;
+    const bh = 16 + ((i * 19) % 36);
+    const bw = 6.2 + (i % 4) * 2.2;
+    const bd = 6.2 + ((i + 2) % 4) * 2.1;
+    const topY = -26 + bh;
     towerItems.push({ x: bx, y: -26 + bh / 2, z: bz, sx: bw, sy: bh, sz: bd });
+    if (i % 2 === 0) {
+      const th = 3.8 + (i % 3) * 1.8;
+      tierItems.push({ x: bx, y: topY + th / 2, z: bz, sx: bw * 0.7, sy: th, sz: bd * 0.7 });
+      capItems.push({ x: bx, y: topY + th + 0.2, z: bz, sx: bw * 0.74, sy: 0.35, sz: bd * 0.74 });
+      if (bh > 32) {
+        beaconItems.push({ x: bx, y: topY + th + 0.6, z: bz });
+      }
+    } else {
+      capItems.push({ x: bx, y: topY + 0.2, z: bz, sx: bw * 1.04, sy: 0.38, sz: bd * 1.04 });
+    }
   }
   addInstancedMeshes(ctx, new T.BoxGeometry(1, 1, 1), cityMat, towerItems, false, false);
+  addInstancedMeshes(ctx, new T.BoxGeometry(1, 1, 1), cityMat, tierItems, false, false);
+  addInstancedMeshes(ctx, new T.BoxGeometry(1, 1, 1), roofCapMat, capItems, false, false);
+  addInstancedMeshes(ctx, new T.SphereGeometry(0.18, 6, 6), towerBeaconMat, beaconItems, false, false);
 
   addBox(0.75, 0.92, 0.54, copingMat, 5.5, 0.46, -5.5, true);
   addBox(0.36, 0.24, 0.04, createMaterial({ color: 0x26323a, emissive: 0x164236, emissiveIntensity: 0.7 }), 5.5, 0.65, -5.21, false);

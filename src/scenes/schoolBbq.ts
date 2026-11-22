@@ -1,6 +1,7 @@
 import type { SceneContext } from './sceneContext';
 import type { SceneInitResult } from '../types/game';
 import { addInstancedMeshes, buildWoodChair } from '../engine/propKit';
+import type { InstanceTransform } from '../engine/propKit';
 
 export function buildSchoolBbqScene(ctx: SceneContext): SceneInitResult {
   const {
@@ -10,10 +11,12 @@ export function buildSchoolBbqScene(ctx: SceneContext): SceneInitResult {
     tex,
     sfx,
     V,
+    track,
     addMesh,
     addBox,
     addCylinder,
     addSign,
+    addDoubleSign,
     createMaterial,
     addInteract,
     addCollectible,
@@ -97,15 +100,15 @@ export function buildSchoolBbqScene(ctx: SceneContext): SceneInitResult {
   colliders.push(doorCol);
 
   addBox(8.5, 0.2, 6, createMaterial({ map: tex.tiles('#cfd4d1', '#c0c5c2', '#969b98', 4, 'hall_f') }), -3, 0.01, 7, false, false, true);
-  addSign(2.2, 1.1, tex.sign('教学楼一层大厅', '#e6dfd0', '#384a3c', '楼梯口 · 右转校医室', true), -7, 1.8, 4.15);
+  addSign(2.2, 1.1, tex.sign('教学楼一层大厅', '#e6dfd0', '#384a3c', '楼梯口 · 右转校医室', true, 2), -7, 1.8, 4.15);
   addBox(0.2, 3.8, 6.2, createMaterial({ color: 0xe5dfd3 }), -7.25, 1.9, 7, true);
   addBox(0.14, 2.5, 1.4, createMaterial({ color: 0x9dc2ae }), -7.12, 1.25, 7.0, true);
-  addSign(1.6, 0.72, tex.sign('校医室 · 走廊尽头右转', '#eef4ef', '#2f5440', '推门进走廊', true), -7.08, 2.8, 7.0, Math.PI / 2);
+  addSign(1.6, 0.72, tex.sign('校医室 · 走廊尽头右转', '#eef4ef', '#2f5440', '推门进走廊', true, 1.6 / 0.72), -7.08, 2.8, 7.0, Math.PI / 2);
 
   addBox(4.3, 1.56, 0.12, createMaterial({ color: 0x5c422a, roughness: 0.7 }), -3, 2.0, -7.83, false);
   addBox(4.15, 1.42, 0.1, createMaterial({ color: 0x2b4a36, roughness: 0.9 }), -3, 2.0, -7.78, true);
   addBox(4.15, 0.06, 0.16, createMaterial({ color: 0x8f6642 }), -3, 1.28, -7.72, false);
-  const bbTex = tex.sign('值日生：林小宇  周敏', '#2b4a36', '#eae6d8', '放学记得关东边窗户', true);
+  const bbTex = tex.sign('值日生：林小宇  周敏', '#2b4a36', '#eae6d8', '放学记得关东边窗户', true, 3.8 / 1.3);
   addMesh(
     new T.PlaneGeometry(3.8, 1.3),
     createMaterial({
@@ -128,16 +131,18 @@ export function buildSchoolBbqScene(ctx: SceneContext): SceneInitResult {
 
   const deskWood = createMaterial({ map: tex.wood('#b88d5c', '#8a653c'), roughness: 0.72 });
   const deskSteel = createMaterial({ color: 0x454c54, metalness: 0.55, roughness: 0.4 });
+  const legItems: InstanceTransform[] = [];
   for (const dx of [-5.5, -3, -0.5]) {
     for (const dz of [-4.5, -1.5]) {
       addBox(0.95, 0.05, 0.56, deskWood, dx, 0.72, dz, true);
       addBox(0.86, 0.14, 0.46, deskSteel, dx, 0.6, dz, false);
       for (const [lx, lz] of [[-0.4, -0.22], [0.4, -0.22], [-0.4, 0.22], [0.4, 0.22]]) {
-        addCylinder(0.02, 0.02, 0.68, 6, deskSteel, dx + lx, 0.36, dz + lz, true);
+        legItems.push({ x: dx + lx, y: 0.36, z: dz + lz });
       }
       buildWoodChair(ctx, dx, 0.13, dz + 0.52, Math.PI, '#9e7246');
     }
   }
+  addInstancedMeshes(ctx, new T.CylinderGeometry(0.02, 0.02, 0.68, 6), deskSteel, legItems, true, false);
   addBox(0.32, 0.05, 0.24, createMaterial({ color: 0x628099 }), -3.1, 0.77, -4.45, false);
 
   const grillMetal = createMaterial({ color: 0x35373a, metalness: 0.65, roughness: 0.42 });
@@ -148,25 +153,45 @@ export function buildSchoolBbqScene(ctx: SceneContext): SceneInitResult {
   }
   addBox(0.46, 0.04, 0.66, inoxMat, 7.64, 0.78, -2, false);
   addBox(1.65, 0.08, 0.56, createMaterial({ color: 0xc94218, emissive: 0x9e2508, emissiveIntensity: 0.95 }), 6.5, 0.88, -2, false);
-  for (let sk = -0.65; sk <= 0.65; sk += 0.26) {
-    addBox(0.05, 0.04, 0.44, createMaterial({ color: 0x9c4c26 }), 6.5 + sk, 0.95, -2, false);
+  const grateItems: InstanceTransform[] = [];
+  for (let gz = -0.22; gz <= 0.23; gz += 0.14) {
+    grateItems.push({ x: 6.5, y: 0.92, z: -2 + gz, rz: Math.PI / 2 });
   }
+  addInstancedMeshes(ctx, new T.CylinderGeometry(0.009, 0.009, 1.72, 6), inoxMat, grateItems, false, false);
+  const skewerMat = createMaterial({ color: 0x9c4c26, roughness: 0.75 });
+  const skewerItems: InstanceTransform[] = [];
+  for (let sk = -0.65; sk <= 0.65; sk += 0.26) {
+    skewerItems.push({ x: 6.5 + sk, y: 0.95, z: -2 });
+  }
+  addInstancedMeshes(ctx, new T.BoxGeometry(0.05, 0.04, 0.44), skewerMat, skewerItems, false, false);
   for (const jx of [7.55, 7.68, 7.8]) {
     addCylinder(0.035, 0.035, 0.12, 8, inoxMat, jx, 0.86, -2.05);
   }
-  addCylinder(0.015, 0.015, 0.9, 6, grillMetal, 5.75, 1.25, -2.35);
-  addSign(1.7, 0.8, tex.sign('炭火烧烤', '#f4e6c3', '#a82c1a', '羊肉串 3元 · 烤面筋 2元', true), 6.5, 1.5, -2.4);
+  addCylinder(0.018, 0.018, 0.96, 6, grillMetal, 5.75, 1.25, -2.35);
+  addCylinder(0.018, 0.018, 0.96, 6, grillMetal, 7.25, 1.25, -2.35);
+  addDoubleSign(
+    1.7,
+    0.8,
+    tex.sign('炭火烧烤', '#f4e6c3', '#a82c1a', '羊肉串 3元 · 烤面筋 2元', true, 1.7 / 0.8),
+    6.5,
+    1.52,
+    -2.35,
+    0,
+    0x35373a,
+  );
 
+  const stoolTopGeo = track(new T.BoxGeometry(0.36, 0.05, 0.36));
+  const stoolLegGeo = track(new T.BoxGeometry(0.05, 0.4, 0.05));
   for (const [sx, sz, col] of [[8.0, -0.8, 0x3a6fa8], [8.6, -2.2, 0xc94c38], [5.8, -0.35, 0xd48e3a]] as [number, number, number][]) {
     const stoolMat = createMaterial({ color: col, roughness: 0.55 });
-    addBox(0.36, 0.05, 0.36, stoolMat, sx, 0.42, sz, true);
+    addMesh(stoolTopGeo, stoolMat, sx, 0.42, sz, true, true);
     for (const [lx, lz] of [[-0.14, -0.14], [0.14, -0.14], [-0.14, 0.14], [0.14, 0.14]]) {
-      addBox(0.05, 0.4, 0.05, stoolMat, sx + lx, 0.2, sz + lz, false);
+      addMesh(stoolLegGeo, stoolMat, sx + lx, 0.2, sz + lz, true, false);
     }
   }
 
   const smokeList: { x: number; y: number; z: number; p: number; s: number }[] = [];
-  const sGeo = new T.DodecahedronGeometry(0.45, 0);
+  const sGeo = new T.IcosahedronGeometry(0.42, 1);
   const sMat = createMaterial({ color: 0xdcdad4, transparent: true, opacity: 0.3, roughness: 1 });
   for (let i = 0; i < 20; i++) {
     smokeList.push({ x: 6.5, y: 1.1 + Math.random() * 1.8, z: -2 + (Math.random() - 0.5) * 1.2, p: Math.random(), s: 0.6 });
@@ -188,8 +213,9 @@ export function buildSchoolBbqScene(ctx: SceneContext): SceneInitResult {
   const fanBlades = new T.Group();
   fanBlades.position.set(-3.0, 1.26, -7.32);
   const bladeMat = createMaterial({ color: 0x7ea5bd, roughness: 0.35 });
+  const bladeGeo = track(new T.BoxGeometry(0.07, 0.2, 0.015));
   for (let bi = 0; bi < 3; bi++) {
-    const b = new T.Mesh(new T.BoxGeometry(0.07, 0.2, 0.015), bladeMat);
+    const b = new T.Mesh(bladeGeo, bladeMat);
     const ang = (bi * Math.PI * 2) / 3;
     b.position.set(Math.cos(ang) * 0.1, Math.sin(ang) * 0.1, 0);
     b.rotation.z = ang + Math.PI / 2;

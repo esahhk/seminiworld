@@ -238,7 +238,7 @@ export function buildBoxTruckModel(
   }
 
   addPart(cabPivot, new THREE.BoxGeometry(2.14, 0.26, 0.22), cabTrimMat, 0, 0.72, -2.97, true, false);
-  addPart(cabPivot, new THREE.BoxGeometry(0.44, 0.14, 0.02), track(new THREE.MeshStandardMaterial({ map: tex.sign('沪A·8025M', '#224c8a', '#ffffff') })), 0, 0.72, -3.09, false, false);
+  addPart(cabPivot, new THREE.BoxGeometry(0.44, 0.14, 0.02), track(new THREE.MeshStandardMaterial({ map: tex.sign('沪A·8025M', '#224c8a', '#ffffff', '', false, 0.44 / 0.14) })), 0, 0.72, -3.09, false, false);
   addPart(cabPivot, new THREE.BoxGeometry(1.42, 0.44, 0.08), darkSteelMat, 0, 1.12, -2.97, false, false);
   for (const gy of [0.98, 1.12, 1.26]) {
     addPart(cabPivot, new THREE.BoxGeometry(1.34, 0.035, 0.09), chromeMat, 0, gy, -2.98, false, false);

@@ -1,6 +1,6 @@
 import type { SceneContext } from './sceneContext';
 import type { SceneInitResult } from '../types/game';
-import { addInstancedMeshes, buildCamphorTree } from '../engine/propKit';
+import { addInstancedMeshes, buildCamphorGrove } from '../engine/propKit';
 
 export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
   const {
@@ -16,6 +16,7 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
     addBox,
     addCylinder,
     addSign,
+    addDoubleSign,
     createMaterial,
     addInteract,
     addCollectible,
@@ -58,8 +59,19 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
   ).rotation.x = -Math.PI / 2;
 
   const lilyMat = createMaterial({ color: 0x4d7d47, roughness: 0.6 });
-  for (const [lx, lz, ls] of [[-2.4, 6.4, 0.34], [2.1, 7.2, 0.28], [-1.2, 8.8, 0.38], [3.4, 6.2, 0.3]]) {
-    addCylinder(ls, ls, 0.02, 12, lilyMat, lx, -0.1, lz, false);
+  const lotusBudMat = createMaterial({ color: 0xf4c2cf, roughness: 0.45 });
+  const pondRimMat = createMaterial({ color: 0x8a928d, roughness: 0.82 });
+  addBox(20.4, 0.18, 0.45, pondRimMat, 0, -0.08, 3.55, false, false, true);
+  for (const [lx, lz, ls, bud] of [
+    [-2.4, 6.4, 0.34, true],
+    [2.1, 7.2, 0.28, false],
+    [-1.2, 8.8, 0.38, true],
+    [3.4, 6.2, 0.3, false],
+  ] as [number, number, number, boolean][]) {
+    addCylinder(ls, ls, 0.02, 16, lilyMat, lx, -0.1, lz, false);
+    if (bud) {
+      addMesh(new T.ConeGeometry(0.08, 0.18, 8), lotusBudMat, lx, -0.02, lz, false, false);
+    }
   }
 
   const facadeMat = createMaterial({
@@ -136,13 +148,21 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
       dewItems.push({ x: fx - side * 0.14, y: 0.88, z: fz });
     }
   }
-  addInstancedMeshes(ctx, new T.DodecahedronGeometry(0.32, 0), createMaterial({ color: 0xffffff, roughness: 0.55 }), bushItems, false, true);
-  addInstancedMeshes(ctx, new T.DodecahedronGeometry(0.14, 1), createMaterial({ color: 0xffffff, roughness: 0.45 }), flItems, false, false);
+  addInstancedMeshes(ctx, new T.IcosahedronGeometry(0.32, 1), createMaterial({ color: 0xffffff, roughness: 0.55 }), bushItems, false, true);
+  addInstancedMeshes(ctx, new T.IcosahedronGeometry(0.15, 2), createMaterial({ color: 0xffffff, roughness: 0.45 }), flItems, false, false);
   addInstancedMeshes(ctx, new T.SphereGeometry(0.028, 6, 6), createMaterial({ color: 0xf0f8ff, roughness: 0.1, metalness: 0.25 }), dewItems, false, false);
 
-  for (const [tx, tz] of [[-7.5, -2.5], [7.5, -2.0], [-9.5, 4.5], [9.2, 5.2], [-6.5, 14.5], [6.8, 15.0]]) {
-    buildCamphorTree(ctx, tx, -0.15, tz, 0.9, false);
-  }
+  buildCamphorGrove(
+    ctx,
+    [[-7.5, -2.5], [7.5, -2.0], [-9.5, 4.5], [9.2, 5.2], [-6.5, 14.5], [6.8, 15.0]].map(([x, z]) => ({
+      x,
+      y: -0.15,
+      z,
+      scale: 0.9,
+      solid: false,
+    })),
+    true,
+  );
 
   const sunCone = addMesh(
     new T.CylinderGeometry(1.1, 2.3, 6.6, 16, 1, true),
@@ -155,7 +175,18 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
   );
   sunCone.rotation.z = -0.24;
 
-  addSign(1.8, 0.7, tex.sign('博物馆后院 · 清晨小路', '#e4ebe6', '#2e4037', '露水未干 · 轻步慢行'), 0, 1.32, 1.78, Math.PI);
+  addCylinder(0.035, 0.035, 1.35, 8, brassMat, -0.72, 0.67, 1.78);
+  addCylinder(0.035, 0.035, 1.35, 8, brassMat, 0.72, 0.67, 1.78);
+  addDoubleSign(
+    1.8,
+    0.72,
+    tex.sign('博物馆后院 · 清晨小路', '#e4ebe6', '#2e4037', '露水未干 · 轻步慢行', false, 1.8 / 0.72),
+    0,
+    1.28,
+    1.78,
+    Math.PI,
+    0x3b4840,
+  );
 
   addBox(0.22, 3.1, 0.22, brassMat, -1.35, 1.55, -7.1, false);
   addBox(0.22, 3.1, 0.22, brassMat, 1.35, 1.55, -7.1, false);
@@ -167,7 +198,14 @@ export function buildBackyardScene(ctx: SceneContext): SceneInitResult {
   addBox(0.22, 0.38, 0.08, brassMat, 1.65, 1.25, -7.02, false);
   addCylinder(0.03, 0.03, 0.03, 8, createMaterial({ color: 0xffe4a0, emissive: 0xffc65c, emissiveIntensity: 1.0 }), 1.65, 1.3, -6.97);
   addBox(0.98, 0.48, 0.04, brassMat, 2.08, 1.88, -7.02, false);
-  addSign(0.92, 0.44, tex.sign('1F · 后院', '#c9a661', '#211a10', 'B2 车库 / B4 溶洞'), 2.08, 1.88, -6.98);
+  addSign(
+    0.92,
+    0.44,
+    tex.sign('1F · 后院', '#c9a661', '#211a10', 'B2 车库 / B4 溶洞', false, 0.92 / 0.44),
+    2.08,
+    1.88,
+    -6.98,
+  );
 
   const elevCabin = new T.Group();
   const cFloor = mkMesh(new T.BoxGeometry(2.4, 0.12, 2.3), createMaterial({ map: marbleTex, roughness: 0.25 }), 0, 0.06, 0, false, true);

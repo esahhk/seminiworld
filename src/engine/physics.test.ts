@@ -5,6 +5,7 @@ import {
   computeMovementDelta,
   selectBestInteractable,
   easeInOutQuad,
+  createSlopedColliderSegments,
 } from './physics';
 import { SCENES_META, sceneIdxById } from '../data/scenesMeta';
 import { BOOKS } from '../data/books';
@@ -118,4 +119,27 @@ test('BOOKS contains complete multi-page text for office, studio, and convenienc
       assert.ok(page.body.length > 100);
     }
   }
+});
+
+test('createSlopedColliderSegments generates stepped colliders matching flight height', () => {
+  const bounds = { minX: -10, maxX: 10, minZ: -10, maxZ: 10 };
+  const segs = createSlopedColliderSegments({
+    minX: -2.3,
+    maxX: -2.2,
+    startZ: 5.2,
+    endZ: -3.0,
+    startY: 0.3,
+    endY: 4.2,
+    height: 1.1,
+    segments: 8,
+  });
+  assert.equal(segs.length, 8);
+  assert.ok(segs[0].minY >= 0.3 && segs[0].maxY < 2.2);
+  assert.ok(segs[7].minY > 3.5 && segs[7].maxY >= 5.2);
+
+  const [blockedX] = resolveMove(-2.5, 4.9, 1.95, 1.65, bounds, segs);
+  assert.ok(blockedX <= -2.649);
+
+  const [abovePassX] = resolveMove(-2.5, 4.9, 6.2, 1.65, bounds, segs);
+  assert.equal(abovePassX, -2.5);
 });

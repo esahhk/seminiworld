@@ -1,12 +1,14 @@
+import type * as THREE from 'three/webgpu';
 import type { SceneContext } from './sceneContext';
 import type { SceneId, SceneInitResult } from '../types/game';
 import {
   addInstancedMeshes,
-  buildCamphorTree,
+  buildCamphorGrove,
   buildParkBench,
   buildPottedPlant,
   buildSedanCar,
 } from '../engine/propKit';
+import type { InstanceTransform } from '../engine/propKit';
 
 export interface CityLandmarkAnchor {
   id: SceneId;
@@ -16,23 +18,23 @@ export interface CityLandmarkAnchor {
 }
 
 export const CITY_LANDMARKS: CityLandmarkAnchor[] = [
-  { id: 'backyard', x: 0, z: -50, yaw: 0 },
-  { id: 'platform', x: -18, z: -18, yaw: 0 },
-  { id: 'office', x: -18, z: -50, yaw: 0 },
-  { id: 'mall', x: 18, z: -18, yaw: 0 },
-  { id: 'hospital', x: 18, z: -50, yaw: 0 },
-  { id: 'airport', x: 50, z: -50, yaw: Math.PI },
-  { id: 'waterpark', x: 50, z: -18, yaw: Math.PI / 2 },
-  { id: 'infirmary', x: -50, z: -50, yaw: 0 },
-  { id: 'school_bbq', x: -50, z: -18, yaw: 0 },
-  { id: 'convenience', x: -18, z: 18, yaw: Math.PI },
-  { id: 'subway', x: 18, z: 18, yaw: Math.PI },
-  { id: 'studio', x: 18, z: 50, yaw: Math.PI },
-  { id: 'zigzag', x: -18, z: 50, yaw: Math.PI },
-  { id: 'park_lot', x: -50, z: 18, yaw: -Math.PI / 2 },
-  { id: 'garage', x: -50, z: 50, yaw: Math.PI },
-  { id: 'cave', x: 50, z: 18, yaw: Math.PI / 2 },
-  { id: 'hellstone', x: 50, z: 50, yaw: Math.PI },
+  { id: 'backyard', x: 0, z: -116, yaw: 0 },
+  { id: 'platform', x: -24, z: -20, yaw: 0 },
+  { id: 'office', x: -24, z: -68, yaw: 0 },
+  { id: 'mall', x: 24, z: -20, yaw: 0 },
+  { id: 'hospital', x: 24, z: -68, yaw: 0 },
+  { id: 'airport', x: 72, z: -68, yaw: 0 },
+  { id: 'waterpark', x: 68, z: -24, yaw: Math.PI / 2 },
+  { id: 'infirmary', x: -72, z: -68, yaw: 0 },
+  { id: 'school_bbq', x: -72, z: -20, yaw: 0 },
+  { id: 'convenience', x: -24, z: 20, yaw: Math.PI },
+  { id: 'subway', x: 24, z: 20, yaw: Math.PI },
+  { id: 'studio', x: 24, z: 68, yaw: Math.PI },
+  { id: 'zigzag', x: -24, z: 68, yaw: Math.PI },
+  { id: 'park_lot', x: -68, z: 24, yaw: -Math.PI / 2 },
+  { id: 'garage', x: -72, z: 68, yaw: Math.PI },
+  { id: 'cave', x: 68, z: 24, yaw: Math.PI / 2 },
+  { id: 'hellstone', x: 72, z: 68, yaw: Math.PI },
 ];
 
 export function buildMiniatureCityScene(ctx: SceneContext): SceneInitResult {
@@ -46,7 +48,7 @@ export function buildMiniatureCityScene(ctx: SceneContext): SceneInitResult {
     addBox,
     addCylinder,
     addMesh,
-    addSign,
+    addDoubleSign,
     createMaterial,
     addInteract,
     addTimedRedirect,
@@ -55,26 +57,25 @@ export function buildMiniatureCityScene(ctx: SceneContext): SceneInitResult {
     updaters,
     sceneIdxById,
     loadScene,
-    showWhisper,
     setBounds,
     setHeightFn,
     setSurfaceFn,
   } = ctx;
 
-  scene.background = new T.Color(0xc9dce9);
-  scene.fog = new T.Fog(0xc9dce9, 48, 155);
-  scene.add(new T.HemisphereLight(0xf2f8ff, 0x62726a, 0.95));
-  const sun = new T.DirectionalLight(0xfff4df, 1.35);
-  sun.position.set(38, 52, 28);
+  scene.background = new T.Color(0xc6dae8);
+  scene.fog = new T.Fog(0xc6dae8, 72, 260);
+  scene.add(new T.HemisphereLight(0xf3f8ff, 0x5c6d64, 0.96));
+  const sun = new T.DirectionalLight(0xfff4df, 1.38);
+  sun.position.set(42, 58, 32);
   sun.castShadow = true;
   scene.add(sun);
 
-  const grassTex = tex.grass('#5c8248', '#466a35');
-  grassTex.repeat.set(22, 22);
+  const grassTex = tex.grass('#597f45', '#446733');
+  grassTex.repeat.set(40, 40);
   addBox(
-    180,
+    360,
     0.4,
-    180,
+    360,
     createMaterial({ map: grassTex, roughness: 0.95 }),
     0,
     -0.24,
@@ -85,14 +86,14 @@ export function buildMiniatureCityScene(ctx: SceneContext): SceneInitResult {
   );
 
   const pavTex = tex.pavement('#c5c6c0', '#b4b6b0', 'city_pav');
-  pavTex.repeat.set(36, 36);
+  pavTex.repeat.set(76, 76);
   addBox(
-    132,
+    276,
     0.16,
-    132,
+    276,
     createMaterial({
       map: pavTex,
-      bumpMap: tex.bumpNoise('city_pb', 24),
+      bumpMap: tex.bumpNoise('city_pb', 22),
       bumpScale: 0.012,
       roughness: 0.85,
     }),
@@ -105,10 +106,10 @@ export function buildMiniatureCityScene(ctx: SceneContext): SceneInitResult {
   );
 
   const roadNS = tex.asphaltRoad('city_ns', true);
-  roadNS.repeat.set(1, 14);
+  roadNS.repeat.set(1, 28);
   const roadEW = tex.asphaltRoad('city_ew', true);
-  roadEW.repeat.set(1, 14);
-  const plainAsp = tex.concrete('#383c42', 0.15, 'city_inter');
+  roadEW.repeat.set(1, 28);
+  const plainAsp = tex.concrete('#383c42', 0.14, 'city_inter');
   plainAsp.repeat.set(3, 3);
   const cwTex = tex.crosswalk('city_cw');
 
@@ -117,84 +118,107 @@ export function buildMiniatureCityScene(ctx: SceneContext): SceneInitResult {
   const interMat = createMaterial({ map: plainAsp, roughness: 0.84 });
   const cwMat = createMaterial({ map: cwTex, roughness: 0.8 });
 
-  for (const rx of [-36, 0, 36]) {
-    const w = rx === 0 ? 9.4 : 8.4;
-    addBox(w, 0.04, 128, roadNSMat, rx, 0.01, 0, false, false, true);
-    for (let z = -54; z <= 54; z += 18) {
+  const avenues = [-96, -48, 0, 48, 96];
+  for (const rx of avenues) {
+    const w = rx === 0 ? 11.2 : 9.6;
+    const len = rx === 0 ? 228 : 258;
+    const zOff = rx === 0 ? 10 : 0;
+    addBox(w, 0.04, len, roadNSMat, rx, 0.01, zOff, false, false, true);
+    for (let z = -100; z <= 116; z += 24) {
+      if (rx === 0 && Math.abs(z) < 16) {
+        continue;
+      }
       roadCenters.push({ x: rx, z, yaw: 0 });
     }
   }
-  for (const rz of [-36, 0, 36]) {
-    const d = rz === 0 ? 9.4 : 8.4;
-    const strip = addBox(d, 0.045, 128, roadEWMat, 0, 0.014, rz, false, false, true);
+  for (const rz of avenues) {
+    const d = rz === 0 ? 11.2 : 9.6;
+    const strip = addBox(d, 0.045, 258, roadEWMat, 0, 0.014, rz, false, false, true);
     strip.rotation.y = Math.PI / 2;
-    for (let x = -54; x <= 54; x += 18) {
-      if (Math.abs(x) > 8 || Math.abs(rz) > 8) {
-        roadCenters.push({ x, z: rz, yaw: Math.PI / 2 });
+    for (let x = -112; x <= 112; x += 24) {
+      if (Math.abs(x) < 16 && Math.abs(rz) < 16) {
+        continue;
       }
-    }
-  }
-  for (const rx of [-36, 0, 36]) {
-    for (const rz of [-36, 0, 36]) {
-      const sz = rx === 0 || rz === 0 ? 9.8 : 8.8;
-      addBox(sz, 0.05, sz, interMat, rx, 0.018, rz, false, false, true);
-      if (rx !== 0 || rz !== 0) {
-        for (const [cx, cz, ry] of [
-          [rx, rz - sz * 0.58, 0],
-          [rx, rz + sz * 0.58, 0],
-          [rx - sz * 0.58, rz, Math.PI / 2],
-          [rx + sz * 0.58, rz, Math.PI / 2],
-        ]) {
-          const cw = addBox(sz * 0.82, 0.02, 2.2, cwMat, cx, 0.025, cz, false, false, false);
-          cw.rotation.y = ry;
-        }
-      }
+      roadCenters.push({ x, z: rz, yaw: Math.PI / 2 });
     }
   }
 
-  addCylinder(13.5, 13.5, 0.055, 42, interMat, 0, 0.02, 0, false, true);
-  addCylinder(6.6, 6.8, 0.22, 32, createMaterial({ color: 0xc2c5bf, roughness: 0.78 }), 0, 0.11, 0, true, true);
-  addCylinder(6.0, 6.0, 0.25, 32, createMaterial({ map: grassTex, roughness: 0.92 }), 0, 0.13, 0, false, true);
-  addCylinder(2.1, 2.4, 0.48, 20, createMaterial({ color: 0x9aa0a6, roughness: 0.55 }), 0, 0.35, 0, true);
-  addCylinder(0.75, 1.05, 4.4, 16, createMaterial({ color: 0xe2ddd2, roughness: 0.5 }), 0, 2.6, 0, true);
+  const cwTransforms: InstanceTransform[] = [];
+  for (const rx of avenues) {
+    for (const rz of avenues) {
+      const sz = rx === 0 || rz === 0 ? 11.4 : 9.8;
+      addBox(sz, 0.05, sz, interMat, rx, 0.018, rz, false, false, true);
+      if (rx !== 0 || rz !== 0) {
+        cwTransforms.push({ x: rx, y: 0.028, z: rz - sz * 0.62, sx: sz * 0.82, sz: 2.3 });
+        cwTransforms.push({ x: rx, y: 0.028, z: rz + sz * 0.62, sx: sz * 0.82, sz: 2.3 });
+        cwTransforms.push({ x: rx - sz * 0.62, y: 0.028, z: rz, ry: Math.PI / 2, sx: sz * 0.82, sz: 2.3 });
+        cwTransforms.push({ x: rx + sz * 0.62, y: 0.028, z: rz, ry: Math.PI / 2, sx: sz * 0.82, sz: 2.3 });
+      }
+    }
+  }
+  addInstancedMeshes(ctx, new T.BoxGeometry(1, 0.02, 1), cwMat, cwTransforms, false, false);
+
+  addCylinder(14.8, 14.8, 0.055, 42, interMat, 0, 0.02, 0, false, true);
+  addCylinder(6.8, 7.1, 0.24, 32, createMaterial({ color: 0xc2c5bf, roughness: 0.78 }), 0, 0.12, 0, true, true);
+  addCylinder(6.1, 6.1, 0.27, 32, createMaterial({ map: grassTex, roughness: 0.92 }), 0, 0.14, 0, false, true);
+  addCylinder(2.3, 2.6, 0.52, 20, createMaterial({ color: 0x9aa0a6, roughness: 0.55 }), 0, 0.36, 0, true);
+  addCylinder(0.82, 1.12, 5.0, 16, createMaterial({ color: 0xe2ddd2, roughness: 0.48 }), 0, 2.8, 0, true);
   const spireRing = addMesh(
-    new T.TorusGeometry(1.1, 0.08, 8, 28),
+    new T.TorusGeometry(1.22, 0.085, 8, 28),
     createMaterial({ color: 0xd9b35f, metalness: 0.75, roughness: 0.22 }),
     0,
-    3.6,
+    4.0,
     0,
   );
   const clockCrown = addMesh(
-    new T.OctahedronGeometry(0.65, 0),
+    new T.OctahedronGeometry(0.72, 0),
     createMaterial({ color: 0xffe4a8, emissive: 0xe6b55a, emissiveIntensity: 0.65, metalness: 0.4 }),
     0,
-    5.45,
+    6.1,
     0,
   );
-  addBox(0.08, 0.08, 0.36, createMaterial({ color: 0x3b424a, metalness: 0.7 }), -0.9, 1.8, 1.06, false);
-  addBox(0.08, 0.08, 0.36, createMaterial({ color: 0x3b424a, metalness: 0.7 }), 0.9, 1.8, 1.06, false);
-  addSign(
-    3.6,
-    1.05,
-    tex.sign('城市微缩枢纽 · 中心环岛', '#1d252e', '#f5dfb0', '按 [G] 召唤厢式卡车 · [E] 进场景'),
+  const postFrameMat = createMaterial({ color: 0x3b424a, metalness: 0.7, roughness: 0.35 });
+  addBox(0.08, 1.95, 0.08, postFrameMat, -1.55, 0.98, 2.8, false);
+  addBox(0.08, 1.95, 0.08, postFrameMat, 1.55, 0.98, 2.8, false);
+  addDoubleSign(
+    4.2,
+    1.18,
+    tex.sign(
+      '城市微缩枢纽 · 中心广场',
+      '#1d252e',
+      '#f5dfb0',
+      'G 召唤卡车 · 进光环按 E 传送',
+      false,
+      4.2 / 1.18,
+    ),
     0,
-    1.8,
-    1.25,
+    2.02,
+    2.8,
+    0,
+    0x3b424a,
   );
-  colliders.push({ minX: -5.8, maxX: 5.8, minZ: -5.8, maxZ: 5.8, minY: 0, maxY: 6, active: true });
+  colliders.push({ minX: -6.1, maxX: 6.1, minZ: -6.1, maxZ: 6.1, minY: 0, maxY: 6.8, active: true });
 
-  for (const bx of [-54, -18, 18, 54]) {
-    for (const bz of [-54, -18, 18, 54]) {
-      const curbMat = createMaterial({ color: 0x9aa0a4, roughness: 0.85 });
-      addBox(24, 0.12, 24, curbMat, bx, 0.06, bz, false, false, true);
+  const curbTransforms: InstanceTransform[] = [];
+  for (const bx of [-72, -24, 24, 72]) {
+    for (const bz of [-72, -24, 24, 72]) {
+      curbTransforms.push({ x: bx, y: 0.06, z: bz });
     }
   }
+  addInstancedMeshes(
+    ctx,
+    new T.BoxGeometry(34, 0.12, 34),
+    createMaterial({ color: 0x9aa0a4, roughness: 0.85 }),
+    curbTransforms,
+    false,
+    true,
+  );
 
   const lampPostTransforms: { x: number; y: number; z: number; ry: number }[] = [];
-  for (const ax of [-36, 0, 36]) {
-    for (const z of [-44, -27, -14, 14, 27, 44]) {
-      lampPostTransforms.push({ x: ax - 4.9, y: 0, z, ry: 0 });
-      lampPostTransforms.push({ x: ax + 4.9, y: 0, z, ry: Math.PI });
+  for (const ax of [-48, 0, 48]) {
+    for (const z of [-84, -60, -36, -16, 16, 36, 60, 84]) {
+      lampPostTransforms.push({ x: ax - 5.9, y: 0, z, ry: 0 });
+      lampPostTransforms.push({ x: ax + 5.9, y: 0, z, ry: Math.PI });
     }
   }
   const poleMat = createMaterial({ color: 0x313840, metalness: 0.68, roughness: 0.35 });
@@ -205,19 +229,19 @@ export function buildMiniatureCityScene(ctx: SceneContext): SceneInitResult {
   });
   addInstancedMeshes(
     ctx,
-    new T.CylinderGeometry(0.06, 0.09, 4.2, 8),
+    new T.CylinderGeometry(0.065, 0.095, 4.4, 8),
     poleMat,
-    lampPostTransforms.map((p) => ({ x: p.x, y: 2.1, z: p.z })),
+    lampPostTransforms.map((p) => ({ x: p.x, y: 2.2, z: p.z })),
     false,
     false,
   );
   addInstancedMeshes(
     ctx,
-    new T.BoxGeometry(0.95, 0.07, 0.08),
+    new T.BoxGeometry(1.0, 0.07, 0.08),
     poleMat,
     lampPostTransforms.map((p) => ({
       x: p.x + Math.cos(p.ry) * 0.45,
-      y: 4.18,
+      y: 4.38,
       z: p.z,
       ry: p.ry,
     })),
@@ -226,11 +250,11 @@ export function buildMiniatureCityScene(ctx: SceneContext): SceneInitResult {
   );
   addInstancedMeshes(
     ctx,
-    new T.BoxGeometry(0.32, 0.06, 0.16),
+    new T.BoxGeometry(0.34, 0.06, 0.16),
     bulbMat,
     lampPostTransforms.map((p) => ({
-      x: p.x + Math.cos(p.ry) * 0.85,
-      y: 4.12,
+      x: p.x + Math.cos(p.ry) * 0.9,
+      y: 4.32,
       z: p.z,
       ry: p.ry,
     })),
@@ -239,184 +263,395 @@ export function buildMiniatureCityScene(ctx: SceneContext): SceneInitResult {
   );
 
   const signalCorners: { x: number; z: number }[] = [];
-  for (const sx of [-36, 36]) {
-    for (const sz of [-36, 0, 36]) {
-      signalCorners.push({ x: sx - 5.2, z: sz - 5.2 });
-      signalCorners.push({ x: sx + 5.2, z: sz + 5.2 });
+  for (const sx of [-48, 0, 48]) {
+    for (const sz of [-48, 0, 48]) {
+      if (sx === 0 && sz === 0) {
+        continue;
+      }
+      signalCorners.push({ x: sx - 6.0, z: sz - 6.0 });
+      signalCorners.push({ x: sx + 6.0, z: sz + 6.0 });
     }
   }
   const sigGreenMat = createMaterial({ color: 0x3bd96f, emissive: 0x26b554, emissiveIntensity: 1.0 });
   const sigRedMat = createMaterial({ color: 0xe8483c, emissive: 0xc92c22, emissiveIntensity: 0.9 });
   addInstancedMeshes(
     ctx,
-    new T.CylinderGeometry(0.07, 0.1, 4.8, 8),
+    new T.CylinderGeometry(0.075, 0.11, 5.0, 8),
     poleMat,
-    signalCorners.map((c) => ({ x: c.x, y: 2.4, z: c.z })),
+    signalCorners.map((c) => ({ x: c.x, y: 2.5, z: c.z })),
     false,
     false,
   );
   addInstancedMeshes(
     ctx,
-    new T.BoxGeometry(0.24, 0.68, 0.24),
+    new T.BoxGeometry(0.26, 0.72, 0.26),
     poleMat,
-    signalCorners.map((c) => ({ x: c.x, y: 4.5, z: c.z })),
+    signalCorners.map((c) => ({ x: c.x, y: 4.7, z: c.z })),
     false,
     false,
   );
   addInstancedMeshes(
     ctx,
-    new T.SphereGeometry(0.07, 8, 6),
+    new T.SphereGeometry(0.075, 8, 6),
     sigGreenMat,
-    signalCorners.map((c) => ({ x: c.x, y: 4.35, z: c.z })),
+    signalCorners.map((c) => ({ x: c.x, y: 4.54, z: c.z })),
     false,
     false,
   );
   addInstancedMeshes(
     ctx,
-    new T.SphereGeometry(0.07, 8, 6),
+    new T.SphereGeometry(0.075, 8, 6),
     sigRedMat,
-    signalCorners.map((c) => ({ x: c.x, y: 4.65, z: c.z })),
+    signalCorners.map((c) => ({ x: c.x, y: 4.86, z: c.z })),
     false,
     false,
   );
 
-  const treeSpots: [number, number, number][] = [
-    [-7.5, 0, -28],
-    [7.5, 0, -28],
-    [-7.5, 0, 28],
-    [7.5, 0, 28],
-    [-28, 0, -8],
-    [28, 0, -8],
-    [-28, 0, 8],
-    [28, 0, 8],
-    [-61, 0, -32],
-    [-61, 0, 0],
-    [-61, 0, 32],
-    [61, 0, -32],
-    [61, 0, 0],
-    [61, 0, 32],
-    [-28, 0, -61],
-    [28, 0, -61],
-    [-28, 0, 61],
-    [28, 0, 61],
+  const treeSpots: [number, number, number, number][] = [
+    [-8.5, 0, -28, 0.85],
+    [8.5, 0, -28, 0.85],
+    [-8.5, 0, 28, 0.85],
+    [8.5, 0, 28, 0.85],
+    [-28, 0, -8.5, 0.85],
+    [28, 0, -8.5, 0.85],
+    [-28, 0, 8.5, 0.85],
+    [28, 0, 8.5, 0.85],
+    [-56, 0, -34, 0.85],
+    [-56, 0, 34, 0.85],
+    [56, 0, -34, 0.85],
+    [56, 0, 34, 0.85],
+    [-34, 0, -56, 0.85],
+    [34, 0, -56, 0.85],
+    [-34, 0, 56, 0.85],
+    [34, 0, 56, 0.85],
+    [-82, 0, -82, 0.9],
+    [82, 0, -82, 0.9],
+    [-82, 0, 82, 0.9],
+    [82, 0, 82, 0.9],
+    [-12, 0, -108, 0.95],
+    [12, 0, -108, 0.95],
   ];
-  for (const [tx, ty, tz] of treeSpots) {
-    buildCamphorTree(ctx, tx, ty, tz, 0.82, true);
+  buildCamphorGrove(
+    ctx,
+    treeSpots.map(([x, y, z, scale]) => ({ x, y, z, scale, solid: true })),
+    true,
+  );
+
+  const winMatA = createMaterial({
+    map: (() => {
+      const t = tex.facadeWindows('#5f7080', '#e3f1ff', 'city_wa');
+      t.repeat.set(2, 3);
+      return t;
+    })(),
+    roughness: 0.7,
+  });
+  const winMatB = createMaterial({
+    map: (() => {
+      const t = tex.facadeWindows('#4f5e6e', '#ffebc2', 'city_wb');
+      t.repeat.set(2, 4);
+      return t;
+    })(),
+    roughness: 0.68,
+  });
+  const brickRedMat = createMaterial({
+    map: (() => {
+      const t = tex.brickFacade('#8c4c3e', '#cfc4b2', 'city_br1');
+      t.repeat.set(2, 2);
+      return t;
+    })(),
+    roughness: 0.82,
+  });
+  const brickTanMat = createMaterial({
+    map: (() => {
+      const t = tex.brickFacade('#a67f58', '#ddd2be', 'city_br2');
+      t.repeat.set(2, 2);
+      return t;
+    })(),
+    roughness: 0.82,
+  });
+  const creamPlasterMat = createMaterial({ color: 0xe6dfd0, roughness: 0.78 });
+  const timberMat = createMaterial({ map: tex.wood('#6b482e', '#452c1a', 'city_timb'), roughness: 0.72 });
+  const roofSlateMat = createMaterial({ color: 0x3b444d, roughness: 0.68 });
+  const roofClayMat = createMaterial({ color: 0x7c4636, roughness: 0.72 });
+  const canopyWineMat = createMaterial({ color: 0x99362e, roughness: 0.65 });
+  const canopyForestMat = createMaterial({ color: 0x265941, roughness: 0.65 });
+  const warmShopGlass = createMaterial({
+    color: 0xffdf99,
+    emissive: 0xe8a846,
+    emissiveIntensity: 0.72,
+    roughness: 0.18,
+  });
+  const coolShopGlass = createMaterial({
+    color: 0xaad4eb,
+    emissive: 0x3a6f8c,
+    emissiveIntensity: 0.42,
+    roughness: 0.18,
+  });
+  const concMat = createMaterial({ map: tex.concrete('#90959a', 0.14, 'lm_c'), roughness: 0.85 });
+  const darkMetal = createMaterial({ color: 0x363d45, metalness: 0.65, roughness: 0.35 });
+  const glassBlue = createMaterial({
+    color: 0x7cb8d4,
+    transparent: true,
+    opacity: 0.44,
+    roughness: 0.1,
+    metalness: 0.3,
+  });
+  const brassGoldMat = createMaterial({ color: 0xcfa959, metalness: 0.7, roughness: 0.3 });
+
+  const hvacTransforms: InstanceTransform[] = [];
+
+  function addCornerCafe(x: number, z: number, ry = 0) {
+    const g = new T.Group();
+    g.position.set(x, 0.12, z);
+    g.rotation.y = ry;
+    const mk = (geo: THREE.BufferGeometry, m: THREE.Material, lx: number, ly: number, lz: number, cast = true) => {
+      const mesh = new T.Mesh(track(geo), m);
+      mesh.position.set(lx, ly, lz);
+      mesh.castShadow = cast;
+      mesh.receiveShadow = true;
+      g.add(mesh);
+      return mesh;
+    };
+    mk(new T.BoxGeometry(7.2, 3.2, 6.2), creamPlasterMat, 0, 1.6, 0);
+    mk(new T.BoxGeometry(6.8, 3.8, 5.8), brickTanMat, 0, 5.1, 0);
+    mk(new T.BoxGeometry(7.4, 0.32, 6.4), roofSlateMat, 0, 7.15, 0, false);
+    mk(new T.BoxGeometry(0.7, 1.1, 0.7), brickRedMat, -2.2, 7.75, -1.6, false);
+    mk(new T.BoxGeometry(5.6, 1.85, 0.12), warmShopGlass, 0, 1.35, 3.12, false);
+    mk(new T.BoxGeometry(2.0, 2.2, 0.16), darkMetal, -1.8, 1.1, 3.14, false);
+    const awn = mk(new T.BoxGeometry(6.2, 0.18, 1.45), canopyWineMat, 0, 2.75, 3.65);
+    awn.rotation.x = 0.28;
+    for (const wx of [-2.0, 0, 2.0]) {
+      mk(new T.BoxGeometry(1.1, 1.5, 0.12), coolShopGlass, wx, 5.0, 2.92, false);
+      mk(new T.BoxGeometry(1.26, 0.16, 0.24), creamPlasterMat, wx, 4.2, 2.98, false);
+    }
+    for (const tx of [-1.4, 1.6]) {
+      mk(new T.CylinderGeometry(0.55, 0.55, 0.06, 12), timberMat, tx, 0.78, 4.25, false);
+      mk(new T.CylinderGeometry(0.05, 0.08, 0.76, 8), darkMetal, tx, 0.38, 4.25, false);
+    }
+    scene.add(g);
+    colliders.push({ minX: x - 3.7, maxX: x + 3.7, minZ: z - 3.2, maxZ: z + 3.2, minY: 0, maxY: 7.5, active: true });
+    hvacTransforms.push({ x: x + 1.4, y: 7.7, z: z - 1.2 });
   }
 
-  const buildingSpecs: {
-    x: number;
-    z: number;
-    w: number;
-    h: number;
-    d: number;
-    wallCol: string;
-    litCol: string;
-    roofCol: number;
-    awning?: number;
-  }[] = [
-    { x: -25, z: -26, w: 6.8, h: 11.5, d: 6.8, wallCol: '#697582', litCol: '#ffe6aa', roofCol: 0x454d54 },
-    { x: -11, z: -27, w: 6.0, h: 8.2, d: 6.4, wallCol: '#8b7968', litCol: '#ffdf9e', roofCol: 0x5c4f44, awning: 0xc24c38 },
-    { x: 11, z: -27, w: 6.4, h: 9.8, d: 6.2, wallCol: '#607382', litCol: '#d9f2ff', roofCol: 0x404a52 },
-    { x: 25, z: -26, w: 7.0, h: 13.5, d: 7.0, wallCol: '#7b848c', litCol: '#fff0c4', roofCol: 0x4e565e },
-    { x: -26, z: -43, w: 7.2, h: 15.0, d: 6.8, wallCol: '#566978', litCol: '#e4f4ff', roofCol: 0x3b4854 },
-    { x: 26, z: -43, w: 7.0, h: 12.2, d: 6.8, wallCol: '#d8d5cc', litCol: '#fff2c8', roofCol: 0x8c9296 },
-    { x: -25, z: 26, w: 6.6, h: 7.5, d: 6.6, wallCol: '#9c785c', litCol: '#ffe3a8', roofCol: 0x614c3c, awning: 0x2f6e52 },
-    { x: -11, z: 27, w: 6.0, h: 9.2, d: 6.2, wallCol: '#6e7b85', litCol: '#fff1cc', roofCol: 0x4a5259 },
-    { x: 11, z: 27, w: 6.2, h: 10.4, d: 6.2, wallCol: '#7a828a', litCol: '#d9f0ff', roofCol: 0x4f565e },
-    { x: 25, z: 26, w: 6.8, h: 8.8, d: 6.8, wallCol: '#8c7e6d', litCol: '#ffdfb0', roofCol: 0x5e5449, awning: 0xd98a38 },
-    { x: -60, z: -25, w: 6.6, h: 8.0, d: 8.2, wallCol: '#d4cab8', litCol: '#ffe8b8', roofCol: 0x736c63 },
-    { x: -60, z: 25, w: 6.6, h: 9.5, d: 8.2, wallCol: '#697c72', litCol: '#fff0c2', roofCol: 0x45544d },
-    { x: 60, z: -25, w: 6.8, h: 11.0, d: 8.2, wallCol: '#5d7485', litCol: '#e0f4ff', roofCol: 0x3d4e5c },
-    { x: 60, z: 25, w: 6.8, h: 7.2, d: 8.2, wallCol: '#5c524f', litCol: '#ffb878', roofCol: 0x3b3533 },
-    { x: -26, z: 59, w: 8.0, h: 11.8, d: 6.8, wallCol: '#646e78', litCol: '#ffe5a8', roofCol: 0x454c54 },
-    { x: 26, z: 59, w: 8.0, h: 10.2, d: 6.8, wallCol: '#85776b', litCol: '#fff0c4', roofCol: 0x574e46 },
-    { x: -60, z: -60, w: 8.2, h: 10.0, d: 8.2, wallCol: '#748580', litCol: '#f2f7e8', roofCol: 0x4e5956 },
-    { x: 60, z: -60, w: 8.2, h: 12.5, d: 8.2, wallCol: '#5c7285', litCol: '#d9f2ff', roofCol: 0x3f4e5c },
-    { x: -60, z: 60, w: 8.2, h: 8.6, d: 8.2, wallCol: '#6a6f75', litCol: '#ffe8b0', roofCol: 0x45494e },
-    { x: 60, z: 60, w: 8.2, h: 9.0, d: 8.2, wallCol: '#4a3d3b', litCol: '#ff9c5c', roofCol: 0x2e2625 },
-  ];
-  for (const b of buildingSpecs) {
-    const fTex = tex.facadeWindows(b.wallCol, b.litCol, 'bldg_' + b.wallCol);
-    fTex.repeat.set(Math.max(1, Math.round(b.w / 3.5)), Math.max(1, Math.round(b.h / 4)));
-    addBox(
-      b.w,
-      b.h,
-      b.d,
-      createMaterial({ map: fTex, roughness: 0.72 }),
-      b.x,
-      b.h / 2 + 0.12,
-      b.z,
-      true,
-      true,
-      true,
+  function addBrickApartment(x: number, z: number, floors = 3, ry = 0) {
+    const h = 3.2 + floors * 2.5;
+    const g = new T.Group();
+    g.position.set(x, 0.12, z);
+    g.rotation.y = ry;
+    const mk = (geo: THREE.BufferGeometry, m: THREE.Material, lx: number, ly: number, lz: number) => {
+      const mesh = new T.Mesh(track(geo), m);
+      mesh.position.set(lx, ly, lz);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      g.add(mesh);
+      return mesh;
+    };
+    mk(new T.BoxGeometry(8.2, 2.8, 6.6), concMat, 0, 1.4, 0);
+    mk(new T.BoxGeometry(7.8, h - 2.8, 6.2), brickRedMat, 0, 2.8 + (h - 2.8) / 2, 0);
+    mk(new T.BoxGeometry(8.4, 0.36, 6.8), roofSlateMat, 0, h + 0.18, 0);
+    mk(new T.CylinderGeometry(0.85, 0.85, 1.5, 12), concMat, -2.0, h + 1.15, -1.2);
+    for (let f = 0; f < floors; f++) {
+      const fy = 3.3 + f * 2.5;
+      for (const bx of [-2.1, 2.1]) {
+        mk(new T.BoxGeometry(2.4, 0.14, 0.9), creamPlasterMat, bx, fy, 3.45);
+        mk(new T.BoxGeometry(2.4, 0.65, 0.08), darkMetal, bx, fy + 0.4, 3.86);
+        mk(new T.BoxGeometry(1.3, 1.6, 0.1), warmShopGlass, bx, fy + 0.95, 3.12);
+      }
+    }
+    scene.add(g);
+    colliders.push({ minX: x - 4.2, maxX: x + 4.2, minZ: z - 3.4, maxZ: z + 3.4, minY: 0, maxY: h + 0.5, active: true });
+    hvacTransforms.push({ x: x + 1.8, y: h + 0.72, z: z + 0.8 });
+  }
+
+  function addIzakayaShop(x: number, z: number, ry = 0) {
+    const g = new T.Group();
+    g.position.set(x, 0.12, z);
+    g.rotation.y = ry;
+    const mk = (geo: THREE.BufferGeometry, m: THREE.Material, lx: number, ly: number, lz: number) => {
+      const mesh = new T.Mesh(track(geo), m);
+      mesh.position.set(lx, ly, lz);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      g.add(mesh);
+      return mesh;
+    };
+    mk(new T.BoxGeometry(6.8, 3.8, 5.6), timberMat, 0, 1.9, 0);
+    const roof = mk(new T.ConeGeometry(5.2, 2.2, 4), roofClayMat, 0, 4.9, 0);
+    roof.rotation.y = Math.PI / 4;
+    const eave = mk(new T.BoxGeometry(7.3, 0.16, 1.35), roofClayMat, 0, 2.85, 3.25);
+    eave.rotation.x = 0.24;
+    mk(new T.BoxGeometry(4.4, 0.65, 0.06), canopyWineMat, 0, 2.15, 2.86);
+    mk(new T.BoxGeometry(5.0, 1.65, 0.1), warmShopGlass, 0, 1.25, 2.82);
+    const lanternMat = createMaterial({ color: 0xff6e3d, emissive: 0xe84018, emissiveIntensity: 1.1 });
+    for (const lx of [-2.4, 0, 2.4]) {
+      mk(new T.SphereGeometry(0.24, 10, 8), lanternMat, lx, 2.55, 3.55);
+    }
+    scene.add(g);
+    colliders.push({ minX: x - 3.5, maxX: x + 3.5, minZ: z - 2.9, maxZ: z + 2.9, minY: 0, maxY: 5.5, active: true });
+  }
+
+  function addArtCinema(x: number, z: number, ry = 0) {
+    const g = new T.Group();
+    g.position.set(x, 0.12, z);
+    g.rotation.y = ry;
+    const mk = (geo: THREE.BufferGeometry, m: THREE.Material, lx: number, ly: number, lz: number) => {
+      const mesh = new T.Mesh(track(geo), m);
+      mesh.position.set(lx, ly, lz);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      g.add(mesh);
+      return mesh;
+    };
+    mk(new T.BoxGeometry(8.8, 7.2, 7.6), winMatB, 0, 3.6, 0);
+    mk(new T.BoxGeometry(3.8, 9.6, 1.4), brickRedMat, 0, 4.8, 3.4);
+    mk(new T.BoxGeometry(7.2, 0.9, 2.4), brassGoldMat, 0, 3.3, 4.4);
+    mk(new T.BoxGeometry(6.8, 0.45, 2.1), warmShopGlass, 0, 3.3, 4.45);
+    mk(new T.BoxGeometry(4.6, 2.4, 0.14), glassBlue, 0, 1.2, 4.12);
+    scene.add(g);
+    addDoubleSign(
+      6.4,
+      0.78,
+      tex.sign('午夜胶片放映室', '#1e1918', '#f7dfa8', '今日加映 · 19:30 / 21:45', false, 6.4 / 0.78),
+      x + Math.sin(ry) * 4.5,
+      3.42,
+      z + Math.cos(ry) * 4.5,
+      ry,
+      0x292422,
     );
-    addBox(
-      b.w + 0.35,
-      0.34,
-      b.d + 0.35,
-      createMaterial({ color: b.roofCol, roughness: 0.65 }),
-      b.x,
-      b.h + 0.25,
-      b.z,
-      false,
-    );
-    addBox(
-      1.6,
-      0.85,
-      1.4,
-      createMaterial({ color: 0x9aa2a8, metalness: 0.4, roughness: 0.5 }),
-      b.x + 1.0,
-      b.h + 0.8,
-      b.z - 0.6,
-      false,
-    );
-    if (b.awning !== undefined) {
-      addBox(
-        b.w * 0.78,
-        0.22,
-        1.1,
-        createMaterial({ color: b.awning, roughness: 0.6 }),
-        b.x,
-        2.6,
-        b.z + b.d / 2 + 0.5,
-        false,
-      ).rotation.x = 0.28;
+    colliders.push({ minX: x - 4.5, maxX: x + 4.5, minZ: z - 3.9, maxZ: z + 4.1, minY: 0, maxY: 9.8, active: true });
+  }
+
+  function addSteppedTower(x: number, z: number, hMain: number) {
+    addBox(8.6, hMain, 8.2, winMatA, x, hMain / 2 + 0.12, z, true, true, true);
+    addBox(6.2, 4.8, 6.0, winMatB, x, hMain + 2.52, z, false, true, true);
+    addBox(6.6, 0.28, 6.4, darkMetal, x, hMain + 5.05, z, false, false, true);
+    addCylinder(0.06, 0.14, 3.8, 8, darkMetal, x, hMain + 7.1, z, false);
+    addMesh(new T.SphereGeometry(0.16, 8, 8), sigRedMat, x, hMain + 9.0, z, false, false);
+    hvacTransforms.push({ x: x + 1.8, y: hMain + 5.5, z: z - 1.4 });
+  }
+
+  function addBookshopCorner(x: number, z: number, ry = 0) {
+    const g = new T.Group();
+    g.position.set(x, 0.12, z);
+    g.rotation.y = ry;
+    const mk = (geo: THREE.BufferGeometry, m: THREE.Material, lx: number, ly: number, lz: number) => {
+      const mesh = new T.Mesh(track(geo), m);
+      mesh.position.set(lx, ly, lz);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      g.add(mesh);
+      return mesh;
+    };
+    mk(new T.BoxGeometry(7.2, 6.4, 6.2), creamPlasterMat, 0, 3.2, 0);
+    mk(new T.BoxGeometry(7.5, 0.65, 6.5), canopyForestMat, 0, 3.3, 0);
+    mk(new T.BoxGeometry(5.8, 2.1, 0.28), warmShopGlass, 0, 1.25, 3.16);
+    const awn = mk(new T.BoxGeometry(6.4, 0.16, 1.3), canopyForestMat, 0, 2.7, 3.65);
+    awn.rotation.x = 0.3;
+    const roof = mk(new T.ConeGeometry(5.5, 2.3, 4), canopyForestMat, 0, 7.55, 0);
+    roof.rotation.y = Math.PI / 4;
+    scene.add(g);
+    colliders.push({ minX: x - 3.7, maxX: x + 3.7, minZ: z - 3.2, maxZ: z + 3.2, minY: 0, maxY: 8.6, active: true });
+  }
+
+  function addPocketPark(x: number, z: number) {
+    addCylinder(5.4, 5.6, 0.22, 24, concMat, x, 0.22, z, false, true);
+    addCylinder(4.8, 4.8, 0.25, 24, createMaterial({ map: grassTex, roughness: 0.92 }), x, 0.24, z, false, true);
+    addCylinder(1.8, 2.0, 0.44, 18, creamPlasterMat, x, 0.44, z, true, true);
+    addCylinder(1.5, 1.5, 0.1, 18, createMaterial({ color: 0x56b2cf, roughness: 0.12 }), x, 0.64, z, false, false);
+    addCylinder(0.28, 0.4, 1.15, 10, creamPlasterMat, x, 0.98, z, true);
+    buildParkBench(ctx, x - 3.6, 0.12, z + 3.6, Math.PI / 4, true);
+    buildParkBench(ctx, x + 3.6, 0.12, z - 3.6, -Math.PI * 0.75, true);
+    colliders.push({ minX: x - 1.9, maxX: x + 1.9, minZ: z - 1.9, maxZ: z + 1.9, minY: 0, maxY: 1.5, active: true });
+  }
+
+  addCornerCafe(-18, -32, 0);
+  addBrickApartment(-32, -32, 3, 0);
+  addIzakayaShop(18, -32, 0);
+  addSteppedTower(32, -32, 14.5);
+  addBookshopCorner(-32, 32, Math.PI);
+  addPocketPark(-18, 32);
+  addArtCinema(24, 34, Math.PI);
+  addCornerCafe(-32, -80, 0);
+  addSteppedTower(-16, -80, 17.0);
+  addBrickApartment(32, -80, 4, 0);
+  addPocketPark(16, -80);
+  addBookshopCorner(-66, -80, 0);
+  addBrickApartment(-82, -80, 3, 0);
+  addSteppedTower(80, -80, 15.5);
+  addIzakayaShop(64, -80, 0);
+  addCornerCafe(-66, -32, 0);
+  addBrickApartment(-82, -32, 4, 0);
+  addSteppedTower(82, -18, 13.5);
+  addPocketPark(82, -33);
+  addBrickApartment(-82, 18, 3, Math.PI / 2);
+  addIzakayaShop(-82, 33, Math.PI / 2);
+  addCornerCafe(82, 18, -Math.PI / 2);
+  addBookshopCorner(82, 33, -Math.PI / 2);
+  addSteppedTower(-32, 80, 16.0);
+  addPocketPark(-16, 80);
+  addBrickApartment(32, 80, 3, Math.PI);
+  addIzakayaShop(16, 80, Math.PI);
+  addSteppedTower(-82, 80, 14.0);
+  addBookshopCorner(-66, 80, Math.PI);
+  addArtCinema(80, 80, Math.PI);
+  addCornerCafe(64, 80, Math.PI);
+
+  for (const [tx, tz] of [
+    [-116, -72],
+    [-116, -24],
+    [-116, 24],
+    [-116, 72],
+    [116, -72],
+    [116, -24],
+    [116, 24],
+    [116, 72],
+    [-72, 116],
+    [-24, 116],
+    [24, 116],
+    [72, 116],
+    [-72, -116],
+    [72, -116],
+  ]) {
+    if ((Math.abs(tx) + Math.abs(tz)) % 48 === 0) {
+      addSteppedTower(tx, tz, 13.5 + ((Math.abs(tx * 3 + tz) % 5) * 1.4));
+    } else {
+      addBrickApartment(tx, tz, 3, tx > 0 ? -Math.PI / 2 : tx < -100 ? Math.PI / 2 : 0);
     }
   }
 
-  buildSedanCar(ctx, -33.2, 0.03, -24, 0, 0x3b5978, true);
-  buildSedanCar(ctx, 33.2, 0.03, 24, Math.PI, 0xb84c38, true);
-  buildSedanCar(ctx, 24, 0.03, -3.2, Math.PI / 2, 0xd4c8b4, true);
-  buildSedanCar(ctx, -24, 0.03, 3.2, -Math.PI / 2, 0x4b6e58, true);
+  addInstancedMeshes(
+    ctx,
+    new T.BoxGeometry(1.6, 0.85, 1.4),
+    createMaterial({ color: 0x9aa2a8, metalness: 0.4, roughness: 0.5 }),
+    hvacTransforms,
+    false,
+    true,
+  );
+
+  buildSedanCar(ctx, -44.6, 0.03, -24, 0, 0x3b5978, true);
+  buildSedanCar(ctx, 44.6, 0.03, 24, Math.PI, 0xb84c38, true);
+  buildSedanCar(ctx, 26, 0.03, -4.0, Math.PI / 2, 0xd4c8b4, true);
+  buildSedanCar(ctx, -26, 0.03, 4.0, -Math.PI / 2, 0x4b6e58, true);
+  buildSedanCar(ctx, -44.6, 0.03, 72, 0, 0xc7923e, true);
+  buildSedanCar(ctx, 44.6, 0.03, -72, Math.PI, 0x5c6978, true);
 
   const portalRings: ReturnType<typeof addMesh>[] = [];
+  const portalPadTransforms: InstanceTransform[] = [];
+  const totemPostTransforms: InstanceTransform[] = [];
+
   function registerLandmark(
     id: SceneId,
     title: string,
     sub: string,
-    x: number,
-    z: number,
     beaconColor: number,
-    interactX = x,
-    interactZ = z + 4.4,
-    signY = 3.6,
+    interactX: number,
+    interactZ: number,
+    signY = 3.4,
+    signRy = 0,
   ) {
-    const pad = addCylinder(
-      1.35,
-      1.45,
-      0.1,
-      20,
-      createMaterial({ color: 0x262d36, roughness: 0.5 }),
-      interactX,
-      0.17,
-      interactZ,
-      false,
-      true,
-    );
-    void pad;
+    portalPadTransforms.push({ x: interactX, y: 0.17, z: interactZ });
     const ring = addMesh(
-      new T.TorusGeometry(0.95, 0.075, 10, 26),
+      new T.TorusGeometry(1.0, 0.08, 10, 26),
       createMaterial({
         color: beaconColor,
         emissive: beaconColor,
@@ -424,19 +659,25 @@ export function buildMiniatureCityScene(ctx: SceneContext): SceneInitResult {
         roughness: 0.2,
       }),
       interactX,
-      1.35,
+      1.38,
       interactZ,
       false,
       false,
     );
     portalRings.push(ring);
-    addSign(
-      2.6,
-      0.95,
-      tex.sign(title, '#1c242d', '#f5e4b8', sub),
+    const dx = Math.cos(signRy) * 1.38;
+    const dz = -Math.sin(signRy) * 1.38;
+    totemPostTransforms.push({ x: interactX - dx, y: (signY + 0.48) / 2, z: interactZ - dz, sy: signY + 0.48 });
+    totemPostTransforms.push({ x: interactX + dx, y: (signY + 0.48) / 2, z: interactZ + dz, sy: signY + 0.48 });
+    addDoubleSign(
+      2.8,
+      1.0,
+      tex.sign(title, '#1c242d', '#f5e4b8', sub, false, 2.8),
       interactX,
       signY,
       interactZ,
+      signRy,
+      0x3b424a,
     );
     addInteract(
       'city_enter_' + id,
@@ -452,151 +693,185 @@ export function buildMiniatureCityScene(ctx: SceneContext): SceneInitResult {
           }, 180);
         }
       },
-      { radius: 3.4, mesh: ring },
+      { radius: 3.6, mesh: ring },
     );
   }
 
-  const concMat = createMaterial({ map: tex.concrete('#90959a', 0.14, 'lm_c'), roughness: 0.85 });
-  const darkMetal = createMaterial({ color: 0x363d45, metalness: 0.65, roughness: 0.35 });
-  const glassBlue = createMaterial({ color: 0x7cb8d4, transparent: true, opacity: 0.42, roughness: 0.1, metalness: 0.3 });
-
-  addBox(6.8, 4.4, 6.8, concMat, -18, 2.3, -18, true);
-  addBox(7.2, 0.28, 7.2, darkMetal, -18, 4.6, -18, false);
+  addBox(6.8, 4.4, 6.8, concMat, -24, 2.3, -20, true);
+  addBox(7.2, 0.28, 7.2, darkMetal, -24, 4.6, -20, false);
   const miniFan = addMesh(
     new T.TorusGeometry(0.65, 0.12, 8, 18),
     createMaterial({ color: 0xd4dade, metalness: 0.5 }),
-    -19.5,
+    -25.5,
     5.4,
-    -18,
+    -20,
   );
-  addCylinder(0.05, 0.05, 1.8, 8, darkMetal, -16.2, 5.5, -19.5);
-  addMesh(new T.ConeGeometry(0.18, 0.8, 8), createMaterial({ color: 0xd96236 }), -15.75, 6.3, -19.5).rotation.z =
+  addCylinder(0.05, 0.05, 1.8, 8, darkMetal, -22.2, 5.5, -21.5);
+  addMesh(new T.ConeGeometry(0.18, 0.8, 8), createMaterial({ color: 0xd96236 }), -21.75, 6.3, -21.5).rotation.z =
     -Math.PI / 2;
-  registerLandmark('platform', '高处平台', '天台观测塔 · 214m', -18, -18, 0xc8d8e6, -18, -13.5, 3.3);
+  registerLandmark('platform', '高处平台', '天台观测塔 · 214m', 0xc8d8e6, -24, -13.2, 3.4, 0);
 
-  addBox(6.6, 8.8, 6.6, createMaterial({ map: tex.facadeWindows('#4a6275', '#d6efff', 'lm_off') }), -18, 4.5, -50, true);
-  addBox(6.9, 0.3, 6.9, darkMetal, -18, 9.0, -50, false);
-  registerLandmark('office', '写字楼念词', '幕墙办公楼 · 讲台', -18, -50, 0x9ec9eb, -18, -45.5, 3.4);
+  addBox(6.6, 9.2, 6.6, winMatA, -24, 4.7, -68, true);
+  addBox(6.9, 0.3, 6.9, darkMetal, -24, 9.4, -68, false);
+  addBox(3.4, 0.16, 1.6, darkMetal, -24, 2.8, -64.2, false);
+  addBox(3.0, 2.5, 0.14, glassBlue, -24, 1.4, -64.65, false);
+  addCylinder(0.05, 0.12, 2.6, 8, darkMetal, -24, 10.7, -68, false);
+  registerLandmark('office', '写字楼念词', '幕墙办公楼 · 讲台', 0x9ec9eb, -24, -60.5, 3.4, 0);
 
-  addBox(7.4, 4.2, 7.0, createMaterial({ color: 0xefe7d6, roughness: 0.6 }), 18, 2.2, -18, true);
-  addBox(7.8, 0.5, 2.2, createMaterial({ color: 0xc94832 }), 18, 3.6, -14.2, false);
-  addCylinder(1.2, 1.2, 0.45, 16, createMaterial({ color: 0xd99b4e }), 18, 4.65, -18);
-  addCylinder(1.25, 1.25, 0.22, 16, createMaterial({ color: 0x6b321e }), 18, 4.95, -18);
-  addCylinder(1.22, 1.22, 0.3, 16, createMaterial({ color: 0xe6ad5c }), 18, 5.2, -18);
-  registerLandmark('mall', '大商场汉堡店', '炙烤牛肉汉堡站', 18, -18, 0xf2b554, 18, -13.3, 3.3);
+  addBox(7.4, 4.2, 7.0, createMaterial({ color: 0xefe7d6, roughness: 0.6 }), 24, 2.2, -20, true);
+  addBox(7.8, 0.5, 2.2, createMaterial({ color: 0xc94832 }), 24, 3.6, -16.2, false);
+  addCylinder(1.2, 1.2, 0.45, 16, createMaterial({ color: 0xd99b4e }), 24, 4.65, -20);
+  addCylinder(1.25, 1.25, 0.22, 16, createMaterial({ color: 0x6b321e }), 24, 4.95, -20);
+  addCylinder(1.22, 1.22, 0.3, 16, createMaterial({ color: 0xe6ad5c }), 24, 5.2, -20);
+  registerLandmark('mall', '大商场汉堡店', '炙烤牛肉汉堡站', 0xf2b554, 24, -13.2, 3.4, 0);
 
   const hospMat = createMaterial({ color: 0xe8efed, roughness: 0.55 });
-  addBox(7.4, 4.6, 6.6, hospMat, 18, 2.4, -50, true);
-  addBox(1.8, 2.6, 0.28, createMaterial({ color: 0x697d85, metalness: 0.45 }), 18, 1.4, -46.6, false);
-  addBox(0.32, 1.2, 0.14, createMaterial({ color: 0xc93b32 }), 18, 3.7, -46.6, false);
-  addBox(1.2, 0.32, 0.14, createMaterial({ color: 0xc93b32 }), 18, 3.7, -46.6, false);
-  registerLandmark('hospital', '医院厚门走廊', '隔离屏蔽门区', 18, -50, 0x77c4d9, 18, -45.4, 3.1);
+  addBox(7.4, 4.8, 6.6, hospMat, 24, 2.5, -68, true);
+  addBox(3.2, 0.16, 1.5, darkMetal, 24, 2.85, -64.2, false);
+  addBox(1.8, 2.6, 0.28, createMaterial({ color: 0x697d85, metalness: 0.45 }), 24, 1.4, -64.6, false);
+  addBox(0.32, 1.2, 0.14, createMaterial({ color: 0xc93b32 }), 24, 3.8, -64.6, false);
+  addBox(1.2, 0.32, 0.14, createMaterial({ color: 0xc93b32 }), 24, 3.8, -64.6, false);
+  registerLandmark('hospital', '医院厚门走廊', '隔离屏蔽门区', 0x77c4d9, 24, -60.5, 3.3, 0);
 
-  addBox(8.0, 2.8, 6.0, createMaterial({ color: 0xe3e9ee }), 50, 1.5, -50, true);
-  addBox(3.6, 2.4, 3.6, glassBlue, 47, 3.9, -50, false);
-  addCylinder(0.42, 0.42, 4.5, 14, createMaterial({ color: 0xf4f6f8 }), 50, 4.6, -45.5);
-  addBox(5.2, 0.14, 1.4, createMaterial({ color: 0x245682 }), 50, 4.6, -45.5, false);
-  registerLandmark('airport', '机场登机玻璃门', '03号登机口 · 客机', 50, -50, 0x99d1f0, 50, -44.2, 3.4);
+  addBox(8.2, 2.8, 6.0, createMaterial({ color: 0xe3e9ee }), 72, 1.5, -68, true);
+  addBox(3.6, 2.4, 3.6, glassBlue, 69, 3.9, -68, false);
+  const jetBodyMat = createMaterial({ color: 0xf4f6f8, roughness: 0.35, metalness: 0.2 });
+  const jetJet = addCylinder(0.42, 0.42, 4.4, 14, jetBodyMat, 72, 4.6, -63.5);
+  jetJet.rotation.x = Math.PI / 2;
+  addMesh(new T.ConeGeometry(0.42, 0.9, 14), jetBodyMat, 72, 4.6, -60.85).rotation.x = Math.PI / 2;
+  addBox(5.2, 0.12, 1.3, createMaterial({ color: 0x245682 }), 72, 4.55, -63.5, false);
+  addBox(0.12, 1.05, 0.85, createMaterial({ color: 0x245682 }), 72, 5.2, -65.3, false);
+  registerLandmark('airport', '机场登机玻璃门', '03号登机口 · 客机', 0x99d1f0, 72, -60.5, 3.4, 0);
 
-  addCylinder(3.8, 4.2, 1.4, 24, createMaterial({ color: 0xeaf6f8 }), 50, 0.8, -18, true);
-  addMesh(new T.SphereGeometry(3.5, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), glassBlue, 50, 1.5, -18, false);
+  addCylinder(3.8, 4.2, 1.4, 24, createMaterial({ color: 0xeaf6f8 }), 68, 0.8, -24, true);
+  addMesh(new T.SphereGeometry(3.5, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), glassBlue, 68, 1.5, -24, false);
   const slideRing = addMesh(
     new T.TorusGeometry(2.1, 0.24, 8, 24),
     createMaterial({ color: 0xf0829d }),
-    50,
+    68,
     2.4,
-    -18,
+    -24,
   );
   slideRing.rotation.x = 0.65;
-  registerLandmark('waterpark', '商场水上乐园', '二层戏水圆筒', 50, -18, 0xf287a4, 44.5, -18, 3.3);
+  registerLandmark('waterpark', '商场水上乐园', '二层戏水圆筒', 0xf287a4, 60.2, -24, 3.4, Math.PI / 2);
 
-  addBox(6.8, 3.8, 6.0, createMaterial({ color: 0xdbe8df }), -50, 2.0, -50, true);
-  addMesh(new T.ConeGeometry(4.8, 1.8, 4), createMaterial({ color: 0x5c8c72 }), -50, 4.8, -50).rotation.y = Math.PI / 4;
-  registerLandmark('infirmary', '小学医务室', 'F字形绿墙走廊', -50, -50, 0x96d4b2, -50, -45.5, 3.3);
+  addBox(6.8, 3.8, 6.0, createMaterial({ color: 0xdbe8df }), -72, 2.0, -68, true);
+  addMesh(new T.ConeGeometry(4.8, 1.8, 4), createMaterial({ color: 0x5c8c72 }), -72, 4.8, -68).rotation.y = Math.PI / 4;
+  registerLandmark('infirmary', '小学医务室', 'F字形绿墙走廊', 0x96d4b2, -72, -60.5, 3.4, 0);
 
-  addBox(7.2, 3.8, 5.4, createMaterial({ color: 0xebe3d3 }), -50, 2.0, -18, true);
-  addBox(1.8, 0.9, 0.8, darkMetal, -46.8, 0.6, -14.8, true);
-  addBox(1.5, 0.12, 0.6, createMaterial({ color: 0xd9481c, emissive: 0xb82e0c, emissiveIntensity: 0.9 }), -46.8, 1.08, -14.8, false);
-  registerLandmark('school_bbq', '小学门外烧烤', '教室与炭火烤摊', -50, -18, 0xf0a66e, -50, -13.5, 3.3);
+  addBox(7.2, 3.8, 5.4, createMaterial({ color: 0xebe3d3 }), -72, 2.0, -20, true);
+  addBox(1.8, 0.9, 0.8, darkMetal, -68.8, 0.6, -16.8, true);
+  addBox(1.5, 0.12, 0.6, createMaterial({ color: 0xd9481c, emissive: 0xb82e0c, emissiveIntensity: 0.9 }), -68.8, 1.08, -16.8, false);
+  registerLandmark('school_bbq', '小学门外烧烤', '教室与炭火烤摊', 0xf0a66e, -72, -13.2, 3.4, 0);
 
-  addBox(6.6, 3.6, 6.2, createMaterial({ color: 0xf2eee3 }), -18, 1.9, 18, true);
-  addBox(6.8, 0.85, 6.4, createMaterial({ color: 0x1f5e48 }), -18, 3.75, 18, false);
-  addBox(6.8, 0.2, 6.4, createMaterial({ color: 0xd97a38 }), -18, 3.25, 18, false);
-  addBox(4.8, 0.12, 2.0, createMaterial({ map: tex.wood('#b88e5a', '#876338') }), -18, 0.18, 22.8, false);
-  registerLandmark('convenience', '便利店与修路木道', '24H热关东煮', -18, 18, 0xe8c47a, -18, 22.5, 3.3);
+  addBox(6.6, 3.6, 6.2, createMaterial({ color: 0xf2eee3 }), -24, 1.9, 20, true);
+  addBox(6.8, 0.85, 6.4, createMaterial({ color: 0x1f5e48 }), -24, 3.75, 20, false);
+  addBox(6.8, 0.2, 6.4, createMaterial({ color: 0xd97a38 }), -24, 3.25, 20, false);
+  addBox(4.8, 0.12, 2.0, createMaterial({ map: tex.wood('#b88e5a', '#876338') }), -24, 0.18, 15.2, false);
+  registerLandmark('convenience', '便利店与修路木道', '24H热关东煮', 0xe8c47a, -24, 13.2, 3.4, 0);
 
-  addBox(6.4, 0.4, 7.2, createMaterial({ color: 0xb8bec2 }), 18, 0.3, 18, true);
-  addBox(6.0, 2.4, 6.6, glassBlue, 18, 1.7, 18, true);
-  addBox(6.4, 0.28, 7.0, createMaterial({ color: 0x1f3c5c }), 18, 3.0, 18, false);
-  registerLandmark('subway', '多线地铁站', '1/4/7号线换乘站', 18, 18, 0x7ab4e0, 18, 22.6, 3.3);
+  addBox(6.4, 0.4, 7.2, createMaterial({ color: 0xb8bec2 }), 24, 0.3, 20, true);
+  addBox(6.0, 2.4, 6.6, glassBlue, 24, 1.7, 20, true);
+  addBox(6.4, 0.28, 7.0, createMaterial({ color: 0x1f3c5c }), 24, 3.0, 20, false);
+  registerLandmark('subway', '多线地铁站', '1/4/7号线换乘站', 0x7ab4e0, 24, 13.2, 3.4, 0);
 
-  addBox(6.2, 3.4, 6.2, createMaterial({ color: 0xebe4d5 }), 18, 1.8, 50, true);
-  addMesh(new T.ConeGeometry(4.6, 2.2, 4), createMaterial({ color: 0x8f5b3a }), 18, 4.6, 50).rotation.y = Math.PI / 4;
-  addBox(0.9, 1.4, 0.14, createMaterial({ color: 0xf2e5b8 }), 18, 1.6, 46.8, false);
-  registerLandmark('studio', '小画室', '地铁旁画架工坊', 18, 50, 0x5d8ec7, 18, 45.6, 3.3);
+  addBox(6.2, 3.4, 6.2, createMaterial({ color: 0xebe4d5 }), 24, 1.8, 68, true);
+  addMesh(new T.ConeGeometry(4.6, 2.2, 4), createMaterial({ color: 0x8f5b3a }), 24, 4.6, 68).rotation.y = Math.PI / 4;
+  addBox(0.9, 1.4, 0.14, createMaterial({ color: 0xf2e5b8 }), 24, 1.6, 64.8, false);
+  registerLandmark('studio', '小画室', '地铁旁画架工坊', 0x5d8ec7, 24, 60.5, 3.4, 0);
 
-  addBox(6.8, 4.8, 6.8, createMaterial({ map: tex.concrete('#484c52', 0.2, 'lm_zig') }), -18, 2.5, 50, true);
-  addBox(4.4, 0.6, 4.4, createMaterial({ color: 0xf2cf5b }), -18, 5.1, 50, false);
-  registerLandmark('zigzag', '之字形台阶花田', '光柱与一米花田', -18, 50, 0xf2e394, -18, 45.5, 3.3);
+  addBox(6.8, 4.8, 6.8, createMaterial({ map: tex.concrete('#484c52', 0.2, 'lm_zig') }), -24, 2.5, 68, true);
+  addBox(4.4, 0.45, 4.4, createMaterial({ color: 0x89949e, roughness: 0.45 }), -24, 5.05, 68, false);
+  addBox(3.6, 0.2, 3.6, createMaterial({ color: 0xf2cf5b, emissive: 0xe6b53c, emissiveIntensity: 0.6 }), -24, 5.28, 68, false);
+  for (let s = 0; s < 5; s++) {
+    addBox(1.8, 0.35, 0.7, darkMetal, -21.4, 0.4 + s * 0.45, 69.8 - s * 0.75, false);
+  }
+  registerLandmark('zigzag', '之字形台阶花田', '光柱与一米花田', 0xf2e394, -24, 60.5, 3.4, 0);
 
-  addBox(7.2, 0.24, 7.2, createMaterial({ map: tex.concrete('#5c6166', 0.16, 'lm_pk') }), -50, 0.2, 18, false);
-  buildCamphorTree(ctx, -52.2, 0.2, 16.5, 0.9, true);
-  buildPottedPlant(ctx, -47.5, 0.2, 16.5, 1.6, 0x5c7d42);
-  buildSedanCar(ctx, -49.5, 0.2, 20.5, Math.PI / 2, 0xc8ced1, true);
-  registerLandmark('park_lot', '小区林荫停车场', '香樟树荫与单车', -50, 18, 0x8cc775, -45.2, 18, 3.3);
+  addBox(7.2, 0.24, 7.2, createMaterial({ map: tex.concrete('#5c6166', 0.16, 'lm_pk') }), -68, 0.2, 24, false);
+  buildPottedPlant(ctx, -65.5, 0.2, 22.5, 1.6, 0x5c7d42);
+  buildSedanCar(ctx, -67.5, 0.2, 26.5, Math.PI / 2, 0xc8ced1, true);
+  registerLandmark('park_lot', '小区林荫停车场', '香樟树荫与单车', 0x8cc775, -60.2, 24, 3.4, Math.PI / 2);
 
-  addBox(7.0, 2.4, 6.8, createMaterial({ color: 0x5a6066 }), -50, 1.3, 50, true);
-  addBox(4.8, 1.8, 0.2, createMaterial({ color: 0x16191e }), -50, 1.0, 46.5, false);
-  addBox(4.4, 0.16, 0.16, createMaterial({ map: tex.hazard('lm_gar_h') }), -50, 1.35, 45.2, false);
-  registerLandmark('garage', '地下车库', 'B2 电梯与坡道', -50, 50, 0xc7b588, -50, 44.8, 3.3);
+  addBox(7.0, 2.4, 6.8, createMaterial({ color: 0x5a6066 }), -72, 1.3, 68, true);
+  addBox(4.8, 1.8, 0.2, createMaterial({ color: 0x16191e }), -72, 1.0, 64.5, false);
+  addBox(4.4, 0.16, 0.16, createMaterial({ map: tex.hazard('lm_gar_h') }), -72, 1.35, 63.2, false);
+  registerLandmark('garage', '地下车库', 'B2 电梯与坡道', 0xc7b588, -72, 60.5, 3.4, 0);
 
-  const rockLMMat = createMaterial({ map: tex.concrete('#54606b', 0.22, 'lm_cv') });
-  addMesh(new T.DodecahedronGeometry(3.4, 1), rockLMMat, 50, 1.6, 18);
-  addCylinder(1.2, 1.5, 2.6, 8, rockLMMat, 47.6, 1.4, 18);
-  addMesh(new T.OctahedronGeometry(0.65, 0), createMaterial({ color: 0x7bdcf0, emissive: 0x2f8fa3, emissiveIntensity: 0.75 }), 46.8, 0.9, 16.5);
-  colliders.push({ minX: 46.8, maxX: 53.2, minZ: 14.8, maxZ: 21.2, minY: 0, maxY: 4, active: true });
-  registerLandmark('cave', '幽深洞穴', '狭长石灰岩溶洞', 50, 18, 0xe6be9c, 44.5, 18, 3.3);
+  const rockLMMat = createMaterial({ map: tex.concrete('#5e574e', 0.22, 'lm_cv'), roughness: 0.92 });
+  const caveInnerMat = createMaterial({ color: 0x11151a, roughness: 0.96 });
+  addBox(6.8, 1.2, 6.8, rockLMMat, 68, 0.7, 24, false);
+  addBox(2.2, 3.6, 6.2, rockLMMat, 65.7, 2.2, 21.6, false);
+  addBox(2.2, 3.6, 6.2, rockLMMat, 65.7, 2.2, 26.4, false);
+  addBox(5.6, 1.5, 6.8, rockLMMat, 68.4, 4.3, 24, false);
+  addBox(2.4, 2.8, 3.4, caveInnerMat, 67.4, 1.8, 24, false);
+  const crysMat = createMaterial({ color: 0x7bdcf0, emissive: 0x2f8fa3, emissiveIntensity: 0.85 });
+  addMesh(new T.OctahedronGeometry(0.55, 0), crysMat, 64.8, 1.0, 22.4);
+  addMesh(new T.OctahedronGeometry(0.38, 0), crysMat, 64.5, 0.75, 25.6);
+  colliders.push({ minX: 64.8, maxX: 71.2, minZ: 20.8, maxZ: 27.2, minY: 0, maxY: 4.5, active: true });
+  registerLandmark('cave', '幽深洞穴', '狭长石灰岩溶洞', 0xe6be9c, 60.2, 24, 3.4, Math.PI / 2);
 
-  addBox(7.4, 1.1, 7.4, createMaterial({ map: tex.lava(), emissive: 0x6e1a07, emissiveIntensity: 0.45 }), 50, 0.6, 50, true);
-  addBox(1.4, 4.2, 1.4, createMaterial({ color: 0x3b2c2a }), 50, 2.6, 50, true);
-  addMesh(new T.OctahedronGeometry(0.75, 0), createMaterial({ color: 0xff6b3d, emissive: 0xff4500, emissiveIntensity: 1.1 }), 50, 5.2, 50);
-  registerLandmark('hellstone', '地狱石平台', '玄武岩与岩浆裂隙', 50, 50, 0xff6b3d, 50, 45.2, 3.3);
+  addBox(7.4, 1.1, 7.4, createMaterial({ map: tex.lava(), emissive: 0x6e1a07, emissiveIntensity: 0.45 }), 72, 0.6, 68, true);
+  const obsidianMat = createMaterial({ color: 0x3b2c2a, roughness: 0.75 });
+  addCylinder(0.45, 0.95, 4.4, 6, obsidianMat, 72, 2.7, 68, true);
+  addCylinder(0.28, 0.65, 2.8, 6, obsidianMat, 70.2, 1.9, 69.5, false);
+  addCylinder(0.26, 0.6, 2.5, 6, obsidianMat, 73.8, 1.8, 66.6, false);
+  addMesh(new T.OctahedronGeometry(0.75, 0), createMaterial({ color: 0xff6b3d, emissive: 0xff4500, emissiveIntensity: 1.1 }), 72, 5.2, 68);
+  registerLandmark('hellstone', '地狱石平台', '玄武岩与岩浆裂隙', 0xff6b3d, 72, 60.5, 3.4, 0);
 
-  addBox(8.6, 4.8, 6.2, createMaterial({ color: 0xcfd6d3 }), 0, 2.5, -52, true);
-  addBox(2.2, 3.2, 0.2, glassBlue, 0, 1.7, -48.8, false);
-  addBox(9.0, 0.35, 2.6, createMaterial({ color: 0xadb5b2 }), 0, 4.9, -47.8, false);
-  buildPottedPlant(ctx, -3.2, 0.14, -47.5, 1.4, 0x868f8a);
-  buildPottedPlant(ctx, 3.2, 0.14, -47.5, 1.4, 0x868f8a);
-  registerLandmark('backyard', '博物馆清晨后院', '清晨微光绣球庭院', 0, -52, 0xf2f7f2, 0, -46.2, 3.5);
+  addBox(12.0, 5.2, 7.4, createMaterial({ color: 0xcfd6d3, roughness: 0.62 }), 0, 2.6, -116, true);
+  addBox(3.0, 3.6, 0.2, glassBlue, 0, 1.9, -112.2, false);
+  addBox(12.6, 0.42, 3.0, createMaterial({ color: 0xaab4b0 }), 0, 5.3, -111.2, false);
+  addBox(4.8, 0.24, 1.8, createMaterial({ color: 0xbac2bf }), 0, 0.2, -111.4, false);
+  buildPottedPlant(ctx, -4.4, 0.14, -110.8, 1.5, 0x868f8a);
+  buildPottedPlant(ctx, 4.4, 0.14, -110.8, 1.5, 0x868f8a);
+  registerLandmark('backyard', '博物馆清晨后院', '清晨微光绣球庭院', 0xf2f7f2, 0, -106.5, 3.6, 0);
 
-  buildParkBench(ctx, -7.8, 0.12, 9.0, Math.PI / 4, true);
-  buildParkBench(ctx, 7.8, 0.12, 9.0, -Math.PI / 4, true);
+  addInstancedMeshes(
+    ctx,
+    new T.CylinderGeometry(1.4, 1.5, 0.1, 20),
+    createMaterial({ color: 0x262d36, roughness: 0.5 }),
+    portalPadTransforms,
+    false,
+    true,
+  );
+  addInstancedMeshes(
+    ctx,
+    new T.BoxGeometry(0.08, 1.0, 0.08),
+    postFrameMat,
+    totemPostTransforms,
+    false,
+    false,
+  );
+
+  buildParkBench(ctx, -9.2, 0.12, 10.6, Math.PI / 4, true);
+  buildParkBench(ctx, 9.2, 0.12, 10.6, -Math.PI / 4, true);
 
   updaters.push((dt, t) => {
     spireRing.rotation.y += dt * 0.6;
     clockCrown.rotation.y += dt * 1.1;
-    clockCrown.position.y = 5.45 + Math.sin(t * 2.1) * 0.14;
+    clockCrown.position.y = 6.1 + Math.sin(t * 2.1) * 0.14;
     miniFan.rotation.z += dt * 3.5;
     for (let i = 0; i < portalRings.length; i++) {
       portalRings[i].rotation.y = t * 1.2 + i * 0.35;
     }
   });
 
-  setBounds({ minX: -64, maxX: 64, minZ: -64, maxZ: 64 });
+  setBounds({ minX: -136, maxX: 136, minZ: -136, maxZ: 136 });
   setHeightFn(() => 0.02);
   setSurfaceFn((x, z) => {
-    if (Math.abs(x) < 5 || Math.abs(x - 36) < 4.5 || Math.abs(x + 36) < 4.5) {
-      return 'concrete';
-    }
-    if (Math.abs(z) < 5 || Math.abs(z - 36) < 4.5 || Math.abs(z + 36) < 4.5) {
-      return 'concrete';
+    for (const av of avenues) {
+      const half = av === 0 ? 5.6 : 4.8;
+      if (Math.abs(x - av) < half || Math.abs(z - av) < half) {
+        return 'concrete';
+      }
     }
     return 'stone';
   });
 
   return {
-    pos: V(0, 1.65, 16.5),
+    pos: V(0, 1.65, 19.5),
     yaw: 0,
-    whisper: '欢迎来到微缩城市！按 [G] 召唤厢式卡车代步，走进各地标光环按 [E] 传送进入对应场景。',
+    whisper: '欢迎来到微缩城市！按 [G] 召唤厢式卡车并切换 D/R 档穿梭街区，走进地标光环按 [E] 进入对应场景。',
   };
 }

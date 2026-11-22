@@ -1,6 +1,6 @@
 import type { SceneContext } from './sceneContext';
 import type { SceneInitResult } from '../types/game';
-import { addInstancedMeshes, buildStreetLamp } from '../engine/propKit';
+import { addInstancedMeshes, buildAcCondenser, buildStreetLamp } from '../engine/propKit';
 import type { InstanceTransform } from '../engine/propKit';
 
 export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
@@ -16,6 +16,7 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
     addBox,
     addCylinder,
     addSign,
+    addDoubleSign,
     syncColZ,
     createMaterial,
     addInteract,
@@ -105,21 +106,27 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
   addInstancedMeshes(ctx, new T.ConeGeometry(0.24, 0.72, 10), createMaterial({ color: 0xe36222 }), coneItems, true, false);
   addInstancedMeshes(ctx, new T.BoxGeometry(0.48, 0.06, 0.48), createMaterial({ color: 0x26292d }), coneBaseItems, false, true);
 
+  const barrierOrange = createMaterial({ color: 0xd97828, roughness: 0.65 });
+  const barrierStripe = createMaterial({ color: 0xebe8dc, roughness: 0.6 });
   for (const bz of [-10.8, -1.8, 7.2]) {
-    addBox(0.32, 0.64, 2.2, createMaterial({ color: 0xd97828 }), 4.35, 0.32, bz, false);
-    addBox(0.34, 0.14, 2.22, createMaterial({ color: 0xebe8dc }), 4.35, 0.44, bz, false);
+    addBox(0.32, 0.64, 2.2, barrierOrange, 4.35, 0.32, bz, true);
+    addBox(0.34, 0.14, 2.22, barrierStripe, 4.35, 0.44, bz, false);
   }
   const warnLamp = new T.PointLight(0xff9b26, 1.25, 9);
   warnLamp.position.set(3.8, 1.2, 4.8);
   scene.add(warnLamp);
-  addSign(
+  const legWood = createMaterial({ color: 0x6b4e31, roughness: 0.8 });
+  addBox(0.08, 1.35, 0.08, legWood, 2.42, 0.67, 9.2, false);
+  addBox(0.08, 1.35, 0.08, legWood, 3.98, 0.67, 9.2, false);
+  addDoubleSign(
     1.8,
     0.9,
-    tex.sign('前方修路 走大木板', '#e0ad34', '#1e1d1a', '长段施工 慢行', true),
+    tex.sign('前方修路 走大木板', '#e0ad34', '#1e1d1a', '长段施工 慢行', true, 2),
     3.2,
-    1.15,
+    1.18,
     9.2,
     0,
+    0x3b352c,
   );
 
   addBox(
@@ -155,7 +162,7 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
   addSign(
     7.2,
     0.78,
-    tex.sign('24H 街角便利店', '#f5f0e1', '#1f5e48', '热关东煮 · 冰饮 · 饭团'),
+    tex.sign('24H 街角便利店', '#f5f0e1', '#1f5e48', '热关东煮 · 冰饮 · 饭团', false, 7.2 / 0.78),
     -4.195,
     3.16,
     0,
@@ -163,6 +170,10 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
   );
   addBox(0.24, 0.2, 9.2, createMaterial({ color: 0x1f5e48 }), -4.42, 3.74, 0, false);
   addBox(0.24, 0.08, 9.2, createMaterial({ color: 0xd97a38 }), -4.42, 3.6, 0, false);
+  const storePillarMat = createMaterial({ color: 0x1f5e48, roughness: 0.55 });
+  addBox(0.22, 3.6, 0.24, storePillarMat, -4.42, 1.8, -4.5, false);
+  addBox(0.22, 3.6, 0.24, storePillarMat, -4.42, 1.8, 4.5, false);
+  buildAcCondenser(ctx, -4.35, 2.35, 4.05, Math.PI / 2);
   addBox(0.9, 0.04, 1.7, createMaterial({ color: 0x353b42, roughness: 0.95 }), -4.98, 0.16, 0, false);
 
   const ceilingStripMat = createMaterial({
@@ -235,6 +246,11 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
   addCylinder(0.06, 0.06, 0.08, 10, createMaterial({ color: 0xf2ead7 }), -6.5, 1.27, -2.62, false);
   addCylinder(0.055, 0.055, 0.08, 10, createMaterial({ color: 0xf2ead7 }), -6.32, 1.27, -2.62, false);
   addBox(0.09, 0.08, 0.09, createMaterial({ color: 0x736b64 }), -6.48, 1.27, -2.38, false);
+  const skewerMat = createMaterial({ color: 0xd6ba82, roughness: 0.7 });
+  for (const [ox, oz] of [[-6.5, -2.62], [-6.32, -2.62], [-6.48, -2.38]]) {
+    const sk = addCylinder(0.004, 0.004, 0.16, 5, skewerMat, ox, 1.33, oz, false);
+    sk.rotation.z = 0.25;
+  }
   addBox(0.62, 0.22, 0.78, createMaterial({ color: 0xddeef5, transparent: true, opacity: 0.3 }), -6.4, 1.38, -2.4, false);
 
   addCylinder(0.075, 0.055, 0.24, 10, createMaterial({ color: 0xece8de }), -6.6, 1.2, -3.1, false);

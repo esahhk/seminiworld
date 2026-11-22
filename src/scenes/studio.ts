@@ -108,7 +108,7 @@ export function buildStudioScene(ctx: SceneContext): SceneInitResult {
   addSign(
     1.4,
     0.65,
-    tex.sign('下楼 → 地铁站', '#1f3c5c', '#f0f2f4', '1/4/7号线站台'),
+    tex.sign('下楼 → 地铁站', '#1f3c5c', '#f0f2f4', '1/4/7号线站台', false, 1.4 / 0.65),
     4.38,
     3.05,
     3.3,
@@ -224,7 +224,15 @@ export function buildStudioScene(ctx: SceneContext): SceneInitResult {
   addBox(0.82, 1.02, 0.05, easelWood, 3.8, 0.55, -3.57, false);
   addBox(1.1, 1.3, 0.08, createMaterial({ color: 0xc9d3d6 }), 3.6, 0.65, -3.4, true);
 
-  addSign(1.1, 1.4, tex.sign('城市写生草图', '#d4d0c5', '#36454f', '炭笔 · 站台光线'), -4.36, 1.85, -1.2, Math.PI / 2);
+  addSign(
+    1.1,
+    1.4,
+    tex.sign('城市写生草图', '#d4d0c5', '#36454f', '炭笔 · 站台光线', false, 1.1 / 1.4),
+    -4.36,
+    1.85,
+    -1.2,
+    Math.PI / 2,
+  );
 
   addCylinder(0.22, 0.22, 0.06, 12, easelWood, 0.9, 0.46, -0.6);
   for (let l = 0; l < 3; l++) {

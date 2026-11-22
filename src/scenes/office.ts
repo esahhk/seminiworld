@@ -129,53 +129,42 @@ export function buildOfficeScene(ctx: SceneContext): SceneInitResult {
     false,
     false,
   );
-  const skySpecs: [number, number, number, number, string][] = [
-    [24, -10, 26, 0x87939e, '#727f8a'],
-    [26, 4, 30, 0x77838e, '#65717d'],
-    [33, -3, 34, 0x95a1ab, '#7f8c96'],
-    [23, 14, 22, 0x808c96, '#6d7882'],
-    [36, 13, 28, 0x89949e, '#737f88'],
+  const skyTexA = tex.facadeWindows('#727f8a', '#f0d89e', 'off_sky_a');
+  skyTexA.repeat.set(2, 4);
+  const skyTexB = tex.facadeWindows('#65717d', '#dceeff', 'off_sky_b');
+  skyTexB.repeat.set(2, 4);
+  const skyMatA = createMaterial({ color: 0x8a97a2, map: skyTexA, roughness: 0.6 });
+  const skyMatB = createMaterial({ color: 0x7b8894, map: skyTexB, roughness: 0.6 });
+  const skyRoofMat = createMaterial({ color: 0x5c646c });
+  const skySpecs: [number, number, number, number][] = [
+    [24, -10, 26, 0],
+    [26, 4, 30, 1],
+    [33, -3, 34, 0],
+    [23, 14, 22, 1],
+    [36, 13, 28, 0],
   ];
-  for (const [bx, bz, bh, col, hexStr] of skySpecs) {
-    const winTex = tex.facadeWindows(hexStr, '#f0d89e', 'off_sky_' + bx + '_' + bz);
-    winTex.repeat.set(2, 4);
-    addBox(
-      7.4,
-      bh,
-      8.2,
-      createMaterial({ color: col, map: winTex, roughness: 0.6 }),
-      bx,
-      -8 + bh / 2,
-      bz,
-      false,
-      false,
-      false,
-    );
-    addBox(
-      7.8,
-      0.35,
-      8.6,
-      createMaterial({ color: 0x5c646c }),
-      bx,
-      -8 + bh + 0.17,
-      bz,
-      false,
-      false,
-      false,
-    );
+  for (const [bx, bz, bh, mIdx] of skySpecs) {
+    addBox(7.4, bh, 8.2, mIdx === 0 ? skyMatA : skyMatB, bx, -8 + bh / 2, bz, false, false, false);
+    addBox(7.8, 0.35, 8.6, skyRoofMat, bx, -8 + bh + 0.17, bz, false, false, false);
   }
 
-  const blinds: ReturnType<typeof addMesh>[] = [];
-  const slatMat = createMaterial({ color: 0xeceae0, roughness: 0.6 });
-  const slatGeo = track(new T.BoxGeometry(0.085, 0.012, 2.42));
+  const blindPos: { x: number; y: number; z: number }[] = [];
+  const blindHeaderMat = createMaterial({ color: 0xd0cec4 });
   for (const bz of [-2.53, 0, 2.53]) {
-    addBox(0.07, 0.07, 2.46, createMaterial({ color: 0xd0cec4 }), 6.82, 3.3, bz, false);
+    addBox(0.07, 0.07, 2.46, blindHeaderMat, 6.82, 3.3, bz, false);
     for (let r = 0; r < 18; r++) {
-      const sl = addMesh(slatGeo, slatMat, 6.82, 0.98 + r * 0.13, bz, false, false);
-      sl.rotation.z = 1.32;
-      blinds.push(sl);
+      blindPos.push({ x: 6.82, y: 0.98 + r * 0.13, z: bz });
     }
   }
+  const blindInst = addInstancedMeshes(
+    ctx,
+    new T.BoxGeometry(0.085, 0.012, 2.42),
+    createMaterial({ color: 0xeceae0, roughness: 0.6 }),
+    blindPos.map((b) => ({ x: b.x, y: b.y, z: b.z, rz: 1.32 })),
+    false,
+    false,
+  );
+  const _blindDummy = new T.Object3D();
   addCylinder(0.012, 0.012, 1.5, 6, createMaterial({ color: 0xe6e4dc }), 6.72, 2.35, 3.7, false, false);
   let blindOpen = false;
 
@@ -187,7 +176,7 @@ export function buildOfficeScene(ctx: SceneContext): SceneInitResult {
   addSign(
     1.4,
     0.65,
-    tex.sign('下楼 · 汉堡店', '#eae4d6', '#42372c', '一层商场中庭'),
+    tex.sign('下楼 · 汉堡店', '#eae4d6', '#42372c', '一层商场中庭', false, 1.4 / 0.65),
     -4.2,
     3.08,
     5.82,
@@ -197,26 +186,26 @@ export function buildOfficeScene(ctx: SceneContext): SceneInitResult {
   const lecWood = createMaterial({ map: tex.wood('#7b5838', '#573b22'), roughness: 0.72 });
   addBox(1.16, 0.08, 0.72, lecWood, 0, 0.04, -2.8, false);
   addBox(1.06, 1.1, 0.62, lecWood, 0, 0.59, -2.8, true);
-  addBox(1.18, 0.06, 0.74, lecWood, 0, 1.15, -2.8, false);
+  const lecTop = addBox(1.18, 0.06, 0.74, lecWood, 0, 1.16, -2.8, false);
+  lecTop.rotation.x = 0.18;
+  addBox(1.18, 0.04, 0.04, lecWood, 0, 1.12, -2.44, false);
   addBox(0.75, 0.35, 0.04, createMaterial({ color: 0x26292d, roughness: 0.85 }), 0, 0.85, -2.48, false);
-  addCylinder(0.06, 0.06, 0.02, 10, createMaterial({ color: 0x2c2c2c, metalness: 0.7 }), 0.25, 1.19, -2.65);
-  addCylinder(0.018, 0.018, 0.35, 8, createMaterial({ color: 0x2c2c2c, metalness: 0.7 }), 0, 1.35, -2.65);
-  addMesh(
-    new T.SphereGeometry(0.048, 10, 10),
-    createMaterial({ color: 0x3a3d42, metalness: 0.55 }),
-    0,
-    1.53,
-    -2.65,
-  );
+  const micMat = createMaterial({ color: 0x26292e, metalness: 0.72, roughness: 0.32 });
+  addCylinder(0.055, 0.065, 0.025, 10, micMat, 0.24, 1.18, -2.66);
+  const mStem1 = addCylinder(0.012, 0.014, 0.22, 8, micMat, 0.24, 1.28, -2.66);
+  mStem1.rotation.z = 0.28;
+  const mStem2 = addCylinder(0.01, 0.012, 0.22, 8, micMat, 0.14, 1.44, -2.62);
+  mStem2.rotation.set(0.42, 0, 0.62);
+  addMesh(new T.SphereGeometry(0.038, 10, 10), createMaterial({ color: 0x3a3d42, metalness: 0.55 }), 0.04, 1.51, -2.56);
   addSign(
     0.45,
     0.34,
-    tex.sign('发言稿：第三段', '#fbf8ef', '#2b2926', '放慢语速 · 别低头', true),
+    tex.sign('发言稿：第三段', '#fbf8ef', '#2b2926', '放慢语速 · 别低头', true, 0.45 / 0.34),
     0,
-    1.21,
+    1.2,
     -2.8,
     0,
-    -Math.PI / 2 - 0.32,
+    -Math.PI / 2 + 0.18,
   );
 
   const deskWood = createMaterial({ map: tex.wood('#9c7852', '#735535'), roughness: 0.62 });
@@ -272,7 +261,7 @@ export function buildOfficeScene(ctx: SceneContext): SceneInitResult {
   addSign(
     2.4,
     1.2,
-    tex.sign('周四前借投影线', '#f4f6f8', '#2f4354', '白板便签（擦一半）', true),
+    tex.sign('周四前借投影线', '#f4f6f8', '#2f4354', '白板便签（擦一半）', true, 2),
     -6.82,
     2.0,
     -1.5,
@@ -345,9 +334,17 @@ export function buildOfficeScene(ctx: SceneContext): SceneInitResult {
     '水平翻转窗叶透出窗外楼群',
     () => {
       blindOpen = !blindOpen;
-      blinds.forEach((b) => {
-        b.rotation.z = blindOpen ? 0.05 : 1.32;
-      });
+      if (blindInst) {
+        const rz = blindOpen ? 0.05 : 1.32;
+        for (let i = 0; i < blindPos.length; i++) {
+          const b = blindPos[i];
+          _blindDummy.position.set(b.x, b.y, b.z);
+          _blindDummy.rotation.set(0, 0, rz);
+          _blindDummy.updateMatrix();
+          blindInst.setMatrixAt(i, _blindDummy.matrix);
+        }
+        blindInst.instanceMatrix.needsUpdate = true;
+      }
       flLight.intensity = blindOpen ? 1.25 : 0.95;
       winSun.intensity = blindOpen ? 1.1 : 0.55;
       sfx.play('switch');

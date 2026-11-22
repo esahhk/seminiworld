@@ -2,6 +2,7 @@ import type { SceneContext } from './sceneContext';
 import type { SceneInitResult } from '../types/game';
 import { addInstancedMeshes, buildParkBench } from '../engine/propKit';
 import type { InstanceTransform } from '../engine/propKit';
+import { createSlopedColliderSegments } from '../engine/physics';
 
 export function buildZigzagScene(ctx: SceneContext): SceneInitResult {
   const {
@@ -14,10 +15,11 @@ export function buildZigzagScene(ctx: SceneContext): SceneInitResult {
     addMesh,
     addBox,
     addCylinder,
-    addSign,
+    addDoubleSign,
     createMaterial,
     addInteract,
     addCollectible,
+    colliders,
     updaters,
     showWhisper,
     setBounds,
@@ -127,11 +129,13 @@ export function buildZigzagScene(ctx: SceneContext): SceneInitResult {
   addBox(5, 0.4, 5, stepMat, -4.0, 0.1, 8.0, false, true, true);
   addBox(3.5, 0.35, 9.6, wallMat, -4.0, 1.95, 1.15, false, true, true).rotation.x = 0.42;
 
+  const stepItems: InstanceTransform[] = [];
+  const edgeItems: InstanceTransform[] = [];
   for (let i = 0; i < 14; i++) {
     const sy = 0.15 + i * 0.29;
     const sz = 5.2 - i * 0.62;
-    addBox(3.4, 0.48, 0.65, stepMat, -4.0, sy - 0.08, sz, false, false, true);
-    addBox(3.42, 0.03, 0.05, edgeMat, -4.0, sy + 0.16, sz + 0.31, false, false, false);
+    stepItems.push({ x: -4.0, y: sy - 0.08, z: sz });
+    edgeItems.push({ x: -4.0, y: sy + 0.16, z: sz + 0.31 });
   }
 
   addBox(12.4, 4.2, 4.4, stepMat, 0, 2.1, -5.2, false, true, true);
@@ -146,9 +150,11 @@ export function buildZigzagScene(ctx: SceneContext): SceneInitResult {
   for (let i = 0; i < 14; i++) {
     const sy = 4.2 + i * 0.29;
     const sz = -2.86 + i * 0.62;
-    addBox(3.4, 0.48, 0.65, stepMat, 4.0, sy - 0.08, sz, false, false, true);
-    addBox(3.42, 0.03, 0.05, edgeMat, 4.0, sy + 0.16, sz - 0.31, false, false, false);
+    stepItems.push({ x: 4.0, y: sy - 0.08, z: sz });
+    edgeItems.push({ x: 4.0, y: sy + 0.16, z: sz - 0.31 });
   }
+  addInstancedMeshes(ctx, new T.BoxGeometry(3.4, 0.48, 0.65), stepMat, stepItems, false, true);
+  addInstancedMeshes(ctx, new T.BoxGeometry(3.42, 0.03, 0.05), edgeMat, edgeItems, false, false);
 
   addBox(0.08, 0.1, 9.6, railMat, -2.25, 2.95, 1.0, false).rotation.x = 0.43;
   addBox(0.08, 0.1, 9.6, railMat, -5.75, 2.95, 1.0, false).rotation.x = 0.43;
@@ -168,18 +174,43 @@ export function buildZigzagScene(ctx: SceneContext): SceneInitResult {
   }
   addInstancedMeshes(ctx, new T.CylinderGeometry(0.03, 0.03, 0.96, 6), railMat, postItems, false, false);
 
-  addBox(0.1, 1.0, 8.6, createMaterial({ visible: false }), -2.25, 2.5, 1.0, true, false, false).rotation.x = 0.43;
-  addBox(0.1, 1.0, 8.6, createMaterial({ visible: false }), 2.25, 6.5, 1.0, true, false, false).rotation.x = -0.43;
+  colliders.push(
+    ...createSlopedColliderSegments({
+      minX: -2.32,
+      maxX: -2.18,
+      startZ: 5.4,
+      endZ: -3.1,
+      startY: 0.3,
+      endY: 4.2,
+      height: 1.15,
+      segments: 8,
+    }),
+    ...createSlopedColliderSegments({
+      minX: 2.18,
+      maxX: 2.32,
+      startZ: -3.1,
+      endZ: 5.3,
+      startY: 4.2,
+      endY: 8.25,
+      height: 1.15,
+      segments: 8,
+    }),
+  );
 
   addBox(6.6, 0.35, 1.1, createMaterial({ color: 0x8c5a44, roughness: 0.9 }), 0, 4.3, -6.1, true);
   addBox(6.3, 0.15, 0.9, createMaterial({ color: 0x423023, roughness: 1 }), 0, 4.48, -6.1, false);
-  addSign(
+  const zigWoodMat = createMaterial({ color: 0x6b482e, roughness: 0.85 });
+  addBox(0.06, 0.65, 0.06, zigWoodMat, -0.52, 4.62, -6.62, false);
+  addBox(0.06, 0.65, 0.06, zigWoodMat, 0.52, 4.62, -6.62, false);
+  addDoubleSign(
     1.4,
-    0.75,
-    tex.sign('一米花田', '#e8dfcc', '#3a5c3a', '之字形台阶 · 请勿踩踏', true),
+    0.72,
+    tex.sign('一米花田', '#e8dfcc', '#3a5c3a', '之字形台阶 · 请勿踩踏', true, 1.4 / 0.72),
     0,
-    4.85,
-    -6.72,
+    4.92,
+    -6.62,
+    0,
+    0x453425,
   );
 
   const fColors = [0xf0cf5b, 0xe87b70, 0xf5f2e6, 0xd685b8];

@@ -35,13 +35,16 @@ export type SurfaceType =
 export type PerfMode = 'high' | 'fast';
 export type TouchMode = 'auto' | '1' | '0';
 export type PanelId = 'col' | 'set' | null;
+export type TruckGear = 'P' | 'R' | 'N' | 'D';
 
 export interface VehicleHudState {
   inCity: boolean;
   summoned: boolean;
   driving: boolean;
   speedKmh: number;
-  gear: 'P' | 'D' | 'R';
+  gear: TruckGear;
+  steerDeg: number;
+  handbrake: boolean;
 }
 
 export interface SceneMeta {
@@ -190,6 +193,10 @@ export interface GameEngineHandle {
   summonTruck: () => void;
   toggleDrive: () => void;
   honkTruck: () => void;
+  shiftGear: (gear: TruckGear) => void;
+  setDriveSteer: (val: number) => void;
+  setDrivePedal: (pedal: 'gas' | 'brake', pressed: boolean) => void;
+  setDriveHandbrake: (held: boolean) => void;
   setRes: (scale: number) => void;
   setPerf: (perf: PerfMode) => void;
   setFov: (fov: number) => void;

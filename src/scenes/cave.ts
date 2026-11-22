@@ -217,7 +217,7 @@ export function buildCaveScene(ctx: SceneContext): SceneInitResult {
   addSign(
     1.0,
     0.44,
-    tex.sign('B4 · 电梯间', '#c8a45b', '#221a0f', '1F 后院 / B2 车库'),
+    tex.sign('B4 · 电梯间', '#c8a45b', '#221a0f', '1F 后院 / B2 车库', false, 1.0 / 0.44),
     2.02,
     1.9,
     elevDoorZ + 0.1,

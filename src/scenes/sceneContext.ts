@@ -84,6 +84,16 @@ export interface SceneContext {
     ry?: number,
     rx?: number,
   ) => THREE.Mesh;
+  addDoubleSign: (
+    w: number,
+    h: number,
+    texMap: THREE.Texture,
+    x: number,
+    y: number,
+    z: number,
+    ry?: number,
+    frameHex?: number,
+  ) => THREE.Group;
   syncColX: (mesh: THREE.Mesh, halfW: number) => void;
   syncColZ: (mesh: THREE.Mesh, halfD: number) => void;
   createMaterial: (

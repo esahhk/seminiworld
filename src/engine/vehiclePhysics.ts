@@ -1,4 +1,4 @@
-import type { Bounds, Collider } from '../types/game';
+import type { Bounds, Collider, TruckGear } from '../types/game';
 
 export interface TruckState {
   x: number;
@@ -12,10 +12,12 @@ export interface TruckState {
   roll: number;
   braking: boolean;
   reversing: boolean;
+  gear: TruckGear;
 }
 
 export interface TruckInput {
-  throttle: number;
+  gas: number;
+  brake: number;
   steer: number;
   handbrake: boolean;
 }
@@ -25,7 +27,12 @@ export type TruckCollider = Pick<
   'minX' | 'maxX' | 'minZ' | 'maxZ' | 'minY' | 'maxY' | 'active'
 >;
 
-export function createTruckState(x = 0, z = 0, yaw = 0): TruckState {
+export function createTruckState(
+  x = 0,
+  z = 0,
+  yaw = 0,
+  gear: TruckGear = 'D',
+): TruckState {
   return {
     x,
     y: 0,
@@ -38,6 +45,7 @@ export function createTruckState(x = 0, z = 0, yaw = 0): TruckState {
     roll: 0,
     braking: false,
     reversing: false,
+    gear,
   };
 }
 
@@ -95,50 +103,62 @@ export function stepTruckPhysics(
   colliders: readonly TruckCollider[],
   dt: number,
 ): TruckState {
-  const maxFwd = 22.0;
-  const maxRev = 7.5;
-  const accelFwd = 13.5;
-  const accelRev = 8.0;
-  const footBrake = 25.0;
-  const handBrakeDecel = 20.0;
-  const drag = 2.6;
+  const maxFwd = 26.0;
+  const maxRev = 9.0;
+  const accelFwd = 15.5;
+  const accelRev = 9.5;
+  const footBrake = 28.0;
+  const parkLockDecel = 32.0;
+  const handBrakeDecel = 24.0;
+  const drag = 2.4;
   const wheelBase = 3.55;
 
-  const th = Math.max(-1, Math.min(1, input.throttle));
+  const gas = Math.max(0, Math.min(1, input.gas));
+  const brake = Math.max(0, Math.min(1, input.brake));
   const st = Math.max(-1, Math.min(1, input.steer));
 
   let speed = truck.speed;
   let braking = false;
   let accel = 0;
 
-  if (input.handbrake) {
-    braking = Math.abs(speed) > 0.08;
-    const dec = handBrakeDecel * dt;
+  if (truck.gear === 'P' || input.handbrake) {
+    braking = Math.abs(speed) > 0.08 || brake > 0.05;
+    const dec = (truck.gear === 'P' ? parkLockDecel : handBrakeDecel) * dt;
     if (Math.abs(speed) <= dec) {
       speed = 0;
     } else {
+      accel = -Math.sign(speed) * handBrakeDecel;
       speed -= Math.sign(speed) * dec;
     }
-  } else if (th > 0.04) {
-    if (speed < -0.25) {
-      braking = true;
-      accel = footBrake;
-      speed = Math.min(0, speed + footBrake * dt);
+  } else if (brake > 0.04) {
+    braking = true;
+    const dec = footBrake * brake * dt;
+    if (Math.abs(speed) <= dec) {
+      speed = 0;
     } else {
-      accel = accelFwd * th;
+      accel = -Math.sign(speed) * footBrake * brake;
+      speed -= Math.sign(speed) * dec;
+    }
+  } else if (truck.gear === 'D' && gas > 0.04) {
+    if (speed < -0.2) {
+      braking = true;
+      accel = footBrake * gas;
+      speed = Math.min(0, speed + accel * dt);
+    } else {
+      accel = accelFwd * gas;
       speed = Math.min(maxFwd, speed + accel * dt);
     }
-  } else if (th < -0.04) {
-    if (speed > 0.25) {
+  } else if (truck.gear === 'R' && gas > 0.04) {
+    if (speed > 0.2) {
       braking = true;
-      accel = -footBrake;
-      speed = Math.max(0, speed - footBrake * dt);
+      accel = -footBrake * gas;
+      speed = Math.max(0, speed + accel * dt);
     } else {
-      accel = accelRev * th;
+      accel = -accelRev * gas;
       speed = Math.max(-maxRev, speed + accel * dt);
     }
   } else {
-    const drop = (drag + Math.abs(speed) * 0.14) * dt;
+    const drop = (drag + Math.abs(speed) * 0.12) * dt;
     if (Math.abs(speed) <= drop) {
       speed = 0;
     } else {
@@ -146,10 +166,10 @@ export function stepTruckPhysics(
     }
   }
 
-  const speedFactor = Math.min(1, Math.abs(speed) / 18);
-  const maxSteer = 0.56 - speedFactor * 0.24;
+  const speedFactor = Math.min(1, Math.abs(speed) / 22);
+  const maxSteer = 0.58 - speedFactor * 0.24;
   const targetSteer = st * maxSteer;
-  const steerBlend = Math.min(1, dt * (Math.abs(st) > 0.05 ? 7.5 : 10.0));
+  const steerBlend = Math.min(1, dt * (Math.abs(st) > 0.05 ? 8.2 : 10.5));
   const steerAngle = truck.steerAngle + (targetSteer - truck.steerAngle) * steerBlend;
 
   let yaw = truck.yaw;
@@ -222,7 +242,8 @@ export function stepTruckPhysics(
     pitch,
     roll,
     braking,
-    reversing: speed < -0.15,
+    reversing: truck.gear === 'R' || speed < -0.15,
+    gear: truck.gear,
   };
 }
 

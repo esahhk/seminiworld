@@ -244,6 +244,181 @@ export function buildPottedPlant(
   return g;
 }
 
+export interface CamphorGroveSpec {
+  x: number;
+  y: number;
+  z: number;
+  scale?: number;
+  solid?: boolean;
+  ry?: number;
+}
+
+export interface CamphorGroveResult {
+  trunkInst: THREE.InstancedMesh | null;
+  boughInst: THREE.InstancedMesh | null;
+  crownInst: THREE.InstancedMesh | null;
+  swayCrowns: (t: number, windBoost?: number) => void;
+}
+
+export function buildCamphorGrove(
+  ctx: SceneContext,
+  specs: readonly CamphorGroveSpec[],
+  cast = true,
+): CamphorGroveResult {
+  if (specs.length === 0) {
+    return {
+      trunkInst: null,
+      boughInst: null,
+      crownInst: null,
+      swayCrowns: () => {},
+    };
+  }
+  const { T, scene, tex, track, createMaterial, colliders } = ctx;
+  const barkMat = createMaterial({ map: tex.wood('#5e4835', '#3d2e20', 'bark'), roughness: 0.92 });
+  const leafMat = createMaterial({ color: 0xffffff, roughness: 0.87 });
+
+  const trunkGeo = track(new T.CylinderGeometry(0.2, 0.34, 2.8, 10));
+  const boughGeo = track(new T.CylinderGeometry(0.08, 0.15, 1.4, 8));
+  const crownGeo = track(new T.SphereGeometry(1.42, 14, 10));
+
+  const trunkInst = new T.InstancedMesh(trunkGeo, barkMat, specs.length);
+  const boughInst = new T.InstancedMesh(boughGeo, barkMat, specs.length * 3);
+  const crownInst = new T.InstancedMesh(crownGeo, leafMat, specs.length * 5);
+  trunkInst.castShadow = cast;
+  trunkInst.receiveShadow = true;
+  boughInst.castShadow = cast;
+  boughInst.receiveShadow = true;
+  crownInst.castShadow = cast;
+  crownInst.receiveShadow = true;
+
+  const boughDefs: [number, number, number, number, number][] = [
+    [-0.4, 2.9, 0.25, 0.4, 0.5],
+    [0.45, 3.0, -0.2, -0.35, -0.5],
+    [0.1, 3.1, 0.42, 0.5, -0.15],
+  ];
+  const crownDefs: [number, number, number, number, number][] = [
+    [0, 4.35, 0, 1.15, 0x45753d],
+    [-1.05, 3.65, 0.55, 0.86, 0x568846],
+    [1.08, 3.7, -0.45, 0.88, 0x487a3f],
+    [0.2, 3.85, 1.0, 0.82, 0x5c8f4b],
+    [-0.25, 3.75, -0.95, 0.8, 0x3f6d38],
+  ];
+
+  const rootObj = new T.Object3D();
+  const partObj = new T.Object3D();
+  const matWorld = new T.Matrix4();
+  const tintColor = new T.Color();
+  const crownMeta: {
+    baseX: number;
+    baseY: number;
+    baseZ: number;
+    sc: number;
+    treeRy: number;
+    lx: number;
+    ly: number;
+    lz: number;
+    fs: number;
+    phase: number;
+  }[] = [];
+
+  let bIdx = 0;
+  let cIdx = 0;
+
+  for (let i = 0; i < specs.length; i++) {
+    const sp = specs[i];
+    const sc = sp.scale ?? 1;
+    const ry = sp.ry ?? ((i * 2.17) % (Math.PI * 2));
+    rootObj.position.set(sp.x, sp.y, sp.z);
+    rootObj.rotation.set(0, ry, 0);
+    rootObj.scale.setScalar(sc);
+    rootObj.updateMatrix();
+
+    partObj.position.set(0, 1.4, 0);
+    partObj.rotation.set(0, 0, 0);
+    partObj.scale.set(1, 1, 1);
+    partObj.updateMatrix();
+    matWorld.multiplyMatrices(rootObj.matrix, partObj.matrix);
+    trunkInst.setMatrixAt(i, matWorld);
+
+    for (const [bx, by, bz, rx, rz] of boughDefs) {
+      partObj.position.set(bx, by, bz);
+      partObj.rotation.set(rx, 0, rz);
+      partObj.scale.set(1, 1, 1);
+      partObj.updateMatrix();
+      matWorld.multiplyMatrices(rootObj.matrix, partObj.matrix);
+      boughInst.setMatrixAt(bIdx++, matWorld);
+    }
+
+    for (let l = 0; l < crownDefs.length; l++) {
+      const [fx, fy, fz, fs, hex] = crownDefs[l];
+      partObj.position.set(fx, fy, fz);
+      partObj.rotation.set(0, 0, 0);
+      partObj.scale.set(fs * 1.1, fs * 0.82, fs * 1.1);
+      partObj.updateMatrix();
+      matWorld.multiplyMatrices(rootObj.matrix, partObj.matrix);
+      crownInst.setMatrixAt(cIdx, matWorld);
+      tintColor.setHex(hex);
+      crownInst.setColorAt(cIdx, tintColor);
+      crownMeta.push({
+        baseX: sp.x,
+        baseY: sp.y,
+        baseZ: sp.z,
+        sc,
+        treeRy: ry,
+        lx: fx,
+        ly: fy,
+        lz: fz,
+        fs,
+        phase: i * 1.1 + l * 0.25,
+      });
+      cIdx++;
+    }
+
+    if (sp.solid) {
+      colliders.push({
+        minX: sp.x - 0.36 * sc,
+        maxX: sp.x + 0.36 * sc,
+        minZ: sp.z - 0.36 * sc,
+        maxZ: sp.z + 0.36 * sc,
+        minY: sp.y,
+        maxY: sp.y + 3.0 * sc,
+        active: true,
+      });
+    }
+  }
+
+  trunkInst.instanceMatrix.needsUpdate = true;
+  boughInst.instanceMatrix.needsUpdate = true;
+  crownInst.instanceMatrix.needsUpdate = true;
+  if (crownInst.instanceColor) {
+    crownInst.instanceColor.needsUpdate = true;
+  }
+  trunkInst.computeBoundingSphere();
+  boughInst.computeBoundingSphere();
+  crownInst.computeBoundingSphere();
+  scene.add(trunkInst, boughInst, crownInst);
+
+  const swayCrowns = (t: number, windBoost = 0) => {
+    const amp = 0.02 + windBoost * 0.05;
+    for (let k = 0; k < crownMeta.length; k++) {
+      const m = crownMeta[k];
+      rootObj.position.set(m.baseX, m.baseY, m.baseZ);
+      rootObj.rotation.set(0, m.treeRy, Math.sin(t * 1.2 + m.phase) * amp);
+      rootObj.scale.setScalar(m.sc);
+      rootObj.updateMatrix();
+      partObj.position.set(m.lx, m.ly, m.lz);
+      partObj.rotation.set(0, 0, 0);
+      partObj.scale.set(m.fs * 1.1, m.fs * 0.82, m.fs * 1.1);
+      partObj.updateMatrix();
+      matWorld.multiplyMatrices(rootObj.matrix, partObj.matrix);
+      crownInst.setMatrixAt(k, matWorld);
+    }
+    crownInst.instanceMatrix.needsUpdate = true;
+  };
+
+  return { trunkInst, boughInst, crownInst, swayCrowns };
+}
+
 export function buildCamphorTree(
   ctx: SceneContext,
   x: number,
@@ -389,11 +564,16 @@ export function buildVendingMachine(
   };
   add(new T.BoxGeometry(1.04, 1.92, 0.78), bodyMat, 0, 0.96, 0);
   add(new T.BoxGeometry(0.68, 1.05, 0.04), glowMat, -0.1, 1.24, 0.38);
-  const canCols = [0xd9483b, 0x3b8c5e, 0xe8b538, 0x3a72b8];
+  const canMats = [0xd9483b, 0x3b8c5e, 0xe8b538, 0x3a72b8].map((col) =>
+    createMaterial({ color: col, roughness: 0.3 }),
+  );
+  const canGeo = track(new T.CylinderGeometry(0.03, 0.03, 0.1, 8));
   for (let row = 0; row < 4; row++) {
     for (let col = 0; col < 5; col++) {
-      const canMat = createMaterial({ color: canCols[(row + col) % 4], roughness: 0.3 });
-      add(new T.CylinderGeometry(0.03, 0.03, 0.1, 8), canMat, -0.34 + col * 0.12, 0.85 + row * 0.24, 0.39);
+      const m = new T.Mesh(canGeo, canMats[(row + col) % 4]);
+      m.position.set(-0.34 + col * 0.12, 0.85 + row * 0.24, 0.39);
+      m.castShadow = true;
+      g.add(m);
     }
   }
   add(new T.BoxGeometry(0.18, 0.48, 0.05), trimMat, 0.35, 1.24, 0.38);

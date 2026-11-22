@@ -2,7 +2,7 @@ import type { SceneContext } from './sceneContext';
 import type { SceneInitResult } from '../types/game';
 import {
   addInstancedMeshes,
-  buildCamphorTree,
+  buildCamphorGrove,
   buildParkBench,
   buildSedanCar,
 } from '../engine/propKit';
@@ -91,26 +91,25 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
     }
   }
 
-  const canopies: { m: ReturnType<typeof buildCamphorTree>; p: number }[] = [];
-  (
-    [
-      [-9, -8],
-      [-10, 0],
-      [-9, 8],
-      [9, -7],
-      [10, 2],
-      [8, 9],
-      [-5, -11],
-      [5, -11],
-      [-12, -4],
-      [12, -3],
-      [-12, 5],
-      [12, 6],
-    ] as [number, number][]
-  ).forEach(([tx, tz], i) => {
-    const grp = buildCamphorTree(ctx, tx, 0, tz, 0.95 + (i % 3) * 0.1, false);
-    canopies.push({ m: grp, p: i });
-  });
+  const treeCoords: [number, number][] = [
+    [-9, -8],
+    [-10, 0],
+    [-9, 8],
+    [9, -7],
+    [10, 2],
+    [8, 9],
+    [-5, -11],
+    [5, -11],
+    [-12, -4],
+    [12, -3],
+    [-12, 5],
+    [12, 6],
+  ];
+  const grove = buildCamphorGrove(
+    ctx,
+    treeCoords.map(([x, z], i) => ({ x, y: 0, z, scale: 0.95 + (i % 3) * 0.1, solid: true })),
+    true,
+  );
 
   const bushItems: { x: number; y: number; z: number; sx: number; sy: number; sz: number; color: number }[] = [];
   const stemItems: { x: number; y: number; z: number; sx: number; sy: number; sz: number }[] = [];
@@ -133,7 +132,7 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
       fz = -10.6 - Math.random() * 3.8;
     }
     if (i % 2 === 0) {
-      bushItems.push({ x: fx, y: 0.42, z: fz, sx: 1, sy: 0.85, sz: 1, color: bushColors[i % 3] });
+      bushItems.push({ x: fx, y: 0.42, z: fz, sx: 1, sy: 0.82, sz: 1, color: bushColors[i % 3] });
     }
     const hScale = 0.85 + Math.random() * 1.2;
     stemItems.push({ x: fx, y: 0.7 * hScale, z: fz, sx: 1, sy: hScale, sz: 1 });
@@ -143,20 +142,34 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
       y: 1.42 * hScale,
       z: fz,
       sx: bs,
-      sy: bs * 0.75,
+      sy: bs * 0.72,
       sz: bs,
       color: bloomColors[i % 5],
     });
   }
-  addInstancedMeshes(ctx, new T.DodecahedronGeometry(0.75, 1), createMaterial({ color: 0xffffff, roughness: 0.94 }), bushItems, false, true);
-  addInstancedMeshes(ctx, new T.CylinderGeometry(0.03, 0.04, 1.4, 5), createMaterial({ color: 0x3f6e33, roughness: 0.9 }), stemItems, false, false);
-  addInstancedMeshes(ctx, new T.DodecahedronGeometry(0.28, 0), createMaterial({ color: 0xffffff, roughness: 0.62 }), bloomItems, false, false);
+  addInstancedMeshes(ctx, new T.IcosahedronGeometry(0.72, 1), createMaterial({ color: 0xffffff, roughness: 0.92 }), bushItems, false, true);
+  addInstancedMeshes(ctx, new T.CylinderGeometry(0.03, 0.04, 1.4, 6), createMaterial({ color: 0x3f6e33, roughness: 0.9 }), stemItems, false, false);
+  addInstancedMeshes(ctx, new T.IcosahedronGeometry(0.24, 1), createMaterial({ color: 0xffffff, roughness: 0.58 }), bloomItems, false, false);
 
   const tireGeo = track(new T.TorusGeometry(0.275, 0.035, 8, 18));
   const rimGeo = track(new T.TorusGeometry(0.24, 0.012, 6, 18));
   const spokeGeo = track(new T.CylinderGeometry(0.006, 0.006, 0.48, 4));
+  const unitTubeGeo = track(new T.CylinderGeometry(1, 1, 1, 6));
+  const hubGeo = track(new T.CylinderGeometry(0.025, 0.025, 0.08, 8));
+  const crankGeo = track(new T.CylinderGeometry(0.065, 0.065, 0.02, 12));
+  const handleGeo = track(new T.CylinderGeometry(0.015, 0.015, 0.48, 8));
+  const gripGeo = track(new T.CylinderGeometry(0.02, 0.02, 0.11, 8));
   const tireMat = createMaterial({ color: 0x22252a, roughness: 0.85 });
   const chromeMat = createMaterial({ color: 0xc2c9cf, metalness: 0.72, roughness: 0.25 });
+  const dustyTrimMat = createMaterial({ color: 0x8e9396, metalness: 0.35, roughness: 0.7 });
+  const gripMat = createMaterial({ color: 0x242629, roughness: 0.9 });
+  const seatBagMat = createMaterial({ color: 0xd9e0e6, roughness: 0.5 });
+  const seatLeatherMat = createMaterial({ color: 0x2a2623, roughness: 0.75 });
+  const basketMat = createMaterial({ color: 0x3b424a, metalness: 0.5, roughness: 0.45 });
+  const bottleMat = createMaterial({ color: 0x9cd1e6, transparent: true, opacity: 0.78 });
+  const rackMat = createMaterial({ color: 0x2e3339, metalness: 0.5 });
+  const crateMat = createMaterial({ color: 0x3d5c85, roughness: 0.7 });
+  const lockMat = createMaterial({ color: 0xb34332, roughness: 0.65 });
 
   interface BikeOpts {
     bagSeat?: boolean;
@@ -168,6 +181,9 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
     dusty?: boolean;
     crate?: boolean;
   }
+
+  const _upAxis = new T.Vector3(0, 1, 0);
+  const _dirVec = new T.Vector3();
 
   function addTube(
     parent: InstanceType<typeof T.Group>,
@@ -184,12 +200,11 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
     if (len < 0.001) {
       return;
     }
-    const mesh = new T.Mesh(track(new T.CylinderGeometry(radius, radius, len, 6)), mat);
+    const mesh = new T.Mesh(unitTubeGeo, mat);
     mesh.position.set((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2, (p1[2] + p2[2]) / 2);
-    mesh.quaternion.setFromUnitVectors(
-      new T.Vector3(0, 1, 0),
-      new T.Vector3(dx / len, dy / len, dz / len),
-    );
+    mesh.scale.set(radius, len, radius);
+    _dirVec.set(dx / len, dy / len, dz / len);
+    mesh.quaternion.setFromUnitVectors(_upAxis, _dirVec);
     mesh.castShadow = castShadow;
     parent.add(mesh);
     return mesh;
@@ -209,7 +224,7 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
       sp.rotation.z = (s * Math.PI) / 3;
       parent.add(sp);
     }
-    const hub = mkMesh(new T.CylinderGeometry(0.025, 0.025, 0.08, 8), mat, wx, wy, 0, false, false);
+    const hub = mkMesh(hubGeo, mat, wx, wy, 0, false, false);
     hub.rotation.x = Math.PI / 2;
     parent.add(hub);
   }
@@ -222,9 +237,7 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
       roughness: opts.dusty ? 0.78 : 0.3,
       metalness: opts.dusty ? 0.2 : 0.55,
     });
-    const trimMat = opts.dusty
-      ? createMaterial({ color: 0x8e9396, metalness: 0.35, roughness: 0.7 })
-      : chromeMat;
+    const trimMat = opts.dusty ? dustyTrimMat : chromeMat;
 
     const wheelY = 0.31;
     const rx = -0.49;
@@ -252,46 +265,45 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
     addTube(pivot, [hb[0], hb[1], -0.038], [fx, wheelY, -0.038], 0.015, fMat);
     addTube(pivot, [hb[0], hb[1], 0.038], [fx, wheelY, 0.038], 0.015, fMat);
 
-    const crank = mkMesh(new T.CylinderGeometry(0.065, 0.065, 0.02, 12), trimMat, bb[0], bb[1], 0.04, false, false);
+    const crank = mkMesh(crankGeo, trimMat, bb[0], bb[1], 0.04, false, false);
     crank.rotation.x = Math.PI / 2;
     pivot.add(crank);
 
     const seat = mkMesh(
       new T.BoxGeometry(0.22, 0.055, 0.13),
-      createMaterial({ color: opts.bagSeat ? 0xd9e0e6 : 0x2a2623, roughness: opts.bagSeat ? 0.5 : 0.75 }),
+      opts.bagSeat ? seatBagMat : seatLeatherMat,
       saddlePos[0] - 0.01,
       saddlePos[1] + 0.025,
       0,
       false,
       false,
     );
-    const handle = mkMesh(new T.CylinderGeometry(0.015, 0.015, 0.48, 8), trimMat, stemTop[0] - 0.01, stemTop[1] + 0.01, 0, false, false);
+    const handle = mkMesh(handleGeo, trimMat, stemTop[0] - 0.01, stemTop[1] + 0.01, 0, false, false);
     handle.rotation.x = Math.PI / 2;
-    const gripMat = createMaterial({ color: 0x242629, roughness: 0.9 });
-    const gripL = mkMesh(new T.CylinderGeometry(0.02, 0.02, 0.11, 8), gripMat, stemTop[0] - 0.01, stemTop[1] + 0.01, -0.2, false, false);
+    const gripL = mkMesh(gripGeo, gripMat, stemTop[0] - 0.01, stemTop[1] + 0.01, -0.2, false, false);
     gripL.rotation.x = Math.PI / 2;
-    const gripR = mkMesh(new T.CylinderGeometry(0.02, 0.02, 0.11, 8), gripMat, stemTop[0] - 0.01, stemTop[1] + 0.01, 0.2, false, false);
+    const gripR = mkMesh(gripGeo, gripMat, stemTop[0] - 0.01, stemTop[1] + 0.01, 0.2, false, false);
     gripR.rotation.x = Math.PI / 2;
     pivot.add(seat, handle, gripL, gripR);
 
     if (opts.basket) {
       addTube(pivot, [hb[0], hb[1], 0], [0.49, 0.72, 0], 0.012, trimMat, false);
-      const bsk = mkMesh(new T.BoxGeometry(0.25, 0.2, 0.3), createMaterial({ color: 0x3b424a, metalness: 0.5, roughness: 0.45 }), 0.46, 0.8, 0, true, false);
-      const btl = mkMesh(new T.CylinderGeometry(0.032, 0.032, 0.16, 8), createMaterial({ color: 0x9cd1e6, transparent: true, opacity: 0.78 }), 0.46, 0.92, -0.05, false, false);
+      const bsk = mkMesh(new T.BoxGeometry(0.25, 0.2, 0.3), basketMat, 0.46, 0.8, 0, true, false);
+      const btl = mkMesh(new T.CylinderGeometry(0.032, 0.032, 0.16, 8), bottleMat, 0.46, 0.92, -0.05, false, false);
       pivot.add(bsk, btl);
     }
     if (opts.rack) {
-      const rk = mkMesh(new T.BoxGeometry(0.36, 0.035, 0.18), createMaterial({ color: 0x2e3339, metalness: 0.5 }), -0.46, 0.66, 0, false, false);
+      const rk = mkMesh(new T.BoxGeometry(0.36, 0.035, 0.18), rackMat, -0.46, 0.66, 0, false, false);
       addTube(pivot, [rx, wheelY, -0.05], [-0.56, 0.65, -0.06], 0.01, trimMat, false);
       addTube(pivot, [rx, wheelY, 0.05], [-0.56, 0.65, 0.06], 0.01, trimMat, false);
       pivot.add(rk);
     }
     if (opts.crate) {
-      const box = mkMesh(new T.BoxGeometry(0.3, 0.16, 0.24), createMaterial({ color: 0x3d5c85, roughness: 0.7 }), -0.46, 0.75, 0, true, false);
+      const box = mkMesh(new T.BoxGeometry(0.3, 0.16, 0.24), crateMat, -0.46, 0.75, 0, true, false);
       pivot.add(box);
     }
     if (opts.lock) {
-      const lk = mkMesh(new T.TorusGeometry(0.14, 0.02, 6, 14), createMaterial({ color: 0xb34332, roughness: 0.65 }), -0.54, 0.38, 0.1, false, false);
+      const lk = mkMesh(new T.TorusGeometry(0.14, 0.02, 6, 14), lockMat, -0.54, 0.38, 0.1, false, false);
       lk.rotation.y = 0.4;
       pivot.add(lk);
     }
@@ -366,37 +378,54 @@ export function buildParkLotScene(ctx: SceneContext): SceneInitResult {
   addSign(
     3.6,
     0.72,
-    tex.sign('地下车库入口  B1 / B2', '#d4ad33', '#1a1a18', '限高 2.2m · 顺坡下去直达地下车库'),
+    tex.sign('地下车库入口  B1 / B2', '#d4ad33', '#1a1a18', '限高 2.2m · 顺坡下去直达地下车库', false, 3.6 / 0.72),
     0,
     2.65,
     -9.98,
   );
 
-  const leaves: { m: ReturnType<typeof addMesh>; s: number; p: number }[] = [];
-  const lGeo = new T.PlaneGeometry(0.14, 0.09);
-  const lMat = createMaterial({ color: 0x84ad58, side: T.DoubleSide });
+  const leafState: { x: number; y: number; z: number; rx: number; s: number; p: number }[] = [];
   for (let i = 0; i < 20; i++) {
-    leaves.push({
-      m: addMesh(lGeo, lMat, (Math.random() - 0.5) * 16, 1 + Math.random() * 4, (Math.random() - 0.5) * 16, false, false),
+    leafState.push({
+      x: (Math.random() - 0.5) * 16,
+      y: 1 + Math.random() * 4,
+      z: (Math.random() - 0.5) * 16,
+      rx: Math.random() * Math.PI,
       s: 0.35 + Math.random() * 0.4,
       p: Math.random() * 6,
     });
   }
+  const leafInst = addInstancedMeshes(
+    ctx,
+    new T.PlaneGeometry(0.14, 0.09),
+    createMaterial({ color: 0x84ad58, side: T.DoubleSide }),
+    leafState.map((l) => ({ x: l.x, y: l.y, z: l.z, rx: l.rx })),
+    false,
+    false,
+  );
+  const leafDummy = new T.Object3D();
+
   let windShake = 0;
   let enteredGarage = false;
   updaters.push((dt, t) => {
     windShake = Math.max(0, windShake - dt * 0.6);
-    canopies.forEach((c) => {
-      c.m.rotation.z = Math.sin(t * 1.2 + c.p) * (0.02 + windShake * 0.05);
-    });
-    leaves.forEach((l) => {
-      l.m.position.y -= dt * l.s;
-      l.m.position.x += Math.sin(t * 2 + l.p) * dt * 0.4;
-      l.m.rotation.x += dt * 1.8;
-      if (l.m.position.y < 0.1) {
-        l.m.position.y = 4.8;
+    grove.swayCrowns(t, windShake);
+    if (leafInst) {
+      for (let i = 0; i < leafState.length; i++) {
+        const l = leafState[i];
+        l.y -= dt * l.s;
+        l.x += Math.sin(t * 2 + l.p) * dt * 0.4;
+        l.rx += dt * 1.8;
+        if (l.y < 0.1) {
+          l.y = 4.8;
+        }
+        leafDummy.position.set(l.x, l.y, l.z);
+        leafDummy.rotation.set(l.rx, l.p, 0);
+        leafDummy.updateMatrix();
+        leafInst.setMatrixAt(i, leafDummy.matrix);
       }
-    });
+      leafInst.instanceMatrix.needsUpdate = true;
+    }
     if (!enteredGarage && Math.abs(player.pos.x) < 2.2 && player.pos.z <= -14.6) {
       enteredGarage = true;
       const gi = sceneIdxById('garage');

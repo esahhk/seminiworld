@@ -11,10 +11,12 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
     sfx,
     V,
     track,
+    mkMesh,
     addMesh,
     addBox,
     addCylinder,
     addSign,
+    addDoubleSign,
     syncColX,
     createMaterial,
     addInteract,
@@ -111,8 +113,8 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
     -8.95,
     true,
   );
-  addSign(1.4, 0.55, tex.sign('03 登机口', '#1e2833', '#e8c366', '请勿靠近玻璃'), -3.8, 1.6, -8.86);
-  addSign(1.4, 0.55, tex.sign('03 登机口', '#1e2833', '#e8c366', '请勿靠近玻璃'), 3.8, 1.6, -8.86);
+  addSign(1.4, 0.55, tex.sign('03 登机口', '#1e2833', '#e8c366', '请勿靠近玻璃', false, 1.4 / 0.55), -3.8, 1.6, -8.86);
+  addSign(1.4, 0.55, tex.sign('03 登机口', '#1e2833', '#e8c366', '请勿靠近玻璃', false, 1.4 / 0.55), 3.8, 1.6, -8.86);
 
   for (const sx of [-13.5, 13.5]) {
     addBox(0.26, 0.28, 21, kickMat, sx, 0.14, 1.5, false);
@@ -203,7 +205,17 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
   addBox(0.04, 0.07, 4.8, beltMat, 10.2, 0.85, -2.8, true);
   addBox(2.2, 0.07, 0.04, beltMat, 6.9, 0.85, -5.2, true);
   addBox(2.2, 0.07, 0.04, beltMat, 9.1, 0.85, -0.4, true);
-  addSign(0.9, 0.5, tex.sign('请在此排队', '#eef3f6', '#233342', '1米线'), 5.8, 1.25, -5.2);
+  addCylinder(0.025, 0.025, 0.14, 8, postMat, 5.8, 0.98, -5.2);
+  addDoubleSign(
+    0.95,
+    0.48,
+    tex.sign('请在此排队', '#eef3f6', '#233342', '1米线', false, 0.95 / 0.48),
+    5.8,
+    1.22,
+    -5.2,
+    0,
+    0x4b5560,
+  );
 
   const seatMat = createMaterial({ color: 0x364452, roughness: 0.75 });
   const chromeMat = createMaterial({ color: 0xbac2ca, metalness: 0.78, roughness: 0.24 });
@@ -274,6 +286,11 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
     metalness: 0.65,
   });
 
+  const cockDashMat = createMaterial({ color: 0x262e36 });
+  const avionicsMat = createMaterial({ color: 0x62d68d, emissive: 0x3da867, emissiveIntensity: 0.9 });
+  const doorPatchMat = createMaterial({ color: 0xd4dade });
+  const chockMat = createMaterial({ color: 0xe3b12c });
+
   function addLocal(mesh: InstanceType<typeof T.Mesh>, x: number, y: number, z: number, cast = true) {
     mesh.position.set(x, y, z);
     mesh.castShadow = cast;
@@ -282,40 +299,39 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
     return mesh;
   }
 
-  const cabin = new T.Mesh(new T.CylinderGeometry(1.9, 1.9, 14.5, 24), bodyMat);
+  function addTrackedPart(
+    geo: Parameters<typeof mkMesh>[0],
+    mat: ReturnType<typeof createMaterial>,
+    x: number,
+    y: number,
+    z: number,
+    cast = true,
+  ) {
+    const mesh = mkMesh(geo, mat, x, y, z, cast, true);
+    aircraft.add(mesh);
+    return mesh;
+  }
+
+  const cabin = addTrackedPart(new T.CylinderGeometry(1.9, 1.9, 14.5, 24), bodyMat, 0, 3.25, 0);
   cabin.rotation.x = Math.PI / 2;
-  addLocal(cabin, 0, 3.25, 0);
 
-  const noseCone = new T.Mesh(new T.CylinderGeometry(1.02, 1.9, 2.75, 24), bodyMat);
+  const noseCone = addTrackedPart(new T.CylinderGeometry(1.02, 1.9, 2.75, 24), bodyMat, 0, 3.25, 8.625);
   noseCone.rotation.x = Math.PI / 2;
-  addLocal(noseCone, 0, 3.25, 8.625);
 
-  const radome = new T.Mesh(new T.SphereGeometry(1.02, 22, 14), bodyMat);
+  const radome = addTrackedPart(new T.SphereGeometry(1.02, 22, 14), bodyMat, 0, 3.25, 10.0);
   radome.scale.set(1, 0.96, 1.45);
-  addLocal(radome, 0, 3.25, 10.0);
 
-  const tailCone = new T.Mesh(new T.CylinderGeometry(1.9, 0.4, 4.9, 24), bodyMat);
+  const tailCone = addTrackedPart(new T.CylinderGeometry(1.9, 0.4, 4.9, 24), bodyMat, 0, 3.385, -9.68);
   tailCone.rotation.x = Math.PI / 2 + 0.055;
-  addLocal(tailCone, 0, 3.385, -9.68);
-  const apuCap = new T.Mesh(new T.SphereGeometry(0.4, 16, 12), bodyMat);
-  addLocal(apuCap, 0, 3.52, -12.1);
-  const apuNozzle = new T.Mesh(new T.CylinderGeometry(0.18, 0.24, 0.35, 12), darkMetal);
+  addTrackedPart(new T.SphereGeometry(0.4, 16, 12), bodyMat, 0, 3.52, -12.1);
+  const apuNozzle = addTrackedPart(new T.CylinderGeometry(0.18, 0.24, 0.35, 12), darkMetal, 0, 3.52, -12.42, false);
   apuNozzle.rotation.x = Math.PI / 2;
-  addLocal(apuNozzle, 0, 3.52, -12.42, false);
 
-  addLocal(new T.Mesh(new T.BoxGeometry(1.24, 0.36, 0.78), createMaterial({ color: 0x262e36 })), 0, 4.32, 7.9, false);
-  addLocal(
-    new T.Mesh(
-      new T.BoxGeometry(1.06, 0.08, 0.12),
-      createMaterial({ color: 0x62d68d, emissive: 0x3da867, emissiveIntensity: 0.9 }),
-    ),
-    0,
-    4.34,
-    8.24,
-    false,
-  );
-  addLocal(new T.Mesh(new T.BoxGeometry(0.24, 0.28, 0.12), darkMetal), -0.32, 4.46, 7.72, false);
-  addLocal(new T.Mesh(new T.BoxGeometry(0.24, 0.28, 0.12), darkMetal), 0.32, 4.46, 7.72, false);
+  addTrackedPart(new T.BoxGeometry(1.24, 0.36, 0.78), cockDashMat, 0, 4.32, 7.9, false);
+  addTrackedPart(new T.BoxGeometry(1.06, 0.08, 0.12), avionicsMat, 0, 4.34, 8.24, false);
+  const seatBackGeo = track(new T.BoxGeometry(0.24, 0.28, 0.12));
+  addLocal(new T.Mesh(seatBackGeo, darkMetal), -0.32, 4.46, 7.72, false);
+  addLocal(new T.Mesh(seatBackGeo, darkMetal), 0.32, 4.46, 7.72, false);
 
   for (const [wx, wy, wz, ry, rx, w] of [
     [-0.36, 4.46, 8.26, -0.22, -0.58, 0.62],
@@ -323,32 +339,38 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
     [-0.86, 4.3, 7.88, -0.8, -0.36, 0.58],
     [0.86, 4.3, 7.88, 0.8, -0.36, 0.58],
   ] as [number, number, number, number, number, number][]) {
-    const frame = new T.Mesh(new T.BoxGeometry(w + 0.06, 0.42, 0.08), bodyMat);
+    const frame = new T.Mesh(track(new T.BoxGeometry(w + 0.06, 0.42, 0.08)), bodyMat);
     frame.position.set(wx, wy, wz);
     frame.rotation.set(rx, ry, 0, 'YXZ');
     aircraft.add(frame);
-    const pane = new T.Mesh(new T.BoxGeometry(w, 0.35, 0.1), cockpitGlassMat);
+    const pane = new T.Mesh(track(new T.BoxGeometry(w, 0.35, 0.1)), cockpitGlassMat);
     pane.position.set(wx, wy, wz);
     pane.rotation.set(rx, ry, 0, 'YXZ');
     aircraft.add(pane);
   }
-  const centerPost = new T.Mesh(new T.BoxGeometry(0.07, 0.44, 0.11), bodyMat);
+  const centerPost = new T.Mesh(track(new T.BoxGeometry(0.07, 0.44, 0.11)), bodyMat);
   centerPost.position.set(0, 4.47, 8.3);
   centerPost.rotation.x = -0.58;
   aircraft.add(centerPost);
 
-  addLocal(new T.Mesh(new T.BoxGeometry(0.14, 0.32, 13.8), liveryBlue), 1.88, 3.05, 0, false);
-  addLocal(new T.Mesh(new T.BoxGeometry(0.14, 0.32, 13.8), liveryBlue), -1.88, 3.05, 0, false);
-  addLocal(new T.Mesh(new T.BoxGeometry(0.14, 0.1, 13.8), liveryRed), 1.88, 2.82, 0, false);
-  addLocal(new T.Mesh(new T.BoxGeometry(0.14, 0.1, 13.8), liveryRed), -1.88, 2.82, 0, false);
+  const stripeBlueGeo = track(new T.BoxGeometry(0.14, 0.32, 13.8));
+  const stripeRedGeo = track(new T.BoxGeometry(0.14, 0.1, 13.8));
+  addLocal(new T.Mesh(stripeBlueGeo, liveryBlue), 1.88, 3.05, 0, false);
+  addLocal(new T.Mesh(stripeBlueGeo, liveryBlue), -1.88, 3.05, 0, false);
+  addLocal(new T.Mesh(stripeRedGeo, liveryRed), 1.88, 2.82, 0, false);
+  addLocal(new T.Mesh(stripeRedGeo, liveryRed), -1.88, 2.82, 0, false);
+
+  const cabinWinGeo = track(new T.BoxGeometry(0.06, 0.26, 0.32));
   for (let w = 0; w < 14; w++) {
     const wz = 6.0 - w * 0.9;
-    addLocal(new T.Mesh(new T.BoxGeometry(0.06, 0.26, 0.32), darkMetal), 1.9, 3.45, wz, false);
-    addLocal(new T.Mesh(new T.BoxGeometry(0.06, 0.26, 0.32), darkMetal), -1.9, 3.45, wz, false);
+    addLocal(new T.Mesh(cabinWinGeo, darkMetal), 1.9, 3.45, wz, false);
+    addLocal(new T.Mesh(cabinWinGeo, darkMetal), -1.9, 3.45, wz, false);
   }
-  addLocal(new T.Mesh(new T.BoxGeometry(0.08, 1.5, 0.85), createMaterial({ color: 0xd4dade })), 1.9, 3.3, 7.1, false);
-  addLocal(new T.Mesh(new T.BoxGeometry(0.08, 1.5, 0.85), createMaterial({ color: 0xd4dade })), -1.9, 3.3, 7.1, false);
+  const fwdDoorGeo = track(new T.BoxGeometry(0.08, 1.5, 0.85));
+  addLocal(new T.Mesh(fwdDoorGeo, doorPatchMat), 1.9, 3.3, 7.1, false);
+  addLocal(new T.Mesh(fwdDoorGeo, doorPatchMat), -1.9, 3.3, 7.1, false);
 
+  const cuffGeo = track(new T.BoxGeometry(0.24, 0.22, 1.24));
   for (const side of [-1, 1] as const) {
     const wingGrp = new T.Group();
     wingGrp.position.set(side * 1.5, 2.58, 0.4);
@@ -399,7 +421,7 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
     wlMesh.rotation.y = Math.PI / 2;
     wlMesh.position.set(-0.045, -0.06, 0);
     wlMesh.castShadow = true;
-    const cuff = new T.Mesh(new T.BoxGeometry(0.24, 0.22, 1.24), wingMat);
+    const cuff = new T.Mesh(cuffGeo, wingMat);
     cuff.position.set(0, 0.02, -0.6);
     wlPivot.add(wlMesh, cuff);
     wingGrp.add(wlPivot);
@@ -466,22 +488,27 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
     aircraft.add(hMesh);
   }
 
+  const cowlGeo = track(new T.CylinderGeometry(0.82, 0.78, 2.7, 18));
+  const intakeGeo = track(new T.CylinderGeometry(0.68, 0.68, 0.14, 16));
+  const spinnerGeo = track(new T.ConeGeometry(0.18, 0.36, 12));
+  const bladeGeo = track(new T.BoxGeometry(0.1, 0.56, 0.02));
+  const exhaustGeo = track(new T.CylinderGeometry(0.68, 0.54, 0.65, 14));
+  const pylonGeo = track(new T.BoxGeometry(0.22, 1.0, 1.7));
+
   const fanRotors: InstanceType<typeof T.Group>[] = [];
   for (const ex of [-5.1, 5.1]) {
     const engZ = 0.05;
-    const cowl = new T.Mesh(new T.CylinderGeometry(0.82, 0.78, 2.7, 18), wingMat);
+    const cowl = addLocal(new T.Mesh(cowlGeo, wingMat), ex, 1.72, engZ + 0.6);
     cowl.rotation.x = Math.PI / 2;
-    addLocal(cowl, ex, 1.72, engZ + 0.6);
-    const intake = new T.Mesh(new T.CylinderGeometry(0.68, 0.68, 0.14, 16), darkMetal);
+    const intake = addLocal(new T.Mesh(intakeGeo, darkMetal), ex, 1.72, engZ + 1.98, false);
     intake.rotation.x = Math.PI / 2;
-    addLocal(intake, ex, 1.72, engZ + 1.98, false);
     const rotor = new T.Group();
     rotor.position.set(ex, 1.72, engZ + 1.88);
-    const spinner = new T.Mesh(new T.ConeGeometry(0.18, 0.36, 12), chromeMat);
+    const spinner = new T.Mesh(spinnerGeo, chromeMat);
     spinner.rotation.x = Math.PI / 2;
     rotor.add(spinner);
     for (let b = 0; b < 8; b++) {
-      const bl = new T.Mesh(new T.BoxGeometry(0.1, 0.56, 0.02), darkMetal);
+      const bl = new T.Mesh(bladeGeo, darkMetal);
       const ang = (b * Math.PI * 2) / 8;
       bl.position.set(Math.cos(ang) * 0.32, Math.sin(ang) * 0.32, -0.05);
       bl.rotation.z = ang + 0.5;
@@ -490,25 +517,25 @@ export function buildAirportScene(ctx: SceneContext): SceneInitResult {
     aircraft.add(rotor);
     fanRotors.push(rotor);
 
-    const exhaust = new T.Mesh(new T.CylinderGeometry(0.68, 0.54, 0.65, 14), darkMetal);
+    const exhaust = addLocal(new T.Mesh(exhaustGeo, darkMetal), ex, 1.72, engZ - 0.9, false);
     exhaust.rotation.x = Math.PI / 2;
-    addLocal(exhaust, ex, 1.72, engZ - 0.9, false);
-    addLocal(new T.Mesh(new T.BoxGeometry(0.22, 1.0, 1.7), wingMat), ex, 2.38, engZ + 0.1, false);
+    addLocal(new T.Mesh(pylonGeo, wingMat), ex, 2.38, engZ + 0.1, false);
   }
 
-  addLocal(new T.Mesh(new T.CylinderGeometry(0.11, 0.11, 2.0, 8), darkMetal), 0, 1.0, 8.9);
+  addTrackedPart(new T.CylinderGeometry(0.11, 0.11, 2.0, 8), darkMetal, 0, 1.0, 8.9);
+  const noseWheelGeo = track(new T.CylinderGeometry(0.32, 0.32, 0.18, 12));
   for (const wx of [-0.22, 0.22]) {
-    const nw = new T.Mesh(new T.CylinderGeometry(0.32, 0.32, 0.18, 12), darkMetal);
+    const nw = addLocal(new T.Mesh(noseWheelGeo, darkMetal), wx, 0.22, 8.9);
     nw.rotation.z = Math.PI / 2;
-    addLocal(nw, wx, 0.22, 8.9);
   }
-  addLocal(new T.Mesh(new T.BoxGeometry(0.65, 0.18, 0.55), createMaterial({ color: 0xe3b12c })), 0, 0.0, 8.9, false);
+  addTrackedPart(new T.BoxGeometry(0.65, 0.18, 0.55), chockMat, 0, 0.0, 8.9, false);
+  const mainStrutGeo = track(new T.CylinderGeometry(0.13, 0.13, 2.1, 8));
+  const mainWheelGeo = track(new T.CylinderGeometry(0.45, 0.45, 0.22, 12));
   for (const gx of [-2.4, 2.4]) {
-    addLocal(new T.Mesh(new T.CylinderGeometry(0.13, 0.13, 2.1, 8), darkMetal), gx, 1.0, 0);
+    addLocal(new T.Mesh(mainStrutGeo, darkMetal), gx, 1.0, 0);
     for (const off of [-0.24, 0.24]) {
-      const mw = new T.Mesh(new T.CylinderGeometry(0.45, 0.45, 0.22, 12), darkMetal);
+      const mw = addLocal(new T.Mesh(mainWheelGeo, darkMetal), gx + off, 0.35, 0);
       mw.rotation.z = Math.PI / 2;
-      addLocal(mw, gx + off, 0.35, 0);
     }
   }
   addBox(3.8, 3.4, 16, createMaterial({ visible: false }), 0, 1.7, -23.0, true, false, false);

@@ -13,6 +13,7 @@ export function buildSubwayScene(ctx: SceneContext): SceneInitResult {
     mkMesh,
     addBox,
     addSign,
+    addDoubleSign,
     createMaterial,
     addInteract,
     addCollectible,
@@ -115,14 +116,15 @@ export function buildSubwayScene(ctx: SceneContext): SceneInitResult {
   const hangerMat = createMaterial({ color: 0x7b848c, metalness: 0.65, roughness: 0.38 });
   addBox(0.06, 0.72, 0.06, hangerMat, -0.95, 4.44, -2.0, false);
   addBox(0.06, 0.72, 0.06, hangerMat, 0.95, 4.44, -2.0, false);
-  addBox(2.7, 0.96, 0.1, createMaterial({ color: 0x162b42, roughness: 0.5 }), 0, 3.65, -2.0, false);
-  addSign(
-    2.6,
-    0.9,
-    tex.sign('换乘站 · 1 / 4 / 7 号线', '#1f3c5c', '#f0f2f4', '四线同层穿行'),
+  addDoubleSign(
+    2.7,
+    0.96,
+    tex.sign('换乘站 · 1 / 4 / 7 号线', '#1f3c5c', '#f0f2f4', '四线同层穿行', false, 2.7 / 0.96),
     0,
     3.65,
-    -1.94,
+    -2.0,
+    0,
+    0x162b42,
   );
   addBox(3.4, 3.4, 1.4, createMaterial({ color: 0xdfd8c8 }), 0, 1.7, -14.2, true);
   addBox(
@@ -140,7 +142,7 @@ export function buildSubwayScene(ctx: SceneContext): SceneInitResult {
   addSign(
     2.2,
     0.9,
-    tex.sign('B出口 ↑ 小画室', '#f4ebd8', '#3a2e22', '顺台阶上去就是画室窗边'),
+    tex.sign('B出口 ↑ 小画室', '#f4ebd8', '#3a2e22', '顺台阶上去就是画室窗边', false, 2.2 / 0.9),
     0,
     3.1,
     -13.35,

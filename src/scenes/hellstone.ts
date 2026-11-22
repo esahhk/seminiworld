@@ -1,6 +1,7 @@
 import type { SceneContext } from './sceneContext';
 import type { SceneInitResult } from '../types/game';
 import { addInstancedMeshes } from '../engine/propKit';
+import type { InstanceTransform } from '../engine/propKit';
 
 export function buildHellstoneScene(ctx: SceneContext): SceneInitResult {
   const {
@@ -103,22 +104,20 @@ export function buildHellstoneScene(ctx: SceneContext): SceneInitResult {
   addBox(5.6, 0.45, 5.6, highShelfMat, -8.5, 0.225, 6.2, false, true, true);
   addBox(2.0, 0.22, 1.8, highShelfMat, -6.2, -0.1, 6.2, false, true, true);
 
-  const crackMats: InstanceType<typeof T.MeshStandardMaterial>[] = [];
-  for (const [cx, cz, len, ang] of [
+  const crackMats = [
+    createMaterial({ color: 0xff5e24, emissive: 0xff4212, emissiveIntensity: 0.95 }),
+    createMaterial({ color: 0xff5e24, emissive: 0xff4212, emissiveIntensity: 0.95 }),
+  ];
+  const crackDefs: [number, number, number, number][] = [
     [-2.2, 1.6, 4.8, 0.4],
     [2.4, -1.2, 5.2, -0.6],
     [-8.8, -3.5, 3.6, 1.1],
     [8.6, 0.4, 4.1, -0.3],
-  ]) {
-    const cm = createMaterial({
-      color: 0xff5e24,
-      emissive: 0xff4212,
-      emissiveIntensity: 0.95,
-    });
-    crackMats.push(cm);
-    const cr = addBox(len, 0.04, 0.14, cm, cx, 0.01, cz, false, false, false);
+  ];
+  crackDefs.forEach(([cx, cz, len, ang], idx) => {
+    const cr = addBox(len, 0.04, 0.14, crackMats[idx % 2], cx, 0.01, cz, false, false, false);
     cr.rotation.y = ang;
-  }
+  });
   addBox(1.8, 0.03, 1.3, createMaterial({ color: 0xc9b458, roughness: 0.95 }), 3.8, 0.015, -2.5, false);
   addBox(1.5, 0.03, 1.2, createMaterial({ color: 0xd4cfc4, roughness: 0.95 }), -3.2, 0.015, 3.6, false);
 
@@ -173,8 +172,8 @@ export function buildHellstoneScene(ctx: SceneContext): SceneInitResult {
     false,
     false,
   );
-  const steams: { m: ReturnType<typeof addMesh>; p: number; bx: number; bz: number; by: number }[] = [];
-  const steamGeo = track(new T.DodecahedronGeometry(0.32, 0));
+  const steams: { x: number; y: number; z: number; p: number; bx: number; bz: number; by: number }[] = [];
+  const steamGeo = track(new T.IcosahedronGeometry(0.3, 1));
   const steamMat = createMaterial({
     color: 0xe6e0da,
     emissive: 0x6b5a52,
@@ -185,14 +184,24 @@ export function buildHellstoneScene(ctx: SceneContext): SceneInitResult {
   });
   for (let i = 0; i < 12; i++) {
     const isVent = i >= 7;
+    const bx = isVent ? -8.2 : 8.2;
+    const bz = isVent ? 1.2 : -5.8;
+    const by = isVent ? -0.2 : -0.15;
     steams.push({
-      m: addMesh(steamGeo, steamMat, isVent ? -8.2 : 8.2, isVent ? 0.0 : -0.1, isVent ? 1.2 : -5.8, false, false),
+      x: bx,
+      y: by,
+      z: bz,
       p: Math.random(),
-      bx: isVent ? -8.2 : 8.2,
-      bz: isVent ? 1.2 : -5.8,
-      by: isVent ? -0.2 : -0.15,
+      bx,
+      bz,
+      by,
     });
   }
+  const steamInst = addInstancedMeshes(ctx, steamGeo, steamMat, steams, false, false);
+  if (steamInst) {
+    steamInst.frustumCulled = false;
+  }
+  const _steamDummy = new T.Object3D();
 
   const rustMat = createMaterial({ color: 0x85684d, metalness: 0.42, roughness: 0.62 });
   const ironMat = createMaterial({ color: 0x2d2a28, metalness: 0.65, roughness: 0.4 });
@@ -212,9 +221,10 @@ export function buildHellstoneScene(ctx: SceneContext): SceneInitResult {
     transparent: true,
     opacity: 0.8,
   });
+  const corkMat = createMaterial({ color: 0x9c7248, roughness: 0.85 });
   for (const vx of [8.42, 8.6, 8.76]) {
     addCylinder(0.04, 0.04, 0.22, 8, vialMat, vx, 0.3, 2.55);
-    addCylinder(0.036, 0.036, 0.04, 8, createMaterial({ color: 0x9c7248 }), vx, 0.42, 2.55);
+    addCylinder(0.036, 0.036, 0.04, 8, corkMat, vx, 0.42, 2.55);
   }
 
   const leg1 = addCylinder(0.028, 0.025, 1.5, 6, ironMat, -7.8, 0.05, -5.6);
@@ -227,12 +237,13 @@ export function buildHellstoneScene(ctx: SceneContext): SceneInitResult {
   addBox(0.24, 0.05, 0.08, ironMat, -8.4, 0.72, 6.02, false);
 
   addCylinder(0.82, 0.5, 0.62, 10, ironMat, 0, 1.4, -4.5);
+  addMesh(new T.TorusGeometry(0.78, 0.045, 8, 18), ironMat, 0, 1.72, -4.5, false, true).rotation.x = Math.PI / 2;
   for (let i = 0; i < 6; i++) {
     const a = (i / 6) * Math.PI * 2;
     addBox(0.1, 0.45, 0.08, ironMat, Math.cos(a) * 0.72, 1.56, -4.5 + Math.sin(a) * 0.72, false).rotation.y = -a;
   }
   const emberCore = addMesh(
-    new T.DodecahedronGeometry(0.38, 0),
+    new T.IcosahedronGeometry(0.36, 1),
     createMaterial({ color: 0xff7022, emissive: 0xff4400, emissiveIntensity: 1.5 }),
     0,
     1.85,
@@ -280,17 +291,25 @@ export function buildHellstoneScene(ctx: SceneContext): SceneInitResult {
       }
       emberInst.instanceMatrix.needsUpdate = true;
     }
-    steams.forEach((s) => {
-      s.p += dt * 0.28;
-      if (s.p > 1) {
-        s.p = 0;
+    if (steamInst) {
+      for (let i = 0; i < steams.length; i++) {
+        const s = steams[i];
+        s.p += dt * 0.28;
+        if (s.p > 1) {
+          s.p = 0;
+        }
+        const sc = 0.45 + s.p * 1.1;
+        _steamDummy.position.set(
+          s.bx + Math.sin(s.p * 6) * 0.18,
+          s.by + s.p * 1.9,
+          s.bz + Math.cos(s.p * 5) * 0.18,
+        );
+        _steamDummy.scale.set(sc, sc * 0.7, sc);
+        _steamDummy.updateMatrix();
+        steamInst.setMatrixAt(i, _steamDummy.matrix);
       }
-      s.m.position.x = s.bx + Math.sin(s.p * 6) * 0.18;
-      s.m.position.y = s.by + s.p * 1.9;
-      s.m.position.z = s.bz + Math.cos(s.p * 5) * 0.18;
-      const sc = 0.45 + s.p * 1.1;
-      s.m.scale.set(sc, sc * 0.7, sc);
-    });
+      steamInst.instanceMatrix.needsUpdate = true;
+    }
   });
 
   setHeightFn((x, z, standingY = 0) => {
@@ -313,7 +332,7 @@ export function buildHellstoneScene(ctx: SceneContext): SceneInitResult {
       lit ? '暗红火星轰地窜起，烤得岩面发烫。' : '火焰缩回石隙里，只剩裂纹泛着暗光。',
     );
   });
-  const steleTex = tex.sign('热岩碎裂带', '#241818', '#e88258', '下层岩浆温度高', true);
+  const steleTex = tex.sign('热岩碎裂带', '#241818', '#e88258', '下层岩浆温度高', true, 1.4 / 0.8);
   const steleSign = addSign(1.4, 0.8, steleTex, -4.5, 2.2, -3.55);
   const steleMat = steleSign.material as InstanceType<typeof T.MeshStandardMaterial>;
   steleMat.emissive.setHex(0xffffff);

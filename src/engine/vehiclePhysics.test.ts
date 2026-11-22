@@ -6,20 +6,26 @@ import {
   stepTruckPhysics,
 } from './vehiclePhysics';
 
-test('stepTruckPhysics accelerates forward, brakes smoothly, then reverses', () => {
-  const bounds = { minX: -60, maxX: 60, minZ: -60, maxZ: 60 };
-  let truck = createTruckState(0, 0, 0);
+test('stepTruckPhysics respects D, brake, N coast, P lock, and R reverse gears', () => {
+  const bounds = { minX: -140, maxX: 140, minZ: -140, maxZ: 140 };
+  let truck = createTruckState(0, 0, 0, 'D');
 
   for (let i = 0; i < 30; i++) {
-    truck = stepTruckPhysics(truck, { throttle: 1, steer: 0, handbrake: false }, bounds, [], 1 / 60);
+    truck = stepTruckPhysics(
+      truck,
+      { gas: 1, brake: 0, steer: 0, handbrake: false },
+      bounds,
+      [],
+      1 / 60,
+    );
   }
-  assert.ok(truck.speed > 5.0);
+  assert.ok(truck.speed > 5.5);
   assert.ok(truck.z < -1.0);
   assert.equal(truck.reversing, false);
 
   const braked = stepTruckPhysics(
     truck,
-    { throttle: -1, steer: 0, handbrake: false },
+    { gas: 0, brake: 1, steer: 0, handbrake: false },
     bounds,
     [],
     1 / 60,
@@ -27,31 +33,53 @@ test('stepTruckPhysics accelerates forward, brakes smoothly, then reverses', () 
   assert.equal(braked.braking, true);
   assert.ok(braked.speed < truck.speed);
 
-  let stopped = createTruckState(0, 0, 0);
-  for (let i = 0; i < 20; i++) {
-    stopped = stepTruckPhysics(
-      stopped,
-      { throttle: -1, steer: 0, handbrake: false },
+  let neutral = createTruckState(0, 0, 0, 'N');
+  neutral.speed = 6.0;
+  neutral = stepTruckPhysics(
+    neutral,
+    { gas: 1, brake: 0, steer: 0, handbrake: false },
+    bounds,
+    [],
+    1 / 60,
+  );
+  assert.ok(neutral.speed < 6.0);
+
+  let parked = createTruckState(0, 0, 0, 'P');
+  parked = stepTruckPhysics(
+    parked,
+    { gas: 1, brake: 0, steer: 0, handbrake: false },
+    bounds,
+    [],
+    1 / 60,
+  );
+  assert.equal(parked.speed, 0);
+  assert.equal(parked.z, 0);
+
+  let reversed = createTruckState(0, 0, 0, 'R');
+  for (let i = 0; i < 25; i++) {
+    reversed = stepTruckPhysics(
+      reversed,
+      { gas: 1, brake: 0, steer: 0, handbrake: false },
       bounds,
       [],
       1 / 60,
     );
   }
-  assert.equal(stopped.reversing, true);
-  assert.ok(stopped.speed < -1.5);
-  assert.ok(stopped.z > 0.1);
+  assert.equal(reversed.reversing, true);
+  assert.ok(reversed.speed < -2.0);
+  assert.ok(reversed.z > 0.2);
 });
 
 test('stepTruckPhysics turns smoothly with steering and resolves wall collisions', () => {
-  const bounds = { minX: -50, maxX: 50, minZ: -50, maxZ: 50 };
+  const bounds = { minX: -140, maxX: 140, minZ: -140, maxZ: 140 };
   const wall = [
     { minX: -2, maxX: 2, minZ: -8, maxZ: -6, minY: 0, maxY: 6, active: true },
   ];
-  let truck = createTruckState(0, 0, 0);
+  let truck = createTruckState(0, 0, 0, 'D');
   for (let i = 0; i < 25; i++) {
     truck = stepTruckPhysics(
       truck,
-      { throttle: 1, steer: -1, handbrake: false },
+      { gas: 1, brake: 0, steer: -1, handbrake: false },
       bounds,
       [],
       1 / 60,
@@ -60,11 +88,11 @@ test('stepTruckPhysics turns smoothly with steering and resolves wall collisions
   assert.ok(truck.yaw < -0.1);
   assert.ok(truck.steerAngle < -0.2);
 
-  let crashing = createTruckState(0, -3.4, 0);
+  let crashing = createTruckState(0, -3.4, 0, 'D');
   crashing.speed = 12;
   crashing = stepTruckPhysics(
     crashing,
-    { throttle: 1, steer: 0, handbrake: false },
+    { gas: 1, brake: 0, steer: 0, handbrake: false },
     bounds,
     wall,
     1 / 30,
@@ -74,7 +102,7 @@ test('stepTruckPhysics turns smoothly with steering and resolves wall collisions
 });
 
 test('findTruckSummonPose avoids overlapping buildings and picks clear road spot', () => {
-  const bounds = { minX: -60, maxX: 60, minZ: -60, maxZ: 60 };
+  const bounds = { minX: -140, maxX: 140, minZ: -140, maxZ: 140 };
   const building = [
     { minX: -4, maxX: 4, minZ: -10, maxZ: -1, minY: 0, maxY: 8, active: true },
   ];

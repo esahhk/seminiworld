@@ -120,3 +120,55 @@ export function easeInOutQuad(t: number): number {
   const c = Math.max(0, Math.min(1, t));
   return c < 0.5 ? 2 * c * c : 1 - Math.pow(-2 * c + 2, 2) / 2;
 }
+
+export interface SlopedColliderSpec {
+  minX: number;
+  maxX: number;
+  startZ: number;
+  endZ: number;
+  startY: number;
+  endY: number;
+  height: number;
+  segments: number;
+}
+
+export function createSlopedColliderSegments(
+  spec: SlopedColliderSpec,
+): {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+  minY: number;
+  maxY: number;
+  active: boolean;
+}[] {
+  const count = Math.max(1, Math.floor(spec.segments));
+  const out: {
+    minX: number;
+    maxX: number;
+    minZ: number;
+    maxZ: number;
+    minY: number;
+    maxY: number;
+    active: boolean;
+  }[] = [];
+  for (let i = 0; i < count; i++) {
+    const t0 = i / count;
+    const t1 = (i + 1) / count;
+    const z0 = spec.startZ + (spec.endZ - spec.startZ) * t0;
+    const z1 = spec.startZ + (spec.endZ - spec.startZ) * t1;
+    const y0 = spec.startY + (spec.endY - spec.startY) * t0;
+    const y1 = spec.startY + (spec.endY - spec.startY) * t1;
+    out.push({
+      minX: spec.minX,
+      maxX: spec.maxX,
+      minZ: Math.min(z0, z1),
+      maxZ: Math.max(z0, z1),
+      minY: Math.min(y0, y1),
+      maxY: Math.max(y0, y1) + spec.height,
+      active: true,
+    });
+  }
+  return out;
+}

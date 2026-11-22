@@ -149,9 +149,9 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
   addSign(
     1.55,
     0.58,
-    tex.sign('B2 · 电梯间', '#3b3024', '#e8b658', '1F 后院 / B4 溶洞'),
+    tex.sign('B2 · 电梯间', '#3b3024', '#e8b658', '1F 后院 / B4 溶洞', false, 1.55 / 0.58),
     8.4,
-    3.25,
+    3.36,
     11.82,
     Math.PI,
   );
@@ -205,23 +205,33 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
   addSign(
     3.2,
     0.72,
-    tex.sign('↑ 地面出口 往小区停车场', '#d8c892', '#1e2022', '顺坡道走上去直达地面'),
+    tex.sign('↑ 地面出口 往小区停车场', '#d8c892', '#1e2022', '顺坡道走上去直达地面', false, 3.2 / 0.72),
     0,
     3.15,
     -11.82,
   );
 
+  const pillarMat = createMaterial({ color: 0x72767a, roughness: 0.9 });
+  const pillarHazMat = createMaterial({ map: haz, roughness: 0.75 });
+  const pillarCapMat = createMaterial({ color: 0x454a50 });
   for (const [cx, cz] of [
     [-5, -4],
     [5, -4],
     [-5, 4],
     [5, 4],
   ]) {
-    addBox(0.75, 2.6, 0.75, createMaterial({ color: 0x72767a, roughness: 0.9 }), cx, 2.3, cz, true);
-    addBox(0.77, 1.0, 0.77, createMaterial({ map: haz, roughness: 0.75 }), cx, 0.5, cz, false);
-    addBox(0.84, 0.14, 0.84, createMaterial({ color: 0x454a50 }), cx, 3.5, cz, false);
+    addBox(0.75, 2.6, 0.75, pillarMat, cx, 2.3, cz, true);
+    addBox(0.77, 1.0, 0.77, pillarHazMat, cx, 0.5, cz, false);
+    addBox(0.84, 0.14, 0.84, pillarCapMat, cx, 3.5, cz, false);
   }
-  addSign(0.7, 0.7, tex.sign('B2 08', '#d4ad33', '#1a1a18', '消防通道勿停'), -5, 1.8, -3.6);
+  addSign(
+    0.7,
+    0.7,
+    tex.sign('B2 08', '#d4ad33', '#1a1a18', '消防通道勿停', false, 1),
+    -5,
+    1.8,
+    -3.6,
+  );
   addBox(5.5, 0.08, 0.35, createMaterial({ map: haz }), 0, 0.04, 0, false);
 
   addBox(0.55, 0.36, 22, createMaterial({ color: 0x767f88, metalness: 0.55, roughness: 0.35 }), -3, 3.4, 0, false);

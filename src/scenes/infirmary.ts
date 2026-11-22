@@ -1,6 +1,13 @@
 import type { SceneContext } from './sceneContext';
 import type { SceneInitResult } from '../types/game';
-import { buildHospitalBed, buildOfficeChair, buildParkBench, buildPottedPlant } from '../engine/propKit';
+import {
+  addInstancedMeshes,
+  buildHospitalBed,
+  buildOfficeChair,
+  buildParkBench,
+  buildPottedPlant,
+} from '../engine/propKit';
+import type { InstanceTransform } from '../engine/propKit';
 
 export function buildInfirmaryScene(ctx: SceneContext): SceneInitResult {
   const {
@@ -10,6 +17,7 @@ export function buildInfirmaryScene(ctx: SceneContext): SceneInitResult {
     tex,
     sfx,
     V,
+    track,
     addMesh,
     addBox,
     addCylinder,
@@ -98,7 +106,7 @@ export function buildInfirmaryScene(ctx: SceneContext): SceneInitResult {
   addSign(
     1.5,
     0.72,
-    tex.sign('学校教室 · 出门左转', '#f7f3e8', '#354a3a', '回教学楼门厅', true),
+    tex.sign('学校教室 · 出门左转', '#f7f3e8', '#354a3a', '回教学楼门厅', true, 1.5 / 0.72),
     0,
     2.85,
     9.8,
@@ -109,7 +117,7 @@ export function buildInfirmaryScene(ctx: SceneContext): SceneInitResult {
   addSign(
     1.8,
     0.9,
-    tex.sign('校医室走廊', '#eef4ef', '#2f5440', '前间：登记体检 · 尽头间：休息观察'),
+    tex.sign('校医室走廊', '#eef4ef', '#2f5440', '前间：登记体检 · 尽头间：休息观察', false, 2),
     -1.88,
     1.85,
     5.5,
@@ -140,21 +148,25 @@ export function buildInfirmaryScene(ctx: SceneContext): SceneInitResult {
     false,
   );
   const pillCols = [0xd46a4e, 0x5299c2, 0xf0c954, 0x5aa878, 0xe8e4d8];
+  const pillMats = pillCols.map((c) => createMaterial({ color: c, roughness: 0.45 }));
+  const pillGeo = track(new T.CylinderGeometry(0.04, 0.04, 0.13, 8));
+  const pillCapItems: InstanceTransform[] = [];
   for (let row = 0; row < 2; row++) {
     for (let col = 0; col < 5; col++) {
-      addCylinder(
-        0.04,
-        0.04,
-        0.13,
-        8,
-        createMaterial({ color: pillCols[(row + col) % pillCols.length] }),
-        6.92 + col * 0.18,
-        1.0 + row * 0.35,
-        -1.82,
-        false,
-      );
+      const bx = 6.92 + col * 0.18;
+      const by = 1.0 + row * 0.35;
+      addMesh(pillGeo, pillMats[(row + col) % pillMats.length], bx, by, -1.82, false, false);
+      pillCapItems.push({ x: bx, y: by + 0.075, z: -1.82 });
     }
   }
+  addInstancedMeshes(
+    ctx,
+    new T.CylinderGeometry(0.032, 0.032, 0.025, 8),
+    createMaterial({ color: 0xf4f4ee, roughness: 0.35 }),
+    pillCapItems,
+    false,
+    false,
+  );
   addBox(0.75, 0.04, 0.46, steelMat, 3.6, 0.84, -1.2, false);
   for (const [cx, cz] of [[3.28, -1.38], [3.92, -1.38], [3.28, -1.02], [3.92, -1.02]]) {
     addCylinder(0.02, 0.02, 0.82, 6, steelMat, cx, 0.42, cz, false);
@@ -162,19 +174,18 @@ export function buildInfirmaryScene(ctx: SceneContext): SceneInitResult {
   addBox(0.28, 0.04, 0.18, steelMat, 3.55, 0.88, -1.2, false);
 
   addBox(0.76, 1.22, 0.05, createMaterial({ color: 0x3b4440 }), 3.6, 1.85, -2.4, false);
-  addSign(0.7, 1.15, tex.sign('E Ǝ Ш M', '#f9faf7', '#202220', '五米视力表'), 3.6, 1.85, -2.36);
+  addSign(
+    0.7,
+    1.15,
+    tex.sign('E Ǝ Ш M', '#f9faf7', '#202220', '五米视力表', false, 0.7 / 1.15),
+    3.6,
+    1.85,
+    -2.36,
+  );
 
   addBox(0.46, 0.08, 0.56, steelMat, 7.66, 0.04, 0.4, false);
   addBox(0.18, 1.9, 0.25, createMaterial({ color: 0xf3efe4 }), 7.82, 0.95, 0.4, true);
-  addSign(
-    0.22,
-    1.6,
-    tex.sign('150cm', '#f7f3e8', '#3a5c4a', '130cm  110cm'),
-    7.72,
-    1.1,
-    0.4,
-    -Math.PI / 2,
-  );
+  addSign(0.22, 1.6, tex.heightChart(), 7.72, 1.1, 0.4, -Math.PI / 2);
 
   buildHospitalBed(ctx, 6.2, 0, -8.8, 0, true);
   buildHospitalBed(ctx, 6.2, 0, -6.7, 0, true);

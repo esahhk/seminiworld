@@ -1,6 +1,7 @@
 import type { SceneContext } from './sceneContext';
 import type { SceneInitResult } from '../types/game';
-import { buildPottedPlant, buildWoodChair } from '../engine/propKit';
+import { addInstancedMeshes, buildPottedPlant, buildWoodChair } from '../engine/propKit';
+import type { InstanceTransform } from '../engine/propKit';
 
 export function buildMallScene(ctx: SceneContext): SceneInitResult {
   const {
@@ -111,17 +112,25 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
   addBox(0.22, 4.9, 7.3, createMaterial({ color: 0xd0cec8 }), 9.0, 2.45, 1.75, true);
   addBox(0.22, 5.4, 5.1, createMaterial({ color: 0x868b91 }), 10.75, 2.7, 0.4, true);
 
+  const stairTreadTransforms: InstanceTransform[] = [];
   for (let i = 0; i < 10; i++) {
     const lh = 0.25 + i * 0.25;
-    addBox(1.6, lh, 0.52, upperConc, 9.92, lh / 2, -1.6 + i * 0.5, false, true, true);
-    const uh = 0.38;
-    addBox(1.65, uh, 0.56, upperConc, 11.68, 2.62 + i * 0.25 - 0.07, 2.65 - i * 0.5, false, true, true);
+    stairTreadTransforms.push({ x: 9.92, y: lh / 2, z: -1.6 + i * 0.5, sx: 1.6, sy: lh, sz: 0.52 });
+    stairTreadTransforms.push({ x: 11.68, y: 2.62 + i * 0.25 - 0.07, z: 2.65 - i * 0.5, sx: 1.65, sy: 0.38, sz: 0.56 });
   }
+  addInstancedMeshes(ctx, new T.BoxGeometry(1, 1, 1), upperConc, stairTreadTransforms, true, true);
 
   const railLower = addBox(0.06, 0.08, 5.2, railMetalMat, 10.64, 2.15, 0.65, false);
   railLower.rotation.x = -0.46;
   const railUpper = addBox(0.06, 0.08, 5.2, railMetalMat, 10.88, 4.65, 0.4, false);
   railUpper.rotation.x = 0.46;
+
+  const mallWallMat = createMaterial({ color: 0xddd7cb, roughness: 0.85 });
+  addBox(26.0, 8.6, 0.3, mallWallMat, 0, 4.3, -12.0, true);
+  addBox(0.3, 8.6, 24.0, mallWallMat, -12.9, 4.3, 0, true);
+  addBox(8.6, 4.88, 0.25, mallWallMat, -8.55, 2.44, -5.5, true);
+  addBox(4.75, 4.88, 0.25, mallWallMat, 6.625, 2.44, -5.5, true);
+  addBox(0.24, 3.6, 6.4, mallWallMat, 8.8, 6.7, -8.8, true);
 
   addBox(3.8, 3.2, 0.2, createMaterial({ color: 0xc2c5c9 }), 10.7, 6.4, -5.8, true);
   addBox(1.72, 2.52, 0.16, createMaterial({ color: 0x4b525a, metalness: 0.45 }), 10.7, 6.26, -5.7, false);
@@ -130,7 +139,7 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
   addSign(
     1.8,
     0.72,
-    tex.sign('写字楼 · 楼上', '#eef2f5', '#2c343d', '会议室 / 茶水间在里'),
+    tex.sign('写字楼 · 楼上', '#eef2f5', '#2c343d', '会议室 / 茶水间在里', false, 1.8 / 0.72),
     10.7,
     7.75,
     -5.64,
@@ -141,9 +150,12 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
   addCylinder(0.24, 0.2, 0.44, 10, createMaterial({ color: 0x4b7ea8, roughness: 0.4 }), 11.6, 0.22, -0.2);
 
   addBox(8.5, 1.05, 1.2, createMaterial({ color: 0xc94f35, roughness: 0.55 }), 0, 0.52, -5.5, true);
+  const slatMat = createMaterial({ map: tex.wood('#8c5d3a', '#664023') });
+  const slatTransforms: InstanceTransform[] = [];
   for (let fx = -3.8; fx <= 3.8; fx += 0.95) {
-    addBox(0.82, 0.86, 0.05, createMaterial({ map: tex.wood('#8c5d3a', '#664023') }), fx, 0.52, -4.88, false);
+    slatTransforms.push({ x: fx, y: 0.52, z: -4.88 });
   }
+  addInstancedMeshes(ctx, new T.BoxGeometry(0.82, 0.86, 0.05), slatMat, slatTransforms, false, false);
   addBox(
     8.7,
     0.1,
@@ -158,27 +170,45 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
   shopWallTex.repeat.set(4, 2);
   addBox(8.5, 4.2, 0.3, createMaterial({ map: shopWallTex, roughness: 0.62 }), 0, 2.1, -8.2, true);
   addBox(8.5, 1.05, 0.34, createMaterial({ map: tex.wood('#8c5d3a', '#664023', 'mall_wain'), roughness: 0.7 }), 0, 0.525, -8.18, false);
-  addBox(5.4, 1.48, 0.14, createMaterial({ color: 0x1c1714 }), 0, 3.1, -8.04, false);
+  addBox(3.76, 1.14, 0.14, createMaterial({ color: 0x1c1714 }), 0.35, 3.52, -8.04, false);
   addSign(
-    5.2,
-    1.35,
+    3.6,
+    1.0,
     tex.sign(
       '炙烤牛肉汉堡站',
       '#29201c',
       '#f2c166',
       '双层芝士 ¥28 · 脆薯条 ¥12 · 黄金薯饼 ¥8',
+      false,
+      3.6 / 1.0,
     ),
-    0,
-    3.1,
+    0.35,
+    3.52,
     -7.95,
   );
-  addSign(1.8, 0.85, tex.sign('今日现烤热销', '#2b2420', '#ffe399', '双层牛肉 · 现炸薯饼'), -3.15, 2.25, -8.0, 0);
-  addSign(1.8, 0.85, tex.sign('冰饮套餐组合', '#2b2420', '#9ee6ff', '加 ¥6 配冰美式或可乐'), 3.15, 2.25, -8.0, 0);
+  addSign(
+    1.5,
+    0.72,
+    tex.sign('今日现烤热销', '#2b2420', '#ffe399', '双层牛肉 · 现炸薯饼', false, 1.5 / 0.72),
+    -3.38,
+    3.48,
+    -7.95,
+    0,
+  );
+  addSign(
+    1.5,
+    0.72,
+    tex.sign('冰饮套餐组合', '#2b2420', '#9ee6ff', '加 ¥6 配冰美式或可乐', false, 1.5 / 0.72),
+    3.2,
+    3.48,
+    -7.95,
+    0,
+  );
 
   const hoodSteel = createMaterial({ color: 0xadb4b9, metalness: 0.72, roughness: 0.28 });
-  addBox(2.5, 0.48, 1.15, hoodSteel, -1.6, 2.38, -7.2, false);
-  addBox(1.8, 0.6, 0.6, hoodSteel, -1.6, 2.9, -7.4, false);
-  addBox(2.2, 0.85, 1.0, createMaterial({ color: 0x8c9296, metalness: 0.65, roughness: 0.35 }), -1.6, 0.45, -7.2, true);
+  addBox(2.0, 0.4, 0.98, hoodSteel, -2.1, 2.22, -7.25, false);
+  addBox(0.54, 1.75, 0.52, hoodSteel, -2.1, 3.25, -7.75, false);
+  addBox(2.0, 0.85, 0.96, createMaterial({ color: 0x8c9296, metalness: 0.65, roughness: 0.35 }), -2.1, 0.45, -7.25, true);
   addBox(0.95, 0.85, 0.9, hoodSteel, 0.1, 0.45, -7.2, true);
   addBox(0.75, 0.08, 0.7, createMaterial({ color: 0x3b4046 }), 0.1, 0.9, -7.2, false);
   addBox(1.1, 1.55, 0.8, createMaterial({ color: 0x4b5157, metalness: 0.55 }), 3.1, 0.78, -7.1, true);
@@ -195,27 +225,33 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
   addBox(0.42, 0.58, 0.42, hoodSteel, 2.35, 1.42, -5.5, false);
   addBox(0.44, 0.12, 0.44, createMaterial({ color: 0xc93b2b }), 2.35, 1.66, -5.5, false);
 
-  const patty = addCylinder(0.18, 0.18, 0.06, 12, createMaterial({ color: 0x5a2e1c, roughness: 0.85 }), -1.6, 0.92, -7.2);
+  const patty = addCylinder(0.18, 0.18, 0.06, 12, createMaterial({ color: 0x5a2e1c, roughness: 0.85 }), -2.1, 0.92, -7.25);
   let sizzleOn = false;
   addCylinder(0.11, 0.14, 0.08, 12, createMaterial({ color: 0xe0c170, metalness: 0.82, roughness: 0.2 }), 1.8, 1.17, -5.2);
   addBox(0.66, 0.04, 0.4, createMaterial({ color: 0xb8482f }), 0.6, 1.15, -5.3, false);
-  addCylinder(0.13, 0.12, 0.05, 12, createMaterial({ color: 0xd99c52 }), 0.46, 1.19, -5.3);
-  addCylinder(0.13, 0.13, 0.03, 12, createMaterial({ color: 0x54301f }), 0.46, 1.23, -5.3);
-  addCylinder(0.14, 0.12, 0.05, 12, createMaterial({ color: 0xd99c52 }), 0.46, 1.27, -5.3);
+  const bunMat = createMaterial({ color: 0xd99c52, roughness: 0.72 });
+  addCylinder(0.13, 0.12, 0.045, 14, bunMat, 0.46, 1.19, -5.3);
+  addCylinder(0.13, 0.13, 0.028, 14, createMaterial({ color: 0x54301f, roughness: 0.85 }), 0.46, 1.225, -5.3);
+  addBox(0.24, 0.014, 0.24, createMaterial({ color: 0xf2bf49, roughness: 0.45 }), 0.46, 1.242, -5.3, false).rotation.y = 0.4;
+  addCylinder(0.135, 0.135, 0.018, 12, createMaterial({ color: 0x62a84b, roughness: 0.8 }), 0.46, 1.255, -5.3);
+  addCylinder(0.138, 0.115, 0.05, 14, bunMat, 0.46, 1.285, -5.3);
   addBox(0.14, 0.14, 0.08, createMaterial({ color: 0xc93b2b }), 0.72, 1.23, -5.3, false);
 
   const fryMat = createMaterial({ color: 0xf0c246, roughness: 0.75 });
+  const frontFryTransforms: InstanceTransform[] = [];
   for (let f = 0; f < 5; f++) {
-    const fr = addBox(0.022, 0.14, 0.022, fryMat, 0.67 + f * 0.024, 1.33, -5.3 + (f % 2) * 0.015, false);
-    fr.rotation.z = (f - 2) * 0.08;
+    frontFryTransforms.push({ x: 0.67 + f * 0.024, y: 1.33, z: -5.3 + (f % 2) * 0.015, rz: (f - 2) * 0.08 });
   }
+  addInstancedMeshes(ctx, new T.BoxGeometry(0.022, 0.14, 0.022), fryMat, frontFryTransforms, false, false);
   const hashMat = createMaterial({ color: 0xd99938, roughness: 0.88 });
   addBox(0.16, 0.04, 0.1, hashMat, 0.8, 1.19, -5.2, false);
   addBox(0.16, 0.04, 0.1, hashMat, 0.82, 1.23, -5.2, false).rotation.y = 0.2;
   addBox(0.85, 0.12, 0.52, createMaterial({ color: 0xcfd4d8, metalness: 0.62 }), -0.65, 1.19, -5.35, false);
+  const trayHashTransforms: InstanceTransform[] = [];
   for (let i = 0; i < 4; i++) {
-    addBox(0.18, 0.045, 0.11, hashMat, -0.88 + i * 0.16, 1.27, -5.28, false);
+    trayHashTransforms.push({ x: -0.88 + i * 0.16, y: 1.27, z: -5.28 });
   }
+  addInstancedMeshes(ctx, new T.BoxGeometry(0.18, 0.045, 0.11), hashMat, trayHashTransforms, false, false);
   const eggTray = addBox(0.14, 0.16, 0.09, createMaterial({ color: 0xd13e2c }), -0.45, 1.33, -5.45, false);
   const eggFries: ReturnType<typeof addBox>[] = [];
   for (let f = 0; f < 6; f++) {
@@ -389,7 +425,7 @@ export function buildMallScene(ctx: SceneContext): SceneInitResult {
     },
   );
   addCollectible('mall', 7.2, 0.85, 2.6, 0xe8c47a);
-  setBounds({ minX: -11.8, maxX: 12.2, minZ: -5.2, maxZ: 10.5 });
+  setBounds({ minX: -12.1, maxX: 12.2, minZ: -11.4, maxZ: 10.5 });
   setSurfaceFn((_x, _z, standingY = 0) =>
     standingY >= 0.2 ? 'concrete' : 'stone',
   );

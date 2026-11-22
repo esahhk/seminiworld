@@ -17,6 +17,7 @@ export function buildWaterparkScene(ctx: SceneContext): SceneInitResult {
     addBox,
     addCylinder,
     addSign,
+    addDoubleSign,
     createMaterial,
     addInteract,
     addCollectible,
@@ -93,16 +94,21 @@ export function buildWaterparkScene(ctx: SceneContext): SceneInitResult {
   dolphin.position.set(-2, 0.3, -5.5);
   const dolMat = createMaterial({ color: 0x577b96, roughness: 0.25, metalness: 0.15 });
   const dolBelly = createMaterial({ color: 0xd0e2eb, roughness: 0.3 });
-  const dBody = mkMesh(new T.SphereGeometry(0.38, 12, 10), dolMat, 0, 0, 0);
+  const dBody = mkMesh(new T.SphereGeometry(0.38, 16, 12), dolMat, 0, 0, 0);
   dBody.scale.set(0.82, 0.75, 2.05);
-  const dSnout = mkMesh(new T.ConeGeometry(0.14, 0.46, 10), dolMat, 0, -0.04, 0.85);
+  const dSnout = mkMesh(new T.ConeGeometry(0.14, 0.46, 12), dolMat, 0, -0.04, 0.85);
   dSnout.rotation.x = Math.PI / 2;
   const dFin = mkMesh(new T.BoxGeometry(0.06, 0.36, 0.26), dolMat, 0, 0.28, -0.05);
   dFin.rotation.x = -0.35;
-  const dTail = mkMesh(new T.BoxGeometry(0.66, 0.06, 0.28), dolMat, 0, 0.04, -0.92);
-  const dUnderside = mkMesh(new T.SphereGeometry(0.28, 10, 8), dolBelly, 0, -0.1, 0.05);
+  const dPecL = mkMesh(new T.BoxGeometry(0.34, 0.04, 0.18), dolMat, -0.3, -0.1, 0.22);
+  dPecL.rotation.set(0.15, 0.28, 0.35);
+  const dPecR = mkMesh(new T.BoxGeometry(0.34, 0.04, 0.18), dolMat, 0.3, -0.1, 0.22);
+  dPecR.rotation.set(0.15, -0.28, -0.35);
+  const dTail = mkMesh(new T.BoxGeometry(0.68, 0.06, 0.28), dolMat, 0, 0.04, -0.92);
+  dTail.rotation.x = 0.22;
+  const dUnderside = mkMesh(new T.SphereGeometry(0.28, 12, 10), dolBelly, 0, -0.1, 0.05);
   dUnderside.scale.set(0.76, 0.55, 1.6);
-  dolphin.add(dBody, dSnout, dFin, dTail, dUnderside);
+  dolphin.add(dBody, dSnout, dFin, dPecL, dPecR, dTail, dUnderside);
   scene.add(dolphin);
 
   function addParasolAndChair(cx: number, yBase: number, cz: number, colHex: number) {
@@ -156,7 +162,7 @@ export function buildWaterparkScene(ctx: SceneContext): SceneInitResult {
     false,
   );
   addBox(1.8, 0.72, 0.52, createMaterial({ color: 0xf7b2c6, roughness: 0.45 }), 7.6, 2.26, -0.95, false);
-  addCylinder(0.5, 0.5, 0.35, 12, createMaterial({ color: 0xf7b2c6 }), 8.7, 2.15, -1.4);
+  addCylinder(0.5, 0.5, 0.35, 12, createMaterial({ color: 0xf7b2c6 }), 8.7, 2.075, -1.4);
 
   const cylX = -8.0;
   const cylZ = 5.5;
@@ -246,7 +252,7 @@ export function buildWaterparkScene(ctx: SceneContext): SceneInitResult {
   addSign(
     2.8,
     0.68,
-    tex.sign('↓ 可由此直接跳回一层', '#f2a74b', '#1e1b18', '下方无遮挡水垫区'),
+    tex.sign('↓ 可由此直接跳回一层', '#f2a74b', '#1e1b18', '下方无遮挡水垫区', false, 2.8 / 0.68),
     0.8,
     5.43,
     1.9,
@@ -284,13 +290,17 @@ export function buildWaterparkScene(ctx: SceneContext): SceneInitResult {
   ]) {
     addParasolAndChair(cx, 5.4, cz, col);
   }
-  addSign(
+  addCylinder(0.035, 0.035, 1.25, 8, rimMat, -4.55, 6.02, 1.72);
+  addCylinder(0.035, 0.035, 1.25, 8, rimMat, -2.45, 6.02, 1.72);
+  addDoubleSign(
     2.4,
     0.9,
-    tex.sign('二层水上乐园', '#eefafd', '#216170', '直上圆筒可升至本层'),
+    tex.sign('二层水上乐园', '#eefafd', '#216170', '直上圆筒可升至本层', false, 2.4 / 0.9),
     -3.5,
     6.6,
     1.72,
+    0,
+    0x2b5e6b,
   );
 
   let jumping = 0;

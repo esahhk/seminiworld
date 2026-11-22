@@ -74,9 +74,10 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   addBox(5.2, 4.2, 0.22, wMat, 0.5, 2.1, -11.5, true);
   addBox(0.22, 4.2, 12.8, wMat, -2.0, 2.1, -5.2, true);
   addBox(0.22, 4.2, 15.8, wMat, 3.0, 2.1, -6.7, true);
+  const pilasterMat = createMaterial({ color: 0xd5dfe0 });
   for (const pz of [-2.0, -6.2, -10.2]) {
-    addBox(0.36, 4.2, 0.45, createMaterial({ color: 0xd5dfe0 }), -1.96, 2.1, pz, false);
-    addBox(0.36, 4.2, 0.45, createMaterial({ color: 0xd5dfe0 }), 3.04, 2.1, pz, false);
+    addBox(0.36, 4.2, 0.45, pilasterMat, -1.96, 2.1, pz, false);
+    addBox(0.36, 4.2, 0.45, pilasterMat, 3.04, 2.1, pz, false);
   }
   addBox(4.6, 4.2, 0.2, wMat, -4.7, 2.1, 4.6, true);
   addBox(3.6, 4.2, 0.2, wMat, 4.7, 2.1, 4.6, true);
@@ -107,7 +108,7 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   addSign(
     2.4,
     0.85,
-    tex.sign('← 隔离屏蔽门（左拐再右拐）', '#1c3542', '#eef6f7', '候机连廊（右拐再左拐） →'),
+    tex.sign('← 隔离屏蔽门（左拐再右拐）', '#1c3542', '#eef6f7', '候机连廊（右拐再左拐） →', false, 2.4 / 0.85),
     0.5,
     2.25,
     1.26,
@@ -142,7 +143,7 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   addSign(
     2.2,
     0.9,
-    tex.sign('蓝线:隔离屏蔽门  绿线:候机连廊', '#1c3542', '#eef6f7', '请沿地面标志线通行'),
+    tex.sign('蓝线:隔离屏蔽门  绿线:候机连廊', '#1c3542', '#eef6f7', '请沿地面标志线通行', false, 2.2 / 0.9),
     0,
     0.032,
     7.2,
@@ -227,19 +228,15 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
     );
   }
 
-  const doorSignPlane = mkMesh(
-    new T.PlaneGeometry(1.42, 0.42),
-    createMaterial({
-      map: tex.sign('隔离屏蔽铁门', '#d68536', '#1b1a18', '电动气密 · 请勿倚靠'),
-      roughness: 0.55,
-    }),
-    0,
-    1.26,
-    0.195,
-    false,
-    false,
-  );
-  doorGroup.add(doorSignPlane);
+  const doorSignTex = tex.sign('隔离屏蔽铁门', '#d68536', '#1b1a18', '电动气密 · 请勿倚靠', false, 1.42 / 0.42);
+  const doorSignMat = createMaterial({ map: doorSignTex, roughness: 0.55 });
+  const doorSignGeo = track(new T.PlaneGeometry(1.42, 0.42));
+  const doorSignPlane = new T.Mesh(doorSignGeo, doorSignMat);
+  doorSignPlane.position.set(0, 1.26, 0.195);
+  const doorSignBack = new T.Mesh(doorSignGeo, doorSignMat);
+  doorSignBack.position.set(0, 1.26, -0.195);
+  doorSignBack.rotation.y = Math.PI;
+  doorGroup.add(doorSignPlane, doorSignBack);
 
   const doorCol = {
     minX: -6.2,
@@ -496,7 +493,7 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   addSign(
     2.0,
     0.85,
-    tex.sign('候机连廊 · 通往机场', '#e4edf0', '#22343d', '往前出航站楼'),
+    tex.sign('候机连廊 · 通往机场', '#e4edf0', '#22343d', '往前出航站楼', false, 2.0 / 0.85),
     4.7,
     3.24,
     -14.22,
@@ -531,7 +528,7 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
       : 1.1;
     pcGlow.intensity = 0.58 + Math.sin(t * 2.6) * 0.08;
     hospDoorInter.pos.z = player.pos.z > -3.5 ? -3.15 : -3.85;
-    hospDoorInter.pos.x = doorGroup.position.x > -3.0 ? -2.4 : -4.5;
+    hospDoorInter.pos.x = doorGroup.position.x > -3.0 ? -3.5 : -4.5;
   });
 
   addInteract(

@@ -29,19 +29,21 @@ export function TouchControls({
   onJoyChangeRef.current = onJoyChange;
   onTouchActiveRef.current = onTouchActive;
 
+  const active = visible && !driving;
+
   useEffect(() => {
-    if (!visible || paused) {
+    if (!active || paused) {
       joyIdRef.current = null;
       if (joyKnobRef.current) {
         joyKnobRef.current.style.transform = '';
       }
       onJoyChangeRef.current(0, 0);
     }
-  }, [visible, paused]);
+  }, [active, paused]);
 
   useEffect(() => {
     const zone = joyZoneRef.current;
-    if (!zone) {
+    if (!zone || !active) {
       return;
     }
 
@@ -49,7 +51,7 @@ export function TouchControls({
       const r = zone.getBoundingClientRect();
       let dx = cx - (r.left + r.width / 2);
       let dy = cy - (r.top + r.height / 2);
-      const max = 56;
+      const max = 54;
       const d = Math.hypot(dx, dy);
       if (d > max) {
         dx = (dx / d) * max;
@@ -122,17 +124,17 @@ export function TouchControls({
       zone.removeEventListener('touchend', onEnd);
       zone.removeEventListener('touchcancel', onCancel);
     };
-  }, [paused]);
+  }, [active, paused]);
 
   return (
-    <div id="touch-ui" className={visible ? 'visible' : ''}>
+    <div id="touch-ui" className={active ? 'visible' : ''}>
       <div id="joy-zone" ref={joyZoneRef}>
         <div id="joy-knob" ref={joyKnobRef} />
       </div>
       <button
         type="button"
         id="touch-jump"
-        aria-label={driving ? '手刹' : '跳跃'}
+        aria-label="跳跃"
         onTouchStart={(e) => {
           e.stopPropagation();
           lastTouchRef.current = Date.now();
@@ -147,12 +149,12 @@ export function TouchControls({
           onJump();
         }}
       >
-        {driving ? '手刹' : '跳跃'}
+        跳跃
       </button>
       <button
         type="button"
         id="touch-act"
-        aria-label={driving ? '下车' : '互动'}
+        aria-label="互动"
         onTouchStart={(e) => {
           e.stopPropagation();
           lastTouchRef.current = Date.now();
@@ -167,7 +169,7 @@ export function TouchControls({
           onInteract();
         }}
       >
-        {driving ? '下车' : '互动'}
+        互动
       </button>
     </div>
   );
