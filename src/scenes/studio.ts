@@ -109,7 +109,7 @@ export function buildStudioScene(ctx: SceneContext): SceneInitResult {
     1.4,
     0.65,
     tex.sign('下楼 → 地铁站', '#1f3c5c', '#f0f2f4', '1/4/7号线站台', false, 1.4 / 0.65),
-    4.38,
+    4.34,
     3.05,
     3.3,
     -Math.PI / 2,

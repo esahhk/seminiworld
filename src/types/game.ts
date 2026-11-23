@@ -45,6 +45,10 @@ export interface VehicleHudState {
   gear: TruckGear;
   steerDeg: number;
   handbrake: boolean;
+  turbo: boolean;
+  boostPct: number;
+  rpmPct: number;
+  driftDeg: number;
 }
 
 export interface SceneMeta {
@@ -197,6 +201,7 @@ export interface GameEngineHandle {
   setDriveSteer: (val: number) => void;
   setDrivePedal: (pedal: 'gas' | 'brake', pressed: boolean) => void;
   setDriveHandbrake: (held: boolean) => void;
+  setDriveTurbo: (held: boolean) => void;
   setRes: (scale: number) => void;
   setPerf: (perf: PerfMode) => void;
   setFov: (fov: number) => void;

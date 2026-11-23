@@ -367,121 +367,176 @@ a.btn {
 
 #drive-cockpit {
   position: absolute;
-  bottom: 42px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: max(16px, env(safe-area-inset-left));
+  right: max(16px, env(safe-area-inset-right));
+  bottom: 38px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 18px;
-  background: rgba(13, 14, 17, 0.93);
-  border: 1px solid rgba(236, 232, 224, 0.18);
-  border-radius: 4px;
-  padding: 10px 16px;
-  pointer-events: auto;
-  max-width: calc(100vw - 24px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
-}
-
-.cockpit-steer-cluster {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-
-.steer-key-btn {
-  background: #1a1d23;
-  border: 1px solid rgba(236, 232, 224, 0.2);
-  border-radius: 3px;
-  color: #e6e0d4;
-  font-size: 11px;
-  letter-spacing: 0.4px;
-  padding: 9px 10px;
-  cursor: pointer;
-  touch-action: none;
-  white-space: nowrap;
-  transition: background 0.12s, border-color 0.12s;
-}
-
-.steer-key-btn:hover {
-  background: #252931;
-  border-color: rgba(236, 232, 224, 0.38);
-}
-
-.steer-key-btn:active {
-  background: #c9a55c;
-  color: #15171b;
-  border-color: #dec07d;
-}
-
-.steering-wheel-wrap {
-  width: 78px;
-  height: 78px;
-  border-radius: 50%;
-  border: 1px solid rgba(236, 232, 224, 0.16);
-  background: #14161b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: grab;
-  touch-action: none;
-  flex-shrink: 0;
-}
-
-.steering-wheel-wrap:active {
-  cursor: grabbing;
-  border-color: #c9a55c;
-}
-
-.steering-wheel-svg {
-  width: 68px;
-  height: 68px;
-  transition: transform 0.05s linear;
+  gap: 12px;
   pointer-events: none;
 }
 
-.cockpit-center-cluster {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 7px;
+.cockpit-left,
+.cockpit-telemetry,
+.cockpit-right {
+  pointer-events: auto;
+  background: rgba(14, 16, 20, 0.92);
+  border: 1px solid rgba(236, 232, 224, 0.16);
+  border-radius: 4px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
 }
 
-.speed-readout {
+.cockpit-left {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.steer-pad-row {
+  display: flex;
+  gap: 8px;
+}
+
+.steer-paddle {
+  background: #1b1f26;
+  border: 1px solid rgba(236, 232, 224, 0.2);
+  border-radius: 3px;
+  color: #e9e3d7;
+  font-size: 12px;
+  letter-spacing: 0.4px;
+  padding: 11px 13px;
+  cursor: pointer;
+  touch-action: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: background 0.1s, border-color 0.1s, color 0.1s, transform 0.08s;
+}
+
+.steer-paddle:hover {
+  background: #252a33;
+  border-color: rgba(236, 232, 224, 0.36);
+}
+
+.steer-paddle.on,
+.steer-paddle:active {
+  background: #c9a55c;
+  color: #14161a;
+  border-color: #e5c98a;
+  transform: translateY(1px);
+}
+
+.steer-arrow {
+  font-size: 11px;
+}
+
+.steer-track {
+  position: relative;
+  height: 8px;
+  border-radius: 2px;
+  background: #0d0f13;
+  border: 1px solid rgba(236, 232, 224, 0.12);
+  overflow: hidden;
+}
+
+.steer-center-mark {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: rgba(236, 232, 224, 0.25);
+}
+
+.steer-thumb {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  width: 14px;
+  margin-left: -7px;
+  border-radius: 1px;
+  background: #d8b56c;
+  transition: left 0.05s linear;
+}
+
+.cockpit-telemetry {
+  padding: 9px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+  min-width: 296px;
+}
+
+.telemetry-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.speed-block {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 5px;
 }
 
 .speed-num {
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  font-size: 22px;
-  font-weight: 600;
+  font-size: 26px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: #f3ede2;
+  color: #f5efe3;
   line-height: 1;
+  min-width: 2.2ch;
 }
 
 .speed-unit {
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   font-size: 10px;
-  letter-spacing: 1.4px;
+  letter-spacing: 1.2px;
   color: #9e9687;
+}
+
+.status-tag {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  padding: 2px 5px;
+  border-radius: 2px;
+  align-self: center;
+}
+
+.status-tag.turbo {
+  background: #235f8c;
+  color: #e6f4ff;
+  border: 1px solid #59aee8;
+}
+
+.status-tag.drift {
+  background: #7c4c1e;
+  color: #ffebd0;
+  border: 1px solid #e09c50;
 }
 
 .gear-rack {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-  background: #0b0c0e;
+  gap: 3px;
+  background: #0b0c0f;
   border: 1px solid rgba(236, 232, 224, 0.14);
   border-radius: 3px;
   padding: 3px;
 }
 
 .gear-slot {
-  min-width: 46px;
-  padding: 4px 6px;
+  min-width: 38px;
+  padding: 3px 5px;
   border: 1px solid transparent;
   border-radius: 2px;
   background: transparent;
@@ -507,32 +562,85 @@ a.btn {
 
 .gear-code {
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.1;
 }
 
 .gear-sub {
-  font-size: 9.5px;
+  font-size: 9px;
   line-height: 1.1;
+}
+
+.telemetry-bars {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.meter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.meter-lbl {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.8px;
+  color: #9e9687;
+  min-width: 24px;
+}
+
+.meter-track {
+  flex: 1;
+  height: 5px;
+  background: #0b0d10;
+  border: 1px solid rgba(236, 232, 224, 0.12);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  transition: width 0.08s linear;
+}
+
+.meter-fill.rpm {
+  background: #d8a24a;
+}
+
+.meter-fill.boost {
+  background: #4ea5df;
+}
+
+.meter-fill.boost.active {
+  background: #84d6ff;
 }
 
 .cab-actions {
   display: flex;
-  gap: 5px;
+  justify-content: space-between;
+  gap: 6px;
 }
 
 .cab-btn {
+  flex: 1;
+  justify-content: center;
   padding: 4px 8px;
   font-size: 11px;
 }
 
 .cab-btn.exit {
-  border-color: rgba(201, 165, 92, 0.4);
+  border-color: rgba(201, 165, 92, 0.42);
   color: #ebd9b4;
 }
 
-.cockpit-pedal-cluster {
+.cockpit-right {
+  padding: 9px 11px;
+}
+
+.pedal-deck {
   display: flex;
   align-items: flex-end;
   gap: 7px;
@@ -553,7 +661,7 @@ a.btn {
 }
 
 .pedal-btn.hb {
-  width: 48px;
+  width: 50px;
   height: 52px;
   padding: 6px 4px;
 }
@@ -565,10 +673,10 @@ a.btn {
 }
 
 .pedal-btn.brake {
-  width: 56px;
-  height: 64px;
+  width: 54px;
+  height: 62px;
   padding: 7px 4px;
-  border-color: rgba(208, 108, 92, 0.45);
+  border-color: rgba(208, 108, 92, 0.48);
 }
 
 .pedal-btn.brake:active {
@@ -577,15 +685,30 @@ a.btn {
 }
 
 .pedal-btn.gas {
-  width: 58px;
-  height: 76px;
+  width: 56px;
+  height: 74px;
   padding: 8px 4px;
-  border-color: rgba(201, 165, 92, 0.55);
+  border-color: rgba(201, 165, 92, 0.58);
 }
 
 .pedal-btn.gas:active {
-  background: #a5803b;
+  background: #b58d3e;
   color: #141518;
+  transform: translateY(2px);
+}
+
+.pedal-btn.turbo {
+  width: 52px;
+  height: 66px;
+  padding: 7px 4px;
+  border-color: rgba(88, 174, 232, 0.55);
+}
+
+.pedal-btn.turbo.on,
+.pedal-btn.turbo:active {
+  background: #236596;
+  border-color: #79ccff;
+  color: #f3faff;
   transform: translateY(2px);
 }
 
@@ -1049,8 +1172,11 @@ body.immersive #btn-exit-imm {
     width: min(360px, calc(100vw - 144px));
   }
   #drive-cockpit {
-    gap: 12px;
-    padding: 9px 12px;
+    gap: 10px;
+  }
+  .cockpit-telemetry {
+    min-width: 260px;
+    padding: 8px 10px;
   }
 }
 
@@ -1070,48 +1196,42 @@ body.immersive #btn-exit-imm {
     gap: 5px;
   }
   #drive-cockpit {
-    bottom: max(10px, env(safe-area-inset-bottom));
-    width: calc(100vw - 16px);
-    padding: 8px 10px;
+    left: 8px;
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
     flex-wrap: wrap;
     justify-content: space-between;
     align-items: flex-end;
-    gap: 8px 6px;
-  }
-  .cockpit-center-cluster {
-    order: 1;
-    width: 100%;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
     gap: 6px;
   }
-  .cockpit-steer-cluster {
+  .cockpit-telemetry {
+    order: 1;
+    width: 100%;
+    min-width: 0;
+    padding: 7px 10px;
+    gap: 5px;
+  }
+  .cockpit-left {
     order: 2;
-    gap: 5px;
+    padding: 7px 8px;
+    gap: 6px;
   }
-  .cockpit-pedal-cluster {
+  .cockpit-right {
     order: 3;
+    padding: 7px 8px;
+  }
+  .steer-pad-row {
     gap: 5px;
   }
-  .steer-key-btn {
-    padding: 7px 6px;
-    font-size: 10px;
-  }
-  .steering-wheel-wrap {
-    width: 54px;
-    height: 54px;
-  }
-  .steering-wheel-svg {
-    width: 46px;
-    height: 46px;
+  .steer-paddle {
+    padding: 9px 9px;
+    font-size: 11px;
   }
   .speed-num {
-    font-size: 17px;
+    font-size: 19px;
   }
   .gear-slot {
-    min-width: 34px;
+    min-width: 31px;
     padding: 3px 4px;
   }
   .gear-code {
@@ -1121,26 +1241,38 @@ body.immersive #btn-exit-imm {
     font-size: 8.5px;
   }
   .cab-btn {
-    padding: 3px 6px;
+    padding: 3px 5px;
     font-size: 10px;
   }
+  .pedal-deck {
+    gap: 4px;
+  }
+  .pedal-btn {
+    justify-content: center;
+  }
   .pedal-btn.hb {
-    width: 40px;
-    height: 44px;
+    width: 38px;
+    height: 46px;
     padding: 4px 2px;
   }
   .pedal-btn.brake {
-    width: 46px;
+    width: 40px;
     height: 52px;
     padding: 5px 2px;
   }
   .pedal-btn.gas {
-    width: 48px;
+    width: 42px;
     height: 60px;
     padding: 6px 2px;
   }
+  .pedal-btn.turbo {
+    width: 40px;
+    height: 54px;
+    padding: 5px 2px;
+  }
   .pedal-lbl {
-    font-size: 10.5px;
+    font-size: 10px;
+    line-height: 1.1;
   }
   .pedal-key {
     display: none;
@@ -1173,12 +1305,12 @@ body.immersive #btn-exit-imm {
     max-height: calc(100dvh - 126px);
   }
   .btn {
-    padding: 5px 8px;
-    font-size: 11px;
+    padding: 4px 7px;
+    font-size: 10.5px;
   }
   .btn-world {
-    padding: 5px 10px;
-    font-size: 11.5px;
+    padding: 4px 9px;
+    font-size: 11px;
   }
   #prompt {
     bottom: 220px;
@@ -1256,16 +1388,24 @@ body.immersive #btn-exit-imm {
   }
   #drive-cockpit {
     bottom: 8px;
-    padding: 6px 10px;
-    gap: 10px;
+    left: 10px;
+    right: 10px;
+    gap: 8px;
   }
-  .steering-wheel-wrap {
-    width: 56px;
-    height: 56px;
+  .cockpit-left,
+  .cockpit-telemetry,
+  .cockpit-right {
+    padding: 6px 8px;
   }
-  .steering-wheel-svg {
-    width: 48px;
-    height: 48px;
+  .cockpit-telemetry {
+    min-width: 220px;
+    gap: 4px;
+  }
+  .pedal-btn {
+    justify-content: center;
+  }
+  .pedal-key {
+    display: none;
   }
   .pedal-btn.hb {
     height: 40px;
@@ -1275,6 +1415,9 @@ body.immersive #btn-exit-imm {
   }
   .pedal-btn.gas {
     height: 56px;
+  }
+  .pedal-btn.turbo {
+    height: 50px;
   }
   #inspect-modal {
     max-height: 86vh;

@@ -46,7 +46,11 @@ export function buildSchoolBbqScene(ctx: SceneContext): SceneInitResult {
     26,
     0.2,
     20,
-    createMaterial({ map: tex.concrete('#8f8a81', 0.18, 'bbq_g'), roughness: 0.9 }),
+    createMaterial({
+      map: tex.concrete('#8f8a81', 0.18, 'bbq_g'),
+      normalMap: tex.concreteNormal('bbq_gn', 1.1),
+      roughness: 0.9,
+    }),
     0,
     -0.1,
     0,
@@ -58,7 +62,11 @@ export function buildSchoolBbqScene(ctx: SceneContext): SceneInitResult {
     12,
     0.22,
     12,
-    createMaterial({ map: tex.tiles('#d8d3c8', '#cbc5b8', '#a49e91', 6, 'cls_f'), roughness: 0.7 }),
+    createMaterial({
+      map: tex.tiles('#d8d3c8', '#cbc5b8', '#a49e91', 6, 'cls_f'),
+      normalMap: tex.concreteNormal('cls_fn', 0.7),
+      roughness: 0.68,
+    }),
     -3,
     0.02,
     -2,
@@ -67,7 +75,11 @@ export function buildSchoolBbqScene(ctx: SceneContext): SceneInitResult {
     true,
   );
 
-  const wallMat = createMaterial({ color: 0xeae5d9, roughness: 0.9 });
+  const wallMat = createMaterial({
+    color: 0xeae5d9,
+    normalMap: tex.concreteNormal('bbq_wn', 0.6),
+    roughness: 0.9,
+  });
   const dadoMat = createMaterial({ color: 0xb0c4b3, roughness: 0.78 });
   addBox(0.25, 3.8, 12, wallMat, -9, 1.9, -2, true);
   addBox(0.06, 1.15, 11.8, dadoMat, -8.85, 0.65, -2, false);
@@ -100,10 +112,10 @@ export function buildSchoolBbqScene(ctx: SceneContext): SceneInitResult {
   colliders.push(doorCol);
 
   addBox(8.5, 0.2, 6, createMaterial({ map: tex.tiles('#cfd4d1', '#c0c5c2', '#969b98', 4, 'hall_f') }), -3, 0.01, 7, false, false, true);
-  addSign(2.2, 1.1, tex.sign('教学楼一层大厅', '#e6dfd0', '#384a3c', '楼梯口 · 右转校医室', true, 2), -7, 1.8, 4.15);
+  addSign(2.2, 1.1, tex.sign('教学楼一层大厅', '#e6dfd0', '#384a3c', '楼梯口 · 右转校医室', true, 2), -5.8, 1.8, 4.16);
   addBox(0.2, 3.8, 6.2, createMaterial({ color: 0xe5dfd3 }), -7.25, 1.9, 7, true);
   addBox(0.14, 2.5, 1.4, createMaterial({ color: 0x9dc2ae }), -7.12, 1.25, 7.0, true);
-  addSign(1.6, 0.72, tex.sign('校医室 · 走廊尽头右转', '#eef4ef', '#2f5440', '推门进走廊', true, 1.6 / 0.72), -7.08, 2.8, 7.0, Math.PI / 2);
+  addSign(1.6, 0.72, tex.sign('校医室 · 走廊尽头右转', '#eef4ef', '#2f5440', '推门进走廊', true, 1.6 / 0.72), -7.01, 2.8, 7.0, Math.PI / 2);
 
   addBox(4.3, 1.56, 0.12, createMaterial({ color: 0x5c422a, roughness: 0.7 }), -3, 2.0, -7.83, false);
   addBox(4.15, 1.42, 0.1, createMaterial({ color: 0x2b4a36, roughness: 0.9 }), -3, 2.0, -7.78, true);

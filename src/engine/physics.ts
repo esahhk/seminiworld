@@ -6,16 +6,106 @@ export interface SimpleVec3 {
   z: number;
 }
 
+export type SimpleCollider = Pick<
+  Collider,
+  'minX' | 'maxX' | 'minZ' | 'maxZ' | 'minY' | 'maxY' | 'active'
+>;
+
+export interface SpatialColliderGrid {
+  cellSize: number;
+  buckets: Map<number, number[]>;
+  colliders: readonly SimpleCollider[];
+  seen: Uint32Array;
+  stamp: number;
+}
+
+function hashGridCell(cx: number, cz: number): number {
+  return (cx + 32768) * 65536 + (cz + 32768);
+}
+
+export function createSpatialColliderGrid(
+  colliders: readonly SimpleCollider[],
+  cellSize = 18,
+): SpatialColliderGrid {
+  const buckets = new Map<number, number[]>();
+  const inv = 1 / cellSize;
+  for (let i = 0; i < colliders.length; i++) {
+    const c = colliders[i];
+    if (!c.active) {
+      continue;
+    }
+    const x0 = Math.floor(c.minX * inv);
+    const x1 = Math.floor(c.maxX * inv);
+    const z0 = Math.floor(c.minZ * inv);
+    const z1 = Math.floor(c.maxZ * inv);
+    for (let cx = x0; cx <= x1; cx++) {
+      for (let cz = z0; cz <= z1; cz++) {
+        const key = hashGridCell(cx, cz);
+        let arr = buckets.get(key);
+        if (!arr) {
+          arr = [];
+          buckets.set(key, arr);
+        }
+        arr.push(i);
+      }
+    }
+  }
+  return {
+    cellSize,
+    buckets,
+    colliders,
+    seen: new Uint32Array(Math.max(1, colliders.length)),
+    stamp: 1,
+  };
+}
+
+export function querySpatialColliderGrid(
+  grid: SpatialColliderGrid,
+  minX: number,
+  maxX: number,
+  minZ: number,
+  maxZ: number,
+  outIndices: number[],
+): void {
+  outIndices.length = 0;
+  grid.stamp++;
+  if (grid.stamp >= 0xfffffffe) {
+    grid.seen.fill(0);
+    grid.stamp = 1;
+  }
+  const stamp = grid.stamp;
+  const inv = 1 / grid.cellSize;
+  const x0 = Math.floor(minX * inv);
+  const x1 = Math.floor(maxX * inv);
+  const z0 = Math.floor(minZ * inv);
+  const z1 = Math.floor(maxZ * inv);
+  for (let cx = x0; cx <= x1; cx++) {
+    for (let cz = z0; cz <= z1; cz++) {
+      const bucket = grid.buckets.get(hashGridCell(cx, cz));
+      if (!bucket) {
+        continue;
+      }
+      for (let k = 0; k < bucket.length; k++) {
+        const idx = bucket[k];
+        if (grid.seen[idx] !== stamp) {
+          grid.seen[idx] = stamp;
+          outIndices.push(idx);
+        }
+      }
+    }
+  }
+}
+
+const _moveQueryOut: number[] = [];
+
 export function resolveMove(
   nx: number,
   nz: number,
   playerPosY: number,
   playerHeight: number,
   bounds: Bounds,
-  colliders: readonly Pick<
-    Collider,
-    'minX' | 'maxX' | 'minZ' | 'maxZ' | 'minY' | 'maxY' | 'active'
-  >[],
+  colliders: readonly SimpleCollider[],
+  grid?: SpatialColliderGrid | null,
 ): [number, number] {
   const STEP = 0.45;
   const r = 0.35;
@@ -23,9 +113,9 @@ export function resolveMove(
   let z = Math.max(bounds.minZ, Math.min(bounds.maxZ, nz));
   const py = playerPosY - playerHeight;
 
-  for (const c of colliders) {
+  const checkCollider = (c: SimpleCollider) => {
     if (!c.active || py + STEP > c.maxY || py + playerHeight < c.minY) {
-      continue;
+      return;
     }
     if (x + r > c.minX && x - r < c.maxX && z + r > c.minZ && z - r < c.maxZ) {
       const ox1 = x + r - c.minX;
@@ -42,6 +132,17 @@ export function resolveMove(
       } else {
         z = c.maxZ + r;
       }
+    }
+  };
+
+  if (grid && grid.colliders === colliders) {
+    querySpatialColliderGrid(grid, x - r - 0.5, x + r + 0.5, z - r - 0.5, z + r + 0.5, _moveQueryOut);
+    for (let i = 0; i < _moveQueryOut.length; i++) {
+      checkCollider(colliders[_moveQueryOut[i]]);
+    }
+  } else {
+    for (let i = 0; i < colliders.length; i++) {
+      checkCollider(colliders[i]);
     }
   }
   return [x, z];

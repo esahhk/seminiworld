@@ -65,6 +65,10 @@ export default function App() {
     gear: 'P',
     steerDeg: 0,
     handbrake: false,
+    turbo: false,
+    boostPct: 100,
+    rpmPct: 14,
+    driftDeg: 0,
   });
   const [whisperText, setWhisperText] = useState('');
   const [whisperVisible, setWhisperVisible] = useState(false);
@@ -141,6 +145,7 @@ export default function App() {
   useEffect(() => {
     const isPaused = modal !== null || activePanel !== null;
     stateRef.current.paused = isPaused;
+    document.body.dataset.state = isPaused ? 'paused' : 'playing';
     if (!isPaused) {
       engineRef.current?.resetTouch();
     }
@@ -554,6 +559,7 @@ export default function App() {
         onDriveSteer={(v) => engineRef.current?.setDriveSteer(v)}
         onDrivePedal={(p, pressed) => engineRef.current?.setDrivePedal(p, pressed)}
         onDriveHandbrake={(pressed) => engineRef.current?.setDriveHandbrake(pressed)}
+        onDriveTurbo={(pressed) => engineRef.current?.setDriveTurbo(pressed)}
         onTogglePanel={handleTogglePanel}
         onReset={handleReset}
         onToggleImmersive={toggleImmersive}

@@ -17,6 +17,7 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
     addBox,
     addCylinder,
     addSign,
+    addDoubleSign,
     createMaterial,
     addInteract,
     addCollectible,
@@ -50,8 +51,7 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   flTex.repeat.set(3, 5);
   const flMat = createMaterial({
     map: flTex,
-    bumpMap: bump,
-    bumpScale: 0.004,
+    normalMap: tex.concreteNormal('hosp_fl_n', 0.8),
     roughness: 0.34,
   });
   const wMat = createMaterial({ color: 0xe5eceb, roughness: 0.88 });
@@ -104,14 +104,15 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
   addBox(0.14, 0.24, 0.1, createMaterial({ color: 0xf4f6f6 }), -2.35, 1.25, 4.2, false);
   addBox(0.08, 0.08, 0.06, createMaterial({ color: 0x7cb8cf, transparent: true, opacity: 0.7 }), -2.32, 1.15, 4.2, false);
 
-  addBox(2.5, 0.94, 0.05, createMaterial({ color: 0x8ea1a8, metalness: 0.55, roughness: 0.35 }), 0.5, 2.25, 1.22, false);
-  addSign(
+  addDoubleSign(
     2.4,
     0.85,
     tex.sign('← 隔离屏蔽门（左拐再右拐）', '#1c3542', '#eef6f7', '候机连廊（右拐再左拐） →', false, 2.4 / 0.85),
     0.5,
     2.25,
-    1.26,
+    1.22,
+    0,
+    0x4f6870,
   );
 
   const lineMatB = createMaterial({
@@ -145,7 +146,7 @@ export function buildHospitalScene(ctx: SceneContext): SceneInitResult {
     0.9,
     tex.sign('蓝线:隔离屏蔽门  绿线:候机连廊', '#1c3542', '#eef6f7', '请沿地面标志线通行', false, 2.2 / 0.9),
     0,
-    0.032,
+    0.036,
     7.2,
     0,
     -Math.PI / 2,

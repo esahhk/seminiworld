@@ -47,7 +47,11 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
     3.4,
     0.24,
     34,
-    createMaterial({ map: tex.concrete('#6b6f75', 0.16, 'cv_walk'), bumpMap: bump, bumpScale: 0.012 }),
+    createMaterial({
+      map: tex.concrete('#6b6f75', 0.16, 'cv_walk'),
+      normalMap: tex.concreteNormal('cv_walk_n', 1.0),
+      roughness: 0.84,
+    }),
     -3.3,
     0.0,
     0,
@@ -55,7 +59,22 @@ export function buildConvenienceScene(ctx: SceneContext): SceneInitResult {
     false,
     true,
   );
-  addBox(12, 0.3, 34, createMaterial({ map: asp, roughness: 0.88 }), 4.4, -0.15, 0, true, false, true);
+  addBox(
+    12,
+    0.3,
+    34,
+    createMaterial({
+      map: asp,
+      normalMap: tex.asphaltNormal('cv_asp_n', 1.25),
+      roughness: 0.88,
+    }),
+    4.4,
+    -0.15,
+    0,
+    true,
+    false,
+    true,
+  );
   addBox(5.8, 0.26, 28, createMaterial({ color: 0x45372a, roughness: 1 }), 1.3, -0.35, 0, true, false, true);
   addCylinder(0.26, 0.26, 26, 10, createMaterial({ color: 0x467294 }), 1.3, -0.15, 0).rotation.x = Math.PI / 2;
 

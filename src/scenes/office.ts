@@ -78,7 +78,11 @@ export function buildOfficeScene(ctx: SceneContext): SceneInitResult {
     }
   }
 
-  const wallMat = createMaterial({ color: 0xd8d6cf, bumpMap: bump, bumpScale: 0.006, roughness: 0.9 });
+  const wallMat = createMaterial({
+    color: 0xd8d6cf,
+    normalMap: tex.concreteNormal('off_wn', 0.85),
+    roughness: 0.9,
+  });
   const dadoMat = createMaterial({ map: tex.wood('#8e6e4c', '#694f34', 'off_dado'), roughness: 0.72 });
   const baseTrimMat = createMaterial({ color: 0x3b4046, roughness: 0.65 });
 

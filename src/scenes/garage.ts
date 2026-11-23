@@ -70,14 +70,14 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
   addInstancedMeshes(ctx, new T.BoxGeometry(2.4, 0.06, 0.2), lampMat, lampItems, false, false);
   addInstancedMeshes(ctx, new T.BoxGeometry(2.5, 0.05, 0.28), housingMat, housingItems, false, false);
 
-  const bump = tex.bumpNoise('gar_b', 28);
+  const garNormal = tex.concreteNormal('gar_cn', 1.35);
   const gTex = tex.concrete('#757a82', 0.16, 'gar');
   gTex.repeat.set(6, 6);
   addBox(
     24,
     0.2,
     24,
-    createMaterial({ map: gTex, bumpMap: bump, bumpScale: 0.015, roughness: 0.48, metalness: 0.08 }),
+    createMaterial({ map: gTex, normalMap: garNormal, roughness: 0.46, metalness: 0.08 }),
     0,
     -0.1,
     0,
@@ -100,7 +100,7 @@ export function buildGarageScene(ctx: SceneContext): SceneInitResult {
   addBox(1.85, 0.11, 0.16, wheelStopMat, 8.2, 0.055, -8.1, false);
   addBox(1.85, 0.11, 0.16, wheelStopMat, -7.8, 0.055, -9.8, false);
 
-  const wallMat = createMaterial({ color: 0x7c828a, bumpMap: bump, bumpScale: 0.01, roughness: 0.86 });
+  const wallMat = createMaterial({ color: 0x7c828a, normalMap: garNormal, roughness: 0.86 });
   addBox(9.6, 3.8, 0.3, wallMat, -7.2, 1.9, -12, true);
   addBox(9.6, 3.8, 0.3, wallMat, 7.2, 1.9, -12, true);
   addBox(0.3, 3.8, 24, wallMat, -12, 1.9, 0, true);

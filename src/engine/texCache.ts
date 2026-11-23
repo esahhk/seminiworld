@@ -8,7 +8,19 @@ export interface TexCache {
     drawFn: (g: CanvasRenderingContext2D, w: number, h: number) => void,
     isLinear?: boolean,
   ) => THREE.CanvasTexture;
+  normalFromHeight: (
+    key: string,
+    w: number,
+    h: number,
+    heightFn: (x: number, y: number, w: number, h: number) => number,
+    strength?: number,
+  ) => THREE.CanvasTexture;
   bumpNoise: (key?: string, contrast?: number) => THREE.CanvasTexture;
+  concreteNormal: (key?: string, strength?: number) => THREE.CanvasTexture;
+  brickNormal: (key?: string, strength?: number) => THREE.CanvasTexture;
+  asphaltNormal: (key?: string, strength?: number) => THREE.CanvasTexture;
+  corrugatedNormal: (key?: string, strength?: number) => THREE.CanvasTexture;
+  radialShadow: (key?: string) => THREE.CanvasTexture;
   concrete: (base?: string, wear?: number, key?: string) => THREE.CanvasTexture;
   tiles: (
     c1?: string,
@@ -84,9 +96,15 @@ function fillPixelNoise(
   g.putImageData(img, 0, 0);
 }
 
+function hash2D(x: number, y: number, seed = 1337): number {
+  let h = (x * 374761393 + y * 668265263 + seed * 1442695041) | 0;
+  h = ((h ^ (h >>> 13)) * 1274126177) | 0;
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+}
+
 export function createTexCache(maxAnisotropy = 1): TexCache {
   const cache = new Map<string, THREE.CanvasTexture>();
-  const maxSize = 280;
+  const maxSize = 360;
 
   function get(
     key: string,
@@ -122,6 +140,60 @@ export function createTexCache(maxAnisotropy = 1): TexCache {
     return t;
   }
 
+  function normalFromHeight(
+    key: string,
+    w: number,
+    h: number,
+    heightFn: (x: number, y: number, w: number, h: number) => number,
+    strength = 2.4,
+  ) {
+    return get(
+      'nrm_' + key + '_' + strength.toFixed(1),
+      w,
+      h,
+      (g, cw, ch) => {
+        const field = new Float32Array(cw * ch);
+        for (let y = 0; y < ch; y++) {
+          for (let x = 0; x < cw; x++) {
+            field[y * cw + x] = heightFn(x, y, cw, ch);
+          }
+        }
+        const img = g.createImageData(cw, ch);
+        const d = img.data;
+        const sample = (x: number, y: number) =>
+          field[((y + ch) % ch) * cw + ((x + cw) % cw)];
+        for (let y = 0; y < ch; y++) {
+          for (let x = 0; x < cw; x++) {
+            const tl = sample(x - 1, y - 1);
+            const t = sample(x, y - 1);
+            const tr = sample(x + 1, y - 1);
+            const l = sample(x - 1, y);
+            const r = sample(x + 1, y);
+            const bl = sample(x - 1, y + 1);
+            const b = sample(x, y + 1);
+            const br = sample(x + 1, y + 1);
+            const dX = (tr + 2 * r + br - (tl + 2 * l + bl)) * strength;
+            const dY = (bl + 2 * b + br - (tl + 2 * t + tr)) * strength;
+            let nx = -dX;
+            let ny = -dY;
+            let nz = 1;
+            const invLen = 1 / Math.hypot(nx, ny, nz);
+            nx *= invLen;
+            ny *= invLen;
+            nz *= invLen;
+            const idx = (y * cw + x) * 4;
+            d[idx] = Math.round((nx * 0.5 + 0.5) * 255);
+            d[idx + 1] = Math.round((ny * 0.5 + 0.5) * 255);
+            d[idx + 2] = Math.round((nz * 0.5 + 0.5) * 255);
+            d[idx + 3] = 255;
+          }
+        }
+        g.putImageData(img, 0, 0);
+      },
+      true,
+    );
+  }
+
   function bumpNoise(key = 'bump_std', contrast = 42) {
     return get(
       'bump_' + key + contrast,
@@ -134,13 +206,83 @@ export function createTexCache(maxAnisotropy = 1): TexCache {
     );
   }
 
+  function concreteNormal(key = 'conc_n', strength = 1.9) {
+    return normalFromHeight(
+      'conc_' + key,
+      256,
+      256,
+      (x, y, w, h) => {
+        const fine = hash2D(x, y, 41) * 0.35;
+        const seam = x % (w / 2) < 2 || y % (h / 2) < 2 ? -0.45 : 0;
+        const grain = hash2D(x >> 2, y >> 2, 97) * 0.25;
+        return fine + seam + grain;
+      },
+      strength,
+    );
+  }
+
+  function brickNormal(key = 'brick_n', strength = 2.8) {
+    return normalFromHeight(
+      'brick_' + key,
+      256,
+      256,
+      (x, y, w, h) => {
+        const rows = 16;
+        const cols = 8;
+        const bw = w / cols;
+        const bh = h / rows;
+        const row = Math.floor(y / bh);
+        const rx = (x + (row % 2) * (bw * 0.5)) % bw;
+        const ry = y % bh;
+        const mortar = rx < 2.2 || ry < 2.2 ? 0 : 0.72;
+        return mortar + hash2D(x >> 1, y >> 1, 73) * 0.14;
+      },
+      strength,
+    );
+  }
+
+  function asphaltNormal(key = 'asp_n', strength = 2.3) {
+    return normalFromHeight(
+      'asp_' + key,
+      256,
+      256,
+      (x, y) => hash2D(x, y, 313) * 0.55 + hash2D(x >> 1, y >> 1, 617) * 0.28,
+      strength,
+    );
+  }
+
+  function corrugatedNormal(key = 'corr_n', strength = 2.6) {
+    return normalFromHeight(
+      'corr_' + key,
+      256,
+      256,
+      (x) => 0.5 + 0.45 * Math.sin((x / 16) * Math.PI * 2),
+      strength,
+    );
+  }
+
+  function radialShadow(key = 'rad_sh') {
+    const t = get(key, 256, 256, (g, w, h) => {
+      g.clearRect(0, 0, w, h);
+      const gr = g.createRadialGradient(w / 2, h / 2, w * 0.08, w / 2, h / 2, w * 0.48);
+      gr.addColorStop(0, 'rgba(6, 9, 14, 0.76)');
+      gr.addColorStop(0.55, 'rgba(6, 9, 14, 0.42)');
+      gr.addColorStop(0.85, 'rgba(6, 9, 14, 0.10)');
+      gr.addColorStop(1, 'rgba(6, 9, 14, 0)');
+      g.fillStyle = gr;
+      g.fillRect(0, 0, w, h);
+    });
+    t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+    return t;
+  }
+
   function concrete(base = '#8a8b88', wear = 0.14, key = 'conc') {
     return get(key + base, 256, 256, (g, w, h) => {
       const [br, bg, bb] = parseHexRgb(base);
       fillPixelNoise(g, w, h, br, bg, bb, Math.round(wear * 115), 4019);
-      for (let i = 0; i < 16; i++) {
-        const rx = ((i * 73) % w);
-        const ry = ((i * 137) % h);
+      for (let i = 0; i < 18; i++) {
+        const rx = (i * 73) % w;
+        const ry = (i * 137) % h;
         const r = 18 + (i % 5) * 8;
         const gr = g.createRadialGradient(rx, ry, 2, rx, ry, r);
         const shade = i % 2 === 0 ? '195,198,200' : '22,24,26';
@@ -153,8 +295,8 @@ export function createTexCache(maxAnisotropy = 1): TexCache {
       g.lineWidth = 1;
       for (let i = 0; i < 5; i++) {
         g.beginPath();
-        let x = ((i * 53) % w);
-        let y = ((i * 89) % h);
+        let x = (i * 53) % w;
+        let y = (i * 89) % h;
         g.moveTo(x, y);
         for (let s = 0; s < 4; s++) {
           x += (((i + s) % 3) - 1) * 28 + 12;
@@ -163,7 +305,7 @@ export function createTexCache(maxAnisotropy = 1): TexCache {
         }
         g.stroke();
       }
-      g.strokeStyle = 'rgba(0,0,0,0.05)';
+      g.strokeStyle = 'rgba(0,0,0,0.055)';
       g.lineWidth = 2;
       g.strokeRect(0, 0, w, h);
     });
@@ -182,9 +324,9 @@ export function createTexCache(maxAnisotropy = 1): TexCache {
         for (let x = 0; x < n; x++) {
           g.fillStyle = (x + y) % 2 ? c1 : c2;
           g.fillRect(x * s, y * s, s, s);
-          g.fillStyle = 'rgba(255,255,255,0.07)';
+          g.fillStyle = 'rgba(255,255,255,0.08)';
           g.fillRect(x * s + 2, y * s + 2, s - 4, 2);
-          g.fillStyle = 'rgba(0,0,0,0.04)';
+          g.fillStyle = 'rgba(0,0,0,0.05)';
           g.fillRect(x * s + 2, (y + 1) * s - 4, s - 4, 2);
         }
       }
@@ -280,10 +422,10 @@ export function createTexCache(maxAnisotropy = 1): TexCache {
         g.fillStyle = bg;
         g.fillRect(0, 0, w, h);
         const pad = Math.max(8, Math.round(Math.min(w, h) * 0.045));
-        g.strokeStyle = 'rgba(0,0,0,0.22)';
+        g.strokeStyle = 'rgba(0,0,0,0.24)';
         g.lineWidth = Math.max(4, Math.round(Math.min(w, h) * 0.022));
         g.strokeRect(pad, pad, w - pad * 2, h - pad * 2);
-        g.strokeStyle = 'rgba(255,255,255,0.14)';
+        g.strokeStyle = 'rgba(255,255,255,0.16)';
         g.lineWidth = 2;
         g.strokeRect(pad + 6, pad + 6, w - (pad + 6) * 2, h - (pad + 6) * 2);
 
@@ -312,7 +454,7 @@ export function createTexCache(maxAnisotropy = 1): TexCache {
             sfs = Math.max(14, Math.floor((sfs * availW) / sw));
             g.font = `500 ${sfs}px sans-serif`;
           }
-          g.globalAlpha = 0.84;
+          g.globalAlpha = 0.86;
           g.fillText(sub, w / 2, h * 0.72);
           g.globalAlpha = 1;
         }
@@ -350,8 +492,8 @@ export function createTexCache(maxAnisotropy = 1): TexCache {
       fillPixelNoise(g, w, h, r1, g1, b1, 22, 7711);
       g.fillStyle = c2;
       for (let i = 0; i < 650; i++) {
-        const x = ((i * 59) % w);
-        const y = ((i * 101) % h);
+        const x = (i * 59) % w;
+        const y = (i * 101) % h;
         g.fillStyle = i % 3 === 0 ? c2 : i % 3 === 1 ? '#5d8047' : '#6c9154';
         g.fillRect(x, y, 1.5, 4 + (i % 5));
       }
@@ -366,8 +508,8 @@ export function createTexCache(maxAnisotropy = 1): TexCache {
       g.lineWidth = 4;
       for (let i = 0; i < 18; i++) {
         g.beginPath();
-        let x = ((i * 47) % w);
-        let y = ((i * 83) % h);
+        let x = (i * 47) % w;
+        let y = (i * 83) % h;
         g.moveTo(x, y);
         for (let s = 0; s < 4; s++) {
           x += (((i + s) % 3) - 1) * 42 + 12;
@@ -380,8 +522,8 @@ export function createTexCache(maxAnisotropy = 1): TexCache {
       g.lineWidth = 2;
       for (let i = 0; i < 12; i++) {
         g.beginPath();
-        let x = ((i * 61) % w);
-        let y = ((i * 97) % h);
+        let x = (i * 61) % w;
+        let y = (i * 97) % h;
         g.moveTo(x, y);
         for (let s = 0; s < 3; s++) {
           x += (((i + s) % 3) - 1) * 32;
@@ -439,26 +581,36 @@ export function createTexCache(maxAnisotropy = 1): TexCache {
   }
 
   function asphaltRoad(key = 'asp_road', centerLine = true) {
-    return get(key + String(centerLine), 256, 256, (g, w, h) => {
-      fillPixelNoise(g, w, h, 54, 58, 64, 16, 2029);
-      g.fillStyle = 'rgba(235, 236, 230, 0.9)';
-      g.fillRect(10, 0, 5, h);
-      g.fillRect(w - 15, 0, 5, h);
+    return get(key + String(centerLine), 512, 512, (g, w, h) => {
+      fillPixelNoise(g, w, h, 46, 50, 56, 22, 2029);
+      g.fillStyle = 'rgba(20, 22, 26, 0.22)';
+      g.fillRect(w * 0.22, 0, w * 0.14, h);
+      g.fillRect(w * 0.64, 0, w * 0.14, h);
+      g.fillStyle = 'rgba(240, 242, 238, 0.92)';
+      g.fillRect(16, 0, 8, h);
+      g.fillRect(w - 24, 0, 8, h);
       if (centerLine) {
-        g.fillStyle = '#e5b842';
-        for (let y = 12; y < h; y += 64) {
-          g.fillRect(w / 2 - 3.5, y, 7, 36);
+        g.fillStyle = '#eab83e';
+        g.fillRect(w / 2 - 11, 0, 7, h);
+        g.fillRect(w / 2 + 4, 0, 7, h);
+        g.fillStyle = 'rgba(240, 242, 238, 0.72)';
+        for (let y = 18; y < h; y += 96) {
+          g.fillRect(w * 0.26 - 3, y, 6, 44);
+          g.fillRect(w * 0.74 - 3, y, 6, 44);
         }
       }
     });
   }
 
   function crosswalk(key = 'cw') {
-    return get(key, 256, 256, (g, w, h) => {
-      fillPixelNoise(g, w, h, 54, 58, 64, 14, 3037);
-      g.fillStyle = 'rgba(242, 244, 240, 0.92)';
-      for (let x = 18; x < w - 18; x += 42) {
-        g.fillRect(x, 26, 22, h - 52);
+    return get(key, 512, 256, (g, w, h) => {
+      fillPixelNoise(g, w, h, 46, 50, 56, 18, 3037);
+      g.fillStyle = 'rgba(244, 246, 242, 0.94)';
+      for (let x = 28; x < w - 28; x += 68) {
+        g.fillRect(x, 26, 36, h - 52);
+        g.fillStyle = 'rgba(0,0,0,0.08)';
+        g.fillRect(x + 36, 26, 3, h - 52);
+        g.fillStyle = 'rgba(244, 246, 242, 0.94)';
       }
     });
   }
@@ -478,9 +630,9 @@ export function createTexCache(maxAnisotropy = 1): TexCache {
           const py = r * rh + 2;
           g.fillStyle = (r + c) % 2 === 0 ? c1 : c2;
           g.fillRect(px, py, rw - 4, rh - 4);
-          g.fillStyle = 'rgba(255,255,255,0.12)';
+          g.fillStyle = 'rgba(255,255,255,0.14)';
           g.fillRect(px, py, rw - 4, 2);
-          g.fillStyle = 'rgba(0,0,0,0.08)';
+          g.fillStyle = 'rgba(0,0,0,0.09)';
           g.fillRect(px, py + rh - 5, rw - 4, 2);
         }
       }
@@ -496,31 +648,35 @@ export function createTexCache(maxAnisotropy = 1): TexCache {
       const cw = w / cols;
       const ch = h / rows;
       for (let r = 0; r < rows; r++) {
-        g.fillStyle = 'rgba(0,0,0,0.12)';
-        g.fillRect(0, r * ch, w, 5);
+        g.fillStyle = 'rgba(0,0,0,0.22)';
+        g.fillRect(0, r * ch, w, 8);
+        g.fillStyle = 'rgba(255,255,255,0.08)';
+        g.fillRect(0, r * ch + 8, w, 3);
         for (let c = 0; c < cols; c++) {
-          const x = c * cw + 20;
-          const y = r * ch + 20;
-          const ww = cw - 40;
-          const wh = ch - 40;
-          g.fillStyle = '#242d36';
-          g.fillRect(x - 4, y - 4, ww + 8, wh + 8);
+          const x = c * cw + 18;
+          const y = r * ch + 22;
+          const ww = cw - 36;
+          const wh = ch - 38;
+          g.fillStyle = '#1f2832';
+          g.fillRect(x - 5, y - 5, ww + 10, wh + 10);
           const lit = ((r * 7 + c * 13) % 5) < 2;
           const grad = g.createLinearGradient(x, y, x, y + wh);
           if (lit) {
             grad.addColorStop(0, litCol);
-            grad.addColorStop(1, '#c9aa6e');
+            grad.addColorStop(0.65, '#d6b174');
+            grad.addColorStop(1, '#8c6e44');
           } else {
-            grad.addColorStop(0, '#5a788d');
-            grad.addColorStop(1, '#374c5c');
+            grad.addColorStop(0, '#6a8ca6');
+            grad.addColorStop(0.55, '#3f586b');
+            grad.addColorStop(1, '#263644');
           }
           g.fillStyle = grad;
           g.fillRect(x, y, ww, wh);
-          g.fillStyle = 'rgba(255,255,255,0.16)';
-          g.fillRect(x + 4, y + 4, ww * 0.32, wh - 8);
-          g.fillStyle = '#2b3540';
+          g.fillStyle = 'rgba(255,255,255,0.22)';
+          g.fillRect(x + 4, y + 4, ww * 0.28, wh - 8);
+          g.fillStyle = '#252f3a';
           g.fillRect(x + ww * 0.5 - 2, y, 4, wh);
-          g.fillRect(x, y + wh * 0.55, ww, 3);
+          g.fillRect(x, y + wh * 0.54, ww, 4);
         }
       }
     });
@@ -538,7 +694,7 @@ export function createTexCache(maxAnisotropy = 1): TexCache {
         const off = (r % 2) * (bw * 0.5);
         for (let c = -1; c <= cols; c++) {
           g.fillStyle = brickCol;
-          g.globalAlpha = 0.88 + ((r * 3 + c * 5) % 4) * 0.03;
+          g.globalAlpha = 0.85 + ((r * 3 + c * 5) % 4) * 0.04;
           g.fillRect(c * bw + off + 2, r * bh + 2, bw - 4, bh - 4);
         }
       }
@@ -550,12 +706,13 @@ export function createTexCache(maxAnisotropy = 1): TexCache {
           const ww = 144;
           const wh = 164;
           g.fillStyle = '#dcd4c4';
-          g.fillRect(x - 10, y + wh, ww + 20, 14);
+          g.fillRect(x - 10, y - 10, ww + 20, 12);
+          g.fillRect(x - 12, y + wh, ww + 24, 16);
           g.fillStyle = '#242b33';
           g.fillRect(x - 5, y - 5, ww + 10, wh + 10);
           const grad = g.createLinearGradient(x, y, x, y + wh);
           const lit = (wr + wc) % 2 === 0;
-          grad.addColorStop(0, lit ? '#ffdf9e' : '#506778');
+          grad.addColorStop(0, lit ? '#ffdf9e' : '#587285');
           grad.addColorStop(1, lit ? '#bf8e4e' : '#31404c');
           g.fillStyle = grad;
           g.fillRect(x, y, ww, wh);
@@ -572,49 +729,56 @@ export function createTexCache(maxAnisotropy = 1): TexCache {
       g.fillStyle = baseCol;
       g.fillRect(0, 0, w, h);
       for (let x = 0; x < w; x += 16) {
-        g.fillStyle = 'rgba(0,0,0,0.08)';
+        g.fillStyle = 'rgba(0,0,0,0.09)';
         g.fillRect(x, 0, 4, h);
-        g.fillStyle = 'rgba(255,255,255,0.15)';
+        g.fillStyle = 'rgba(255,255,255,0.18)';
         g.fillRect(x + 5, 0, 3, h);
       }
-      g.strokeStyle = 'rgba(0,0,0,0.08)';
+      g.strokeStyle = 'rgba(0,0,0,0.09)';
       g.lineWidth = 3;
       g.strokeRect(2, 2, w - 4, h - 4);
     });
   }
 
   function truckLivery() {
-    return get('truck_livery', 1024, 512, (g, w, h) => {
-      g.fillStyle = '#f2f4f6';
+    return get('truck_livery_v2', 1024, 512, (g, w, h) => {
+      g.fillStyle = '#f2f4f7';
       g.fillRect(0, 0, w, h);
-      for (let x = 0; x < w; x += 24) {
-        g.fillStyle = 'rgba(0,0,0,0.045)';
-        g.fillRect(x, 0, 5, h);
+      for (let x = 0; x < w; x += 32) {
+        g.fillStyle = 'rgba(18, 28, 42, 0.045)';
+        g.fillRect(x, 0, 4, h);
       }
-      g.fillStyle = '#224c78';
-      g.fillRect(0, h * 0.66, w, 52);
-      g.fillStyle = '#d98434';
-      g.fillRect(0, h * 0.61, w, 18);
-      g.fillStyle = '#224c78';
+      g.fillStyle = '#1b3f66';
+      g.fillRect(0, h * 0.65, w, 64);
+      g.fillStyle = '#de882f';
+      g.fillRect(0, h * 0.6, w, 20);
+      g.fillStyle = '#265c91';
+      g.fillRect(0, 0, w, 22);
+      g.fillStyle = '#d9dee6';
+      g.fillRect(0, h - 22, w, 22);
+      g.fillStyle = '#1b3f66';
       g.font = 'bold 84px sans-serif';
       g.textAlign = 'center';
-      g.fillText('城市速运 · LOGISTICS', w / 2, h * 0.42);
-      g.fillStyle = '#5a6875';
-      g.font = 'bold 40px sans-serif';
-      g.fillText('MICRO-CITY EXPRESS  ·  08', w / 2, h * 0.86);
+      g.fillText('城市速运 · CITY CARGO', w / 2, h * 0.4);
+      g.fillStyle = '#eef3f8';
+      g.font = 'bold 34px monospace';
+      g.fillText('EXPRESS DIVISION  ·  UNIT 08', w / 2, h * 0.725);
+      g.fillStyle = '#53606d';
+      g.font = 'bold 28px monospace';
+      g.fillText('HEAVY LOGISTICS · MICRO-CITY HUB', w / 2, h * 0.875);
     });
   }
 
   function waterSurface() {
     return get('water_surf', 256, 256, (g, w, h) => {
-      g.fillStyle = '#369bb3';
+      g.fillStyle = '#2f8ea8';
       g.fillRect(0, 0, w, h);
-      g.strokeStyle = 'rgba(205, 248, 255, 0.24)';
+      g.strokeStyle = 'rgba(210, 248, 255, 0.28)';
       g.lineWidth = 2;
-      for (let i = 0; i < 24; i++) {
+      for (let i = 0; i < 28; i++) {
         g.beginPath();
-        const cx = ((i * 53) % w);
-        const cy = ((i * 89) % h);
+        const cx = (i * 53) % w;
+        const cy = (i * 89) % h;
         g.ellipse(cx, cy, 16 + (i % 4) * 8, 6 + (i % 3) * 4, 0.2, 0, Math.PI * 2);
         g.stroke();
       }
@@ -628,7 +792,13 @@ export function createTexCache(maxAnisotropy = 1): TexCache {
 
   return {
     get,
+    normalFromHeight,
     bumpNoise,
+    concreteNormal,
+    brickNormal,
+    asphaltNormal,
+    corrugatedNormal,
+    radialShadow,
     concrete,
     tiles,
     wood,

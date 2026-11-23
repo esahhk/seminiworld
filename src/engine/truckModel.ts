@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import { mergePartsToGeometry, type GeoPartSpec } from './propKit';
 import type { TexCache } from './texCache';
 
 export interface BoxTruckRig {
@@ -10,8 +11,57 @@ export interface BoxTruckRig {
   brakeMats: THREE.MeshStandardMaterial[];
   reverseMats: THREE.MeshStandardMaterial[];
   headLampMat: THREE.MeshStandardMaterial;
+  turboGlowMat: THREE.MeshStandardMaterial;
   headSpot: THREE.SpotLight;
   headTarget: THREE.Object3D;
+}
+
+function buildDeepRimGeo(): THREE.BufferGeometry {
+  const pts = [
+    new THREE.Vector2(0.0, -0.155),
+    new THREE.Vector2(0.11, -0.155),
+    new THREE.Vector2(0.13, -0.06),
+    new THREE.Vector2(0.24, -0.06),
+    new THREE.Vector2(0.275, -0.15),
+    new THREE.Vector2(0.295, -0.15),
+    new THREE.Vector2(0.295, 0.15),
+    new THREE.Vector2(0.26, 0.15),
+    new THREE.Vector2(0.23, 0.05),
+    new THREE.Vector2(0.12, 0.05),
+    new THREE.Vector2(0.1, 0.155),
+    new THREE.Vector2(0.0, 0.155),
+  ];
+  const g = new THREE.LatheGeometry(pts, 22);
+  g.rotateZ(Math.PI / 2);
+  return g;
+}
+
+function buildSteppedTankGeo(): THREE.BufferGeometry {
+  const pts = [
+    new THREE.Vector2(0.0, -0.52),
+    new THREE.Vector2(0.19, -0.52),
+    new THREE.Vector2(0.225, -0.46),
+    new THREE.Vector2(0.225, 0.46),
+    new THREE.Vector2(0.19, 0.52),
+    new THREE.Vector2(0.0, 0.52),
+  ];
+  const g = new THREE.LatheGeometry(pts, 18);
+  g.rotateX(Math.PI / 2);
+  return g;
+}
+
+function buildExhaustStackGeo(): THREE.BufferGeometry {
+  const pts = [
+    new THREE.Vector2(0.04, 0.0),
+    new THREE.Vector2(0.048, 0.08),
+    new THREE.Vector2(0.088, 0.14),
+    new THREE.Vector2(0.088, 0.72),
+    new THREE.Vector2(0.052, 0.78),
+    new THREE.Vector2(0.052, 1.72),
+    new THREE.Vector2(0.072, 1.88),
+    new THREE.Vector2(0.062, 1.9),
+  ];
+  return new THREE.LatheGeometry(pts, 14);
 }
 
 export function buildBoxTruckModel(
@@ -23,82 +73,95 @@ export function buildBoxTruckModel(
   group.add(cabPivot);
 
   const frameMat = track(
-    new THREE.MeshStandardMaterial({ color: 0x202429, metalness: 0.65, roughness: 0.45 }),
+    new THREE.MeshStandardMaterial({ color: 0x1d2126, metalness: 0.68, roughness: 0.42 }),
   );
   const darkSteelMat = track(
-    new THREE.MeshStandardMaterial({ color: 0x16191d, metalness: 0.5, roughness: 0.55 }),
+    new THREE.MeshStandardMaterial({ color: 0x14171b, metalness: 0.45, roughness: 0.58 }),
   );
   const chromeMat = track(
-    new THREE.MeshStandardMaterial({ color: 0xd4dbe0, metalness: 0.85, roughness: 0.2 }),
+    new THREE.MeshPhysicalMaterial({
+      color: 0xdce2e8,
+      metalness: 0.92,
+      roughness: 0.14,
+      clearcoat: 0.7,
+    }),
   );
   const alloyMat = track(
-    new THREE.MeshStandardMaterial({ color: 0xb4bcc2, metalness: 0.72, roughness: 0.3 }),
+    new THREE.MeshStandardMaterial({ color: 0xbac2c9, metalness: 0.78, roughness: 0.24 }),
   );
   const cabPaintMat = track(
     new THREE.MeshPhysicalMaterial({
-      color: 0x224c78,
-      metalness: 0.42,
-      roughness: 0.24,
-      clearcoat: 0.85,
-      clearcoatRoughness: 0.12,
+      color: 0x1e4a78,
+      metalness: 0.46,
+      roughness: 0.2,
+      clearcoat: 0.92,
+      clearcoatRoughness: 0.09,
     }),
   );
   const cabTrimMat = track(
-    new THREE.MeshStandardMaterial({ color: 0x1e2228, metalness: 0.25, roughness: 0.62 }),
+    new THREE.MeshStandardMaterial({ color: 0x1b1f25, metalness: 0.28, roughness: 0.6 }),
   );
   const cargoWallMat = track(
-    new THREE.MeshStandardMaterial({
+    new THREE.MeshPhysicalMaterial({
       map: tex.truckLivery(),
-      bumpMap: tex.bumpNoise('trk_b', 14),
-      bumpScale: 0.006,
-      metalness: 0.18,
-      roughness: 0.38,
+      normalMap: tex.corrugatedNormal('trk_n', 1.5),
+      metalness: 0.22,
+      roughness: 0.34,
+      clearcoat: 0.45,
+      clearcoatRoughness: 0.22,
     }),
   );
   const cargoRoofMat = track(
     new THREE.MeshStandardMaterial({
       map: tex.corrugated('#eef2f5', 'trk_roof'),
-      metalness: 0.28,
-      roughness: 0.45,
+      normalMap: tex.corrugatedNormal('trk_rn', 1.8),
+      metalness: 0.3,
+      roughness: 0.44,
     }),
   );
   const glassMat = track(
     new THREE.MeshPhysicalMaterial({
-      color: 0x1c2f3d,
+      color: 0x182b3a,
       transparent: true,
       opacity: 0.52,
-      metalness: 0.15,
-      roughness: 0.06,
+      metalness: 0.18,
+      roughness: 0.05,
       clearcoat: 1.0,
-      clearcoatRoughness: 0.05,
+      clearcoatRoughness: 0.04,
       ior: 1.52,
     }),
   );
   const tireMat = track(
-    new THREE.MeshStandardMaterial({ color: 0x1b1d20, roughness: 0.88, metalness: 0.08 }),
+    new THREE.MeshStandardMaterial({
+      color: 0x191b1e,
+      roughness: 0.88,
+      metalness: 0.08,
+      bumpMap: tex.bumpNoise('tire_b', 28),
+      bumpScale: 0.008,
+    }),
   );
   const headLampMat = track(
     new THREE.MeshStandardMaterial({
       color: 0xfff8e6,
       emissive: 0xffe6a8,
-      emissiveIntensity: 1.15,
-      roughness: 0.2,
+      emissiveIntensity: 1.2,
+      roughness: 0.18,
     }),
   );
   const amberMat = track(
     new THREE.MeshStandardMaterial({
       color: 0xf09224,
-      emissive: 0xd96b10,
-      emissiveIntensity: 0.75,
-      roughness: 0.25,
+      emissive: 0xe67212,
+      emissiveIntensity: 0.85,
+      roughness: 0.24,
     }),
   );
   const tailBrakeMat = track(
     new THREE.MeshStandardMaterial({
       color: 0xc9261e,
       emissive: 0x99120c,
-      emissiveIntensity: 0.35,
-      roughness: 0.25,
+      emissiveIntensity: 0.38,
+      roughness: 0.24,
     }),
   );
   const reverseMat = track(
@@ -106,214 +169,331 @@ export function buildBoxTruckModel(
       color: 0xd8dfe3,
       emissive: 0xffffff,
       emissiveIntensity: 0.08,
-      roughness: 0.25,
+      roughness: 0.24,
+    }),
+  );
+  const turboGlowMat = track(
+    new THREE.MeshStandardMaterial({
+      color: 0x5cc8ff,
+      emissive: 0x38a6ff,
+      emissiveIntensity: 0.0,
+      roughness: 0.2,
     }),
   );
   const interiorMat = track(
-    new THREE.MeshStandardMaterial({ color: 0x2c3036, roughness: 0.85 }),
+    new THREE.MeshStandardMaterial({ color: 0x2a2e34, roughness: 0.84 }),
   );
 
-  function addPart(
-    parent: THREE.Object3D,
-    geo: THREE.BufferGeometry,
-    mat: THREE.Material,
-    x: number,
-    y: number,
-    z: number,
-    cast = true,
-    recv = true,
-  ) {
-    const m = new THREE.Mesh(track(geo), mat);
-    m.position.set(x, y, z);
-    m.castShadow = cast;
-    m.receiveShadow = recv;
-    parent.add(m);
-    return m;
-  }
-
-  for (const sx of [-0.42, 0.42]) {
-    addPart(group, new THREE.BoxGeometry(0.11, 0.18, 5.85), frameMat, sx, 0.56, 0.1, true, true);
-  }
+  const frameParts: GeoPartSpec[] = [
+    { geo: new THREE.BoxGeometry(0.11, 0.18, 5.95), x: -0.42, y: 0.56, z: 0.08 },
+    { geo: new THREE.BoxGeometry(0.11, 0.18, 5.95), x: 0.42, y: 0.56, z: 0.08 },
+    { geo: new THREE.BoxGeometry(1.78, 0.11, 0.12), y: 0.44, z: -1.75 },
+    { geo: new THREE.BoxGeometry(1.78, 0.14, 0.14), y: 0.44, z: 1.8 },
+    { geo: new THREE.CylinderGeometry(0.15, 0.15, 0.34, 14), y: 0.44, z: 1.8, rz: Math.PI / 2 },
+    { geo: new THREE.BoxGeometry(0.38, 0.28, 0.56), x: 0.76, y: 0.52, z: -0.18 },
+    { geo: new THREE.BoxGeometry(2.2, 0.18, 0.14), y: 0.46, z: 3.04 },
+    { geo: new THREE.TorusGeometry(0.23, 0.015, 6, 18), x: -0.78, y: 0.5, z: -0.38 },
+    { geo: new THREE.TorusGeometry(0.23, 0.015, 6, 18), x: -0.78, y: 0.5, z: 0.2 },
+    { geo: new THREE.BoxGeometry(2.26, 0.14, 4.06), y: 0.72, z: 0.96 },
+  ];
   for (const cz of [-2.4, -1.1, 0.3, 1.7, 2.75]) {
-    addPart(group, new THREE.BoxGeometry(0.92, 0.12, 0.12), frameMat, 0, 0.56, cz, false, false);
+    frameParts.push({ geo: new THREE.BoxGeometry(0.92, 0.12, 0.12), y: 0.56, z: cz });
   }
-  addPart(group, new THREE.BoxGeometry(1.75, 0.11, 0.12), frameMat, 0, 0.44, -1.75, false, false);
-  addPart(group, new THREE.BoxGeometry(1.75, 0.14, 0.14), frameMat, 0, 0.44, 1.8, false, false);
-  addPart(group, new THREE.CylinderGeometry(0.14, 0.14, 0.32, 12), frameMat, 0, 0.44, 1.8, false, false).rotation.z =
-    Math.PI / 2;
+  const frameMesh = new THREE.Mesh(track(mergePartsToGeometry(frameParts)), frameMat);
+  frameMesh.castShadow = true;
+  frameMesh.receiveShadow = true;
+  group.add(frameMesh);
 
-  const tank = addPart(group, new THREE.CylinderGeometry(0.21, 0.21, 0.92, 14), alloyMat, -0.78, 0.5, -0.08);
-  tank.rotation.x = Math.PI / 2;
-  for (const tz of [-0.36, 0.2]) {
-    const band = addPart(group, new THREE.TorusGeometry(0.22, 0.015, 6, 16), frameMat, -0.78, 0.5, tz, false, false);
-    band.rotation.y = 0;
-  }
-  addPart(group, new THREE.BoxGeometry(0.38, 0.28, 0.52), frameMat, 0.76, 0.52, -0.15);
-  const exhaust = addPart(group, new THREE.CylinderGeometry(0.045, 0.045, 1.65, 10), chromeMat, 0.96, 1.48, -0.95);
-  exhaust.rotation.x = 0.04;
-  addPart(group, new THREE.CylinderGeometry(0.09, 0.09, 0.65, 10), darkSteelMat, 0.96, 0.95, -0.95);
+  const alloyStaticParts: GeoPartSpec[] = [
+    { geo: buildSteppedTankGeo(), x: -0.78, y: 0.5, z: -0.09 },
+    { geo: buildSteppedTankGeo(), x: 0.78, y: 0.5, z: 0.52, sz: 0.75 },
+  ];
+  const alloyStaticMesh = new THREE.Mesh(track(mergePartsToGeometry(alloyStaticParts)), alloyMat);
+  alloyStaticMesh.castShadow = true;
+  group.add(alloyStaticMesh);
 
-  const rearBumper = addPart(group, new THREE.BoxGeometry(2.18, 0.18, 0.14), frameMat, 0, 0.46, 3.04);
-  rearBumper.castShadow = true;
-  addPart(group, new THREE.BoxGeometry(2.08, 0.06, 0.02), track(new THREE.MeshStandardMaterial({ map: tex.hazard('trk_haz') })), 0, 0.46, 3.12, false, false);
+  const exhaustParts: GeoPartSpec[] = [
+    { geo: buildExhaustStackGeo(), x: 1.0, y: 0.58, z: -0.96 },
+    { geo: buildExhaustStackGeo(), x: -1.0, y: 0.58, z: -0.96 },
+  ];
+  const exhaustMesh = new THREE.Mesh(track(mergePartsToGeometry(exhaustParts)), chromeMat);
+  exhaustMesh.castShadow = true;
+  group.add(exhaustMesh);
 
-  for (const sx of [-0.94, 0.94]) {
-    addPart(group, new THREE.BoxGeometry(0.32, 0.42, 0.03), darkSteelMat, sx, 0.32, 2.52, false, false);
-  }
+  const exhaustTipGlow = new THREE.Mesh(
+    track(
+      mergePartsToGeometry([
+        { geo: new THREE.CylinderGeometry(0.045, 0.055, 0.14, 12), x: 1.0, y: 2.52, z: -0.96 },
+        { geo: new THREE.CylinderGeometry(0.045, 0.055, 0.14, 12), x: -1.0, y: 2.52, z: -0.96 },
+      ]),
+    ),
+    turboGlowMat,
+  );
+  group.add(exhaustTipGlow);
+
+  const mudflapMesh = new THREE.Mesh(
+    track(
+      mergePartsToGeometry([
+        { geo: new THREE.BoxGeometry(0.36, 0.44, 0.03), x: -0.94, y: 0.32, z: 2.54 },
+        { geo: new THREE.BoxGeometry(0.36, 0.44, 0.03), x: 0.94, y: 0.32, z: 2.54 },
+      ]),
+    ),
+    darkSteelMat,
+  );
+  group.add(mudflapMesh);
+
+  const rearHaz = new THREE.Mesh(
+    track(new THREE.BoxGeometry(2.08, 0.06, 0.02)),
+    track(new THREE.MeshStandardMaterial({ map: tex.hazard('trk_haz') })),
+  );
+  rearHaz.position.set(0, 0.46, 3.12);
+  group.add(rearHaz);
 
   const cabShape = new THREE.Shape();
   cabShape.moveTo(0, 0.66);
   cabShape.lineTo(1.78, 0.66);
-  cabShape.lineTo(1.78, 2.38);
-  cabShape.lineTo(0.64, 2.38);
-  cabShape.lineTo(0.24, 1.48);
+  cabShape.lineTo(1.78, 2.4);
+  cabShape.lineTo(0.64, 2.4);
+  cabShape.lineTo(0.22, 1.48);
   cabShape.lineTo(0.02, 1.28);
   cabShape.lineTo(0, 0.66);
   cabShape.closePath();
-
-  const cabGeo = track(
-    new THREE.ExtrudeGeometry(cabShape, {
-      depth: 2.04,
-      bevelEnabled: true,
-      bevelThickness: 0.05,
-      bevelSize: 0.04,
-      bevelSegments: 2,
-    }),
-  );
-  const cabShell = addPart(cabPivot, cabGeo, cabPaintMat, 1.02, 0, -2.92, true, true);
-  cabShell.rotation.y = -Math.PI / 2;
+  const cabGeo = new THREE.ExtrudeGeometry(cabShape, {
+    depth: 2.04,
+    bevelEnabled: true,
+    bevelThickness: 0.055,
+    bevelSize: 0.045,
+    bevelSegments: 2,
+  });
 
   const cowlShape = new THREE.Shape();
   cowlShape.moveTo(0, 0.66);
-  cowlShape.lineTo(0.62, 0.66);
-  cowlShape.lineTo(0.62, 1.48);
+  cowlShape.lineTo(0.64, 0.66);
+  cowlShape.lineTo(0.64, 1.48);
   cowlShape.lineTo(0.18, 1.42);
   cowlShape.lineTo(0, 1.24);
   cowlShape.closePath();
-  const cowlGeo = track(
-    new THREE.ExtrudeGeometry(cowlShape, {
-      depth: 2.1,
-      bevelEnabled: true,
-      bevelThickness: 0.03,
-      bevelSize: 0.03,
-      bevelSegments: 1,
-    }),
-  );
-  const cowlMesh = addPart(cabPivot, cowlGeo, cabPaintMat, 1.05, 0, -2.96, false, true);
-  cowlMesh.rotation.y = -Math.PI / 2;
+  const cowlGeo = new THREE.ExtrudeGeometry(cowlShape, {
+    depth: 2.1,
+    bevelEnabled: true,
+    bevelThickness: 0.035,
+    bevelSize: 0.03,
+    bevelSegments: 2,
+  });
 
   const deflectorShape = new THREE.Shape();
-  deflectorShape.moveTo(0, 2.38);
-  deflectorShape.lineTo(1.0, 2.38);
-  deflectorShape.lineTo(1.0, 2.94);
-  deflectorShape.lineTo(0.32, 2.66);
+  deflectorShape.moveTo(0, 2.39);
+  deflectorShape.lineTo(1.02, 2.39);
+  deflectorShape.lineTo(1.02, 3.02);
+  deflectorShape.lineTo(0.28, 2.7);
   deflectorShape.closePath();
-  const defGeo = track(
-    new THREE.ExtrudeGeometry(deflectorShape, {
-      depth: 1.94,
-      bevelEnabled: true,
-      bevelThickness: 0.04,
-      bevelSize: 0.03,
-      bevelSegments: 1,
-    }),
+  const defGeo = new THREE.ExtrudeGeometry(deflectorShape, {
+    depth: 1.96,
+    bevelEnabled: true,
+    bevelThickness: 0.045,
+    bevelSize: 0.035,
+    bevelSegments: 2,
+  });
+
+  const paintMesh = new THREE.Mesh(
+    track(
+      mergePartsToGeometry([
+        { geo: cabGeo, x: 1.02, z: -2.92, ry: -Math.PI / 2 },
+        { geo: cowlGeo, x: 1.05, z: -2.96, ry: -Math.PI / 2 },
+        { geo: defGeo, x: 0.98, z: -2.14, ry: -Math.PI / 2 },
+        { geo: new THREE.BoxGeometry(1.94, 0.08, 0.26), y: 2.36, z: -2.74, rx: -0.16 },
+        { geo: new THREE.BoxGeometry(0.1, 0.22, 1.22), x: -1.04, y: 0.56, z: 0.25 },
+        { geo: new THREE.BoxGeometry(0.1, 0.22, 1.22), x: 1.04, y: 0.56, z: 0.25 },
+      ]),
+    ),
+    cabPaintMat,
   );
-  const defMesh = addPart(cabPivot, defGeo, cabPaintMat, 0.97, 0, -2.14, true, false);
-  defMesh.rotation.y = -Math.PI / 2;
+  paintMesh.castShadow = true;
+  paintMesh.receiveShadow = true;
+  cabPivot.add(paintMesh);
 
-  const windshield = addPart(cabPivot, new THREE.BoxGeometry(1.88, 0.86, 0.06), glassMat, 0, 1.91, -2.47, false, false);
-  windshield.rotation.x = 0.42;
-  for (const sx of [-0.99, 0.99]) {
-    addPart(cabPivot, new THREE.BoxGeometry(0.06, 0.68, 0.88), glassMat, sx, 1.88, -1.78, false, false);
+  const glassMesh = new THREE.Mesh(
+    track(
+      mergePartsToGeometry([
+        { geo: new THREE.BoxGeometry(1.88, 0.86, 0.05), y: 1.91, z: -2.47, rx: 0.42 },
+        { geo: new THREE.BoxGeometry(0.06, 0.68, 0.88), x: -0.99, y: 1.88, z: -1.78 },
+        { geo: new THREE.BoxGeometry(0.06, 0.68, 0.88), x: 0.99, y: 1.88, z: -1.78 },
+      ]),
+    ),
+    glassMat,
+  );
+  cabPivot.add(glassMesh);
+
+  const interiorParts: GeoPartSpec[] = [
+    { geo: new THREE.BoxGeometry(1.72, 0.24, 0.42), y: 1.48, z: -2.26 },
+    { geo: new THREE.TorusGeometry(0.16, 0.022, 6, 16), x: -0.45, y: 1.56, z: -2.02, rx: -0.7 },
+    { geo: new THREE.BoxGeometry(0.44, 0.62, 0.36), x: -0.45, y: 1.38, z: -1.56 },
+    { geo: new THREE.BoxGeometry(0.44, 0.62, 0.36), x: 0.45, y: 1.38, z: -1.56 },
+  ];
+  cabPivot.add(new THREE.Mesh(track(mergePartsToGeometry(interiorParts)), interiorMat));
+
+  const bullCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.78, 0.72, -3.02),
+    new THREE.Vector3(-0.76, 1.08, -3.14),
+    new THREE.Vector3(0.0, 1.12, -3.16),
+    new THREE.Vector3(0.76, 1.08, -3.14),
+    new THREE.Vector3(0.78, 0.72, -3.02),
+  ]);
+  const mirrorL = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-1.02, 2.02, -2.26),
+    new THREE.Vector3(-1.22, 1.98, -2.2),
+    new THREE.Vector3(-1.22, 1.62, -2.2),
+    new THREE.Vector3(-1.02, 1.58, -2.26),
+  ]);
+  const mirrorR = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(1.02, 2.02, -2.26),
+    new THREE.Vector3(1.22, 1.98, -2.2),
+    new THREE.Vector3(1.22, 1.62, -2.2),
+    new THREE.Vector3(1.02, 1.58, -2.26),
+  ]);
+
+  const chromeTrimParts: GeoPartSpec[] = [
+    { geo: new THREE.TubeGeometry(bullCurve, 20, 0.028, 8, false) },
+    { geo: new THREE.BoxGeometry(1.46, 0.032, 0.04), y: 0.9, z: -3.14 },
+    { geo: new THREE.BoxGeometry(0.28, 0.08, 0.04), y: 1.13, z: -3.03 },
+    { geo: new THREE.CylinderGeometry(0.036, 0.02, 0.28, 10), x: -0.58, y: 2.48, z: -2.18, rx: Math.PI / 2 },
+    { geo: new THREE.CylinderGeometry(0.036, 0.02, 0.28, 10), x: 0.58, y: 2.48, z: -2.18, rx: Math.PI / 2 },
+    { geo: new THREE.BoxGeometry(0.02, 0.36, 0.11), x: -1.19, y: 1.8, z: -2.17 },
+    { geo: new THREE.BoxGeometry(0.02, 0.36, 0.11), x: 1.19, y: 1.8, z: -2.17 },
+    { geo: new THREE.CylinderGeometry(0.022, 0.022, 2.08, 8), x: -0.52, y: 1.86, z: 3.01 },
+    { geo: new THREE.CylinderGeometry(0.022, 0.022, 2.08, 8), x: 0.52, y: 1.86, z: 3.01 },
+  ];
+  for (const gy of [0.97, 1.07, 1.17, 1.27]) {
+    chromeTrimParts.push({ geo: new THREE.BoxGeometry(1.36, 0.028, 0.085), y: gy, z: -2.99 });
   }
-  for (const wx of [-0.42, 0.42]) {
-    const wiper = addPart(cabPivot, new THREE.BoxGeometry(0.46, 0.025, 0.025), darkSteelMat, wx, 1.56, -2.64, false, false);
-    wiper.rotation.z = 0.14;
-  }
+  const chromeTrimMesh = new THREE.Mesh(track(mergePartsToGeometry(chromeTrimParts)), chromeMat);
+  cabPivot.add(chromeTrimMesh);
 
-  addPart(cabPivot, new THREE.BoxGeometry(1.72, 0.24, 0.42), interiorMat, 0, 1.48, -2.26, false, false);
-  const steeringWheel = addPart(cabPivot, new THREE.TorusGeometry(0.16, 0.022, 6, 16), darkSteelMat, -0.45, 1.56, -2.02, false, false);
-  steeringWheel.rotation.x = -0.7;
-  for (const sx of [-0.45, 0.45]) {
-    addPart(cabPivot, new THREE.BoxGeometry(0.44, 0.62, 0.36), interiorMat, sx, 1.38, -1.56, false, false);
-  }
+  const trimParts: GeoPartSpec[] = [
+    { geo: new THREE.BoxGeometry(2.16, 0.26, 0.22), y: 0.72, z: -2.98 },
+    { geo: new THREE.BoxGeometry(1.44, 0.44, 0.08), y: 1.12, z: -2.97 },
+    { geo: new THREE.TubeGeometry(mirrorL, 14, 0.018, 6, false) },
+    { geo: new THREE.TubeGeometry(mirrorR, 14, 0.018, 6, false) },
+    { geo: new THREE.BoxGeometry(0.06, 0.42, 0.15), x: -1.21, y: 1.8, z: -2.2 },
+    { geo: new THREE.BoxGeometry(0.06, 0.42, 0.15), x: 1.21, y: 1.8, z: -2.2 },
+    { geo: new THREE.BoxGeometry(0.46, 0.025, 0.025), x: -0.42, y: 1.56, z: -2.64, rz: 0.14 },
+    { geo: new THREE.BoxGeometry(0.46, 0.025, 0.025), x: 0.42, y: 1.56, z: -2.64, rz: 0.14 },
+    { geo: new THREE.BoxGeometry(0.46, 0.16, 0.05), x: -0.78, y: 0.72, z: 2.99 },
+    { geo: new THREE.BoxGeometry(0.46, 0.16, 0.05), x: 0.78, y: 0.72, z: 2.99 },
+    { geo: new THREE.BoxGeometry(0.07, 0.24, 0.04), x: -1.06, y: 1.5, z: -1.48 },
+    { geo: new THREE.BoxGeometry(0.07, 0.24, 0.04), x: 1.06, y: 1.5, z: -1.48 },
+    { geo: new THREE.BoxGeometry(0.08, 0.06, 0.42), x: -1.02, y: 0.65, z: -1.78 },
+    { geo: new THREE.BoxGeometry(0.08, 0.06, 0.42), x: 1.02, y: 0.65, z: -1.78 },
+  ];
+  const cabTrimMesh = new THREE.Mesh(track(mergePartsToGeometry(trimParts)), cabTrimMat);
+  cabTrimMesh.castShadow = true;
+  cabPivot.add(cabTrimMesh);
 
-  addPart(cabPivot, new THREE.BoxGeometry(2.14, 0.26, 0.22), cabTrimMat, 0, 0.72, -2.97, true, false);
-  addPart(cabPivot, new THREE.BoxGeometry(0.44, 0.14, 0.02), track(new THREE.MeshStandardMaterial({ map: tex.sign('沪A·8025M', '#224c8a', '#ffffff', '', false, 0.44 / 0.14) })), 0, 0.72, -3.09, false, false);
-  addPart(cabPivot, new THREE.BoxGeometry(1.42, 0.44, 0.08), darkSteelMat, 0, 1.12, -2.97, false, false);
-  for (const gy of [0.98, 1.12, 1.26]) {
-    addPart(cabPivot, new THREE.BoxGeometry(1.34, 0.035, 0.09), chromeMat, 0, gy, -2.98, false, false);
-  }
-  addPart(cabPivot, new THREE.BoxGeometry(0.24, 0.08, 0.04), chromeMat, 0, 1.12, -3.02, false, false);
+  const plate = new THREE.Mesh(
+    track(new THREE.BoxGeometry(0.46, 0.14, 0.02)),
+    track(
+      new THREE.MeshStandardMaterial({
+        map: tex.sign('沪A·8025M', '#224c8a', '#ffffff', '', false, 0.46 / 0.14),
+      }),
+    ),
+  );
+  plate.position.set(0, 0.72, -3.1);
+  cabPivot.add(plate);
 
-  for (const sx of [-0.84, 0.84]) {
-    addPart(cabPivot, new THREE.BoxGeometry(0.24, 0.16, 0.08), headLampMat, sx, 1.04, -2.98, false, false);
-    addPart(cabPivot, new THREE.BoxGeometry(0.24, 0.07, 0.08), amberMat, sx, 1.16, -2.98, false, false);
-    addPart(cabPivot, new THREE.BoxGeometry(0.16, 0.08, 0.06), headLampMat, sx, 0.73, -3.07, false, false);
-    addPart(cabPivot, new THREE.BoxGeometry(0.05, 0.22, 0.04), darkSteelMat, sx * 1.26, 1.5, -1.48, false, false);
-    addPart(cabPivot, new THREE.BoxGeometry(0.06, 0.06, 0.42), cabTrimMat, sx * 1.22, 0.65, -1.78, false, false);
+  const headLampMesh = new THREE.Mesh(
+    track(
+      mergePartsToGeometry([
+        { geo: new THREE.BoxGeometry(0.25, 0.15, 0.08), x: -0.84, y: 1.04, z: -2.99 },
+        { geo: new THREE.BoxGeometry(0.25, 0.15, 0.08), x: 0.84, y: 1.04, z: -2.99 },
+        { geo: new THREE.BoxGeometry(0.16, 0.08, 0.06), x: -0.84, y: 0.73, z: -3.08 },
+        { geo: new THREE.BoxGeometry(0.16, 0.08, 0.06), x: 0.84, y: 0.73, z: -3.08 },
+      ]),
+    ),
+    headLampMat,
+  );
+  cabPivot.add(headLampMesh);
 
-    const armX = sx > 0 ? 1.18 : -1.18;
-    addPart(cabPivot, new THREE.BoxGeometry(0.28, 0.03, 0.03), darkSteelMat, sx > 0 ? 1.08 : -1.08, 1.98, -2.18, false, false);
-    addPart(cabPivot, new THREE.BoxGeometry(0.28, 0.03, 0.03), darkSteelMat, sx > 0 ? 1.08 : -1.08, 1.62, -2.18, false, false);
-    addPart(cabPivot, new THREE.BoxGeometry(0.06, 0.38, 0.14), cabTrimMat, armX, 1.8, -2.18, true, false);
-    addPart(cabPivot, new THREE.BoxGeometry(0.02, 0.34, 0.11), chromeMat, armX - Math.sign(sx) * 0.025, 1.8, -2.15, false, false);
-  }
-
+  const amberParts: GeoPartSpec[] = [
+    { geo: new THREE.BoxGeometry(0.25, 0.06, 0.08), x: -0.84, y: 1.15, z: -2.99 },
+    { geo: new THREE.BoxGeometry(0.25, 0.06, 0.08), x: 0.84, y: 1.15, z: -2.99 },
+    { geo: new THREE.BoxGeometry(0.11, 0.11, 0.06), x: -0.9, y: 0.72, z: 3.01 },
+    { geo: new THREE.BoxGeometry(0.11, 0.11, 0.06), x: 0.9, y: 0.72, z: 3.01 },
+  ];
   for (const cx of [-0.55, 0, 0.55]) {
-    addPart(cabPivot, new THREE.BoxGeometry(0.11, 0.05, 0.06), amberMat, cx, 2.43, -2.26, false, false);
+    amberParts.push({ geo: new THREE.BoxGeometry(0.12, 0.05, 0.06), x: cx, y: 2.43, z: -2.26 });
   }
-
-  addPart(cabPivot, new THREE.BoxGeometry(2.22, 2.18, 4.02), cargoWallMat, 0, 1.84, 0.96, true, true);
-  addPart(cabPivot, new THREE.BoxGeometry(2.24, 0.12, 4.04), cargoRoofMat, 0, 2.94, 0.96, true, true);
-  addPart(cabPivot, new THREE.BoxGeometry(2.26, 0.14, 4.06), frameMat, 0, 0.72, 0.96, true, true);
-
-  for (const sx of [-1.11, 1.11]) {
-    addPart(cabPivot, new THREE.BoxGeometry(0.06, 2.26, 0.08), alloyMat, sx, 1.84, -1.03, false, false);
-    addPart(cabPivot, new THREE.BoxGeometry(0.06, 2.26, 0.08), alloyMat, sx, 1.84, 2.95, false, false);
-    addPart(cabPivot, new THREE.BoxGeometry(0.05, 0.08, 4.04), alloyMat, sx, 2.92, 0.96, false, false);
+  for (const sx of [-1.12, 1.12]) {
     for (const mz of [-0.6, 0.96, 2.5]) {
-      addPart(cabPivot, new THREE.BoxGeometry(0.04, 0.05, 0.12), amberMat, sx * 1.01, 0.72, mz, false, false);
+      amberParts.push({ geo: new THREE.BoxGeometry(0.04, 0.05, 0.12), x: sx, y: 0.72, z: mz });
     }
-    addPart(cabPivot, new THREE.BoxGeometry(0.04, 0.05, 1.4), alloyMat, sx * 0.96, 0.44, 0.65, false, false);
   }
+  cabPivot.add(new THREE.Mesh(track(mergePartsToGeometry(amberParts)), amberMat));
 
-  addPart(cabPivot, new THREE.BoxGeometry(1.94, 2.02, 0.04), cargoRoofMat, 0, 1.86, 2.98, false, true);
+  const cargoBox = new THREE.Mesh(track(new THREE.BoxGeometry(2.22, 2.18, 4.02)), cargoWallMat);
+  cargoBox.position.set(0, 1.84, 0.96);
+  cargoBox.castShadow = true;
+  cargoBox.receiveShadow = true;
+  cabPivot.add(cargoBox);
+
+  const roofParts: GeoPartSpec[] = [
+    { geo: new THREE.BoxGeometry(2.24, 0.12, 4.04), y: 2.94, z: 0.96 },
+    { geo: new THREE.BoxGeometry(1.94, 2.02, 0.04), y: 1.86, z: 2.98 },
+  ];
+  const cargoRoofMesh = new THREE.Mesh(track(mergePartsToGeometry(roofParts)), cargoRoofMat);
+  cargoRoofMesh.castShadow = true;
+  cargoRoofMesh.receiveShadow = true;
+  cabPivot.add(cargoRoofMesh);
+
+  const alloyBodyParts: GeoPartSpec[] = [];
+  for (const sx of [-1.11, 1.11]) {
+    alloyBodyParts.push({ geo: new THREE.BoxGeometry(0.06, 2.26, 0.08), x: sx, y: 1.84, z: -1.03 });
+    alloyBodyParts.push({ geo: new THREE.BoxGeometry(0.06, 2.26, 0.08), x: sx, y: 1.84, z: 2.95 });
+    alloyBodyParts.push({ geo: new THREE.BoxGeometry(0.05, 0.08, 4.04), x: sx, y: 2.92, z: 0.96 });
+    alloyBodyParts.push({ geo: new THREE.BoxGeometry(0.04, 0.06, 1.5), x: sx * 0.96, y: 0.44, z: 0.65 });
+  }
   for (let sy = 0.96; sy <= 2.74; sy += 0.22) {
-    addPart(cabPivot, new THREE.BoxGeometry(1.92, 0.02, 0.05), alloyMat, 0, sy, 2.98, false, false);
+    alloyBodyParts.push({ geo: new THREE.BoxGeometry(1.92, 0.02, 0.05), y: sy, z: 2.98 });
   }
-  for (const rx of [-0.52, 0.52]) {
-    addPart(cabPivot, new THREE.CylinderGeometry(0.022, 0.022, 2.06, 8), chromeMat, rx, 1.86, 3.01, false, false);
-  }
+  cabPivot.add(new THREE.Mesh(track(mergePartsToGeometry(alloyBodyParts)), alloyMat));
 
   const brakeMats: THREE.MeshStandardMaterial[] = [];
   const reverseMats: THREE.MeshStandardMaterial[] = [];
   for (const tx of [-0.78, 0.78]) {
-    addPart(cabPivot, new THREE.BoxGeometry(0.46, 0.16, 0.05), darkSteelMat, tx, 0.72, 2.99, false, false);
     const bm = track(tailBrakeMat.clone());
     const rm = track(reverseMat.clone());
     brakeMats.push(bm);
     reverseMats.push(rm);
-    addPart(cabPivot, new THREE.BoxGeometry(0.18, 0.11, 0.06), bm, tx - Math.sign(tx) * 0.1, 0.72, 3.0, false, false);
-    addPart(cabPivot, new THREE.BoxGeometry(0.11, 0.11, 0.06), amberMat, tx + Math.sign(tx) * 0.12, 0.72, 3.0, false, false);
-    addPart(cabPivot, new THREE.BoxGeometry(0.08, 0.11, 0.06), rm, tx, 0.72, 3.0, false, false);
+    const bmMesh = new THREE.Mesh(track(new THREE.BoxGeometry(0.18, 0.11, 0.06)), bm);
+    bmMesh.position.set(tx - Math.sign(tx) * 0.1, 0.72, 3.0);
+    const rmMesh = new THREE.Mesh(track(new THREE.BoxGeometry(0.08, 0.11, 0.06)), rm);
+    rmMesh.position.set(tx, 0.72, 3.0);
+    cabPivot.add(bmMesh, rmMesh);
   }
 
   const headTarget = new THREE.Object3D();
-  headTarget.position.set(0, 0.4, -18);
+  headTarget.position.set(0, 0.35, -24);
   cabPivot.add(headTarget);
-  const headSpot = new THREE.SpotLight(0xfff1cf, 1.6, 34, 0.52, 0.65);
-  headSpot.position.set(0, 1.15, -3.0);
+  const headSpot = new THREE.SpotLight(0xfff1cf, 1.8, 42, 0.54, 0.65);
+  headSpot.position.set(0, 1.18, -3.05);
   headSpot.target = headTarget;
   cabPivot.add(headSpot);
 
-  const tireGeo = track(new THREE.CylinderGeometry(0.44, 0.44, 0.28, 26));
+  const tireGeo = track(new THREE.CylinderGeometry(0.44, 0.44, 0.28, 28));
   tireGeo.rotateZ(Math.PI / 2);
-  const rimGeo = track(new THREE.CylinderGeometry(0.26, 0.26, 0.3, 20));
-  rimGeo.rotateZ(Math.PI / 2);
-  const hubGeo = track(new THREE.CylinderGeometry(0.1, 0.1, 0.33, 10));
-  hubGeo.rotateZ(Math.PI / 2);
-  const lugGeo = track(new THREE.CylinderGeometry(0.018, 0.018, 0.32, 6));
-  lugGeo.rotateZ(Math.PI / 2);
+  const rimGeo = track(buildDeepRimGeo());
+  const hubLugParts: GeoPartSpec[] = [
+    { geo: new THREE.CylinderGeometry(0.095, 0.095, 0.33, 12), rz: Math.PI / 2 },
+  ];
+  for (let b = 0; b < 8; b++) {
+    const ang = (b / 8) * Math.PI * 2;
+    hubLugParts.push({
+      geo: new THREE.CylinderGeometry(0.017, 0.017, 0.32, 6),
+      y: Math.sin(ang) * 0.175,
+      z: Math.cos(ang) * 0.175,
+      rz: Math.PI / 2,
+    });
+  }
+  const hubLugGeo = track(mergePartsToGeometry(hubLugParts));
 
   const wheelSpins: THREE.Group[] = [];
   function createWheel(x: number, z: number, dual: boolean): THREE.Group {
@@ -332,15 +512,9 @@ export function buildBoxTruckModel(
       if (idx === 0) {
         const rim = new THREE.Mesh(rimGeo, alloyMat);
         rim.position.x = ox;
-        const hub = new THREE.Mesh(hubGeo, frameMat);
+        const hub = new THREE.Mesh(hubLugGeo, chromeMat);
         hub.position.x = ox;
         spin.add(rim, hub);
-        for (let b = 0; b < 6; b++) {
-          const ang = (b / 6) * Math.PI * 2;
-          const lug = new THREE.Mesh(lugGeo, chromeMat);
-          lug.position.set(ox, Math.sin(ang) * 0.17, Math.cos(ang) * 0.17);
-          spin.add(lug);
-        }
       }
     });
     group.add(steerPivot);
@@ -361,6 +535,7 @@ export function buildBoxTruckModel(
     brakeMats,
     reverseMats,
     headLampMat,
+    turboGlowMat,
     headSpot,
     headTarget,
   };

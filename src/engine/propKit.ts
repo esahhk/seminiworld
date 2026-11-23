@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { SceneContext } from '../scenes/sceneContext';
 
 export interface InstanceTransform {
@@ -12,6 +13,56 @@ export interface InstanceTransform {
   sy?: number;
   sz?: number;
   color?: number;
+}
+
+export interface GeoPartSpec {
+  geo: THREE.BufferGeometry;
+  x?: number;
+  y?: number;
+  z?: number;
+  rx?: number;
+  ry?: number;
+  rz?: number;
+  sx?: number;
+  sy?: number;
+  sz?: number;
+}
+
+const _mObj = new THREE.Object3D();
+
+export function mergePartsToGeometry(parts: readonly GeoPartSpec[]): THREE.BufferGeometry {
+  if (parts.length === 0) {
+    return new THREE.BoxGeometry(0.01, 0.01, 0.01);
+  }
+  const normalized: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i];
+    const cloned = p.geo.index ? p.geo.toNonIndexed() : p.geo.clone();
+    p.geo.dispose();
+    if (!cloned.getAttribute('normal')) {
+      cloned.computeVertexNormals();
+    }
+    if (!cloned.getAttribute('uv')) {
+      const count = cloned.getAttribute('position').count;
+      cloned.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(count * 2), 2));
+    }
+    for (const key of Object.keys(cloned.attributes)) {
+      if (key !== 'position' && key !== 'normal' && key !== 'uv') {
+        cloned.deleteAttribute(key);
+      }
+    }
+    _mObj.position.set(p.x ?? 0, p.y ?? 0, p.z ?? 0);
+    _mObj.rotation.set(p.rx ?? 0, p.ry ?? 0, p.rz ?? 0);
+    _mObj.scale.set(p.sx ?? 1, p.sy ?? 1, p.sz ?? 1);
+    _mObj.updateMatrix();
+    cloned.applyMatrix4(_mObj.matrix);
+    normalized.push(cloned);
+  }
+  const merged = mergeGeometries(normalized, false);
+  for (let i = 0; i < normalized.length; i++) {
+    normalized[i].dispose();
+  }
+  return merged ?? new THREE.BoxGeometry(0.01, 0.01, 0.01);
 }
 
 export function addInstancedMeshes(
@@ -66,34 +117,49 @@ export function buildOfficeChair(
   const g = new T.Group();
   g.position.set(x, y, z);
   g.rotation.y = ry;
-  const steelMat = createMaterial({ color: 0x262a30, metalness: 0.6, roughness: 0.35 });
-  const fabMat = createMaterial({ color: fabricHex, roughness: 0.85 });
+  const steelMat = createMaterial({ color: 0x262a30, metalness: 0.65, roughness: 0.32 });
+  const fabMat = createMaterial({ color: fabricHex, roughness: 0.86 });
 
-  const add = (geo: THREE.BufferGeometry, mat: THREE.Material, px: number, py: number, pz: number, rx = 0, rz = 0) => {
-    const m = new T.Mesh(track(geo), mat);
-    m.position.set(px, py, pz);
-    m.rotation.set(rx, 0, rz);
-    m.castShadow = true;
-    m.receiveShadow = true;
-    g.add(m);
-    return m;
-  };
-
-  add(new T.CylinderGeometry(0.03, 0.035, 0.38, 8), steelMat, 0, 0.24, 0);
+  const steelParts: GeoPartSpec[] = [
+    { geo: new T.CylinderGeometry(0.03, 0.035, 0.38, 10), y: 0.24 },
+    { geo: new T.BoxGeometry(0.06, 0.28, 0.04), y: 0.56, z: 0.22 },
+  ];
   for (let i = 0; i < 5; i++) {
     const ang = (i * Math.PI * 2) / 5;
-    const arm = add(new T.BoxGeometry(0.038, 0.035, 0.28), steelMat, Math.sin(ang) * 0.14, 0.055, Math.cos(ang) * 0.14);
-    arm.rotation.y = ang;
-    add(new T.CylinderGeometry(0.025, 0.025, 0.025, 8), steelMat, Math.sin(ang) * 0.25, 0.025, Math.cos(ang) * 0.25, 0, Math.PI / 2);
+    steelParts.push({
+      geo: new T.BoxGeometry(0.038, 0.035, 0.28),
+      x: Math.sin(ang) * 0.14,
+      y: 0.055,
+      z: Math.cos(ang) * 0.14,
+      ry: ang,
+    });
+    steelParts.push({
+      geo: new T.CylinderGeometry(0.026, 0.026, 0.026, 10),
+      x: Math.sin(ang) * 0.25,
+      y: 0.026,
+      z: Math.cos(ang) * 0.25,
+      rz: Math.PI / 2,
+    });
   }
-  add(new T.BoxGeometry(0.46, 0.075, 0.44), fabMat, 0, 0.46, 0);
-  add(new T.BoxGeometry(0.44, 0.48, 0.06), fabMat, 0, 0.74, 0.2, -0.08);
-  add(new T.BoxGeometry(0.06, 0.28, 0.04), steelMat, 0, 0.56, 0.22);
   for (const sx of [-0.24, 0.24]) {
-    add(new T.BoxGeometry(0.04, 0.16, 0.04), steelMat, sx, 0.55, 0.02);
-    add(new T.BoxGeometry(0.055, 0.035, 0.28), steelMat, sx, 0.63, 0.02);
+    steelParts.push({ geo: new T.BoxGeometry(0.04, 0.16, 0.04), x: sx, y: 0.55, z: 0.02 });
+    steelParts.push({ geo: new T.BoxGeometry(0.055, 0.035, 0.28), x: sx, y: 0.63, z: 0.02 });
   }
+  const fabParts: GeoPartSpec[] = [
+    { geo: new T.BoxGeometry(0.46, 0.075, 0.44), y: 0.46 },
+    { geo: new T.BoxGeometry(0.44, 0.48, 0.06), y: 0.74, z: 0.2, rx: -0.08 },
+    { geo: new T.BoxGeometry(0.28, 0.13, 0.055), y: 1.04, z: 0.22 },
+  ];
+
+  const steelMesh = new T.Mesh(track(mergePartsToGeometry(steelParts)), steelMat);
+  steelMesh.castShadow = true;
+  steelMesh.receiveShadow = true;
+  const fabMesh = new T.Mesh(track(mergePartsToGeometry(fabParts)), fabMat);
+  fabMesh.castShadow = true;
+  fabMesh.receiveShadow = true;
+  g.add(steelMesh, fabMesh);
   scene.add(g);
+
   if (solid) {
     colliders.push({
       minX: x - 0.3,
@@ -101,7 +167,7 @@ export function buildOfficeChair(
       minZ: z - 0.3,
       maxZ: z + 0.3,
       minY: y,
-      maxY: y + 1.0,
+      maxY: y + 1.1,
       active: true,
     });
   }
@@ -121,28 +187,33 @@ export function buildWoodChair(
   const g = new T.Group();
   g.position.set(x, y, z);
   g.rotation.y = ry;
-  const wMat = createMaterial({ map: tex.wood(woodColor, '#5e4024'), roughness: 0.75 });
+  const wMat = createMaterial({ map: tex.wood(woodColor, '#5e4024'), roughness: 0.72 });
   const cMat = cushionHex !== undefined ? createMaterial({ color: cushionHex, roughness: 0.88 }) : wMat;
 
-  const add = (geo: THREE.BufferGeometry, mat: THREE.Material, px: number, py: number, pz: number) => {
-    const m = new T.Mesh(track(geo), mat);
-    m.position.set(px, py, pz);
-    m.castShadow = true;
-    m.receiveShadow = true;
-    g.add(m);
-    return m;
-  };
+  const woodParts: GeoPartSpec[] = [
+    { geo: new T.BoxGeometry(0.42, 0.04, 0.42), y: 0.44 },
+    { geo: new T.BoxGeometry(0.036, 0.48, 0.036), x: -0.18, y: 0.68, z: -0.19 },
+    { geo: new T.BoxGeometry(0.036, 0.48, 0.036), x: 0.18, y: 0.68, z: -0.19 },
+  ];
   for (const [lx, lz] of [[-0.18, -0.18], [0.18, -0.18], [-0.18, 0.18], [0.18, 0.18]]) {
-    add(new T.CylinderGeometry(0.02, 0.016, 0.44, 6), wMat, lx, 0.22, lz);
+    woodParts.push({ geo: new T.CylinderGeometry(0.02, 0.016, 0.44, 8), x: lx, y: 0.22, z: lz });
   }
-  add(new T.BoxGeometry(0.42, 0.04, 0.42), wMat, 0, 0.44, 0);
+  const wMesh = new T.Mesh(track(mergePartsToGeometry(woodParts)), wMat);
+  wMesh.castShadow = true;
+  wMesh.receiveShadow = true;
+  g.add(wMesh);
+
+  const cushParts: GeoPartSpec[] = [
+    { geo: new T.BoxGeometry(0.4, 0.18, 0.03), y: 0.82, z: -0.19 },
+  ];
   if (cushionHex !== undefined) {
-    add(new T.BoxGeometry(0.38, 0.04, 0.38), cMat, 0, 0.48, 0);
+    cushParts.push({ geo: new T.BoxGeometry(0.38, 0.045, 0.38), y: 0.48 });
   }
-  for (const lx of [-0.18, 0.18]) {
-    add(new T.BoxGeometry(0.036, 0.48, 0.036), wMat, lx, 0.68, -0.19);
-  }
-  add(new T.BoxGeometry(0.4, 0.18, 0.03), cMat, 0, 0.82, -0.19);
+  const cMesh = new T.Mesh(track(mergePartsToGeometry(cushParts)), cMat);
+  cMesh.castShadow = true;
+  cMesh.receiveShadow = true;
+  g.add(cMesh);
+
   scene.add(g);
   return g;
 }
@@ -159,30 +230,31 @@ export function buildParkBench(
   const g = new T.Group();
   g.position.set(x, y, z);
   g.rotation.y = ry;
-  const woodMat = createMaterial({ map: tex.wood('#9b6f44', '#6b4929'), roughness: 0.78 });
-  const ironMat = createMaterial({ color: 0x262b30, metalness: 0.6, roughness: 0.45 });
+  const woodMat = createMaterial({ map: tex.wood('#9b6f44', '#6b4929'), roughness: 0.76 });
+  const ironMat = createMaterial({ color: 0x262b30, metalness: 0.65, roughness: 0.4 });
 
-  const add = (geo: THREE.BufferGeometry, mat: THREE.Material, px: number, py: number, pz: number, rx = 0) => {
-    const m = new T.Mesh(track(geo), mat);
-    m.position.set(px, py, pz);
-    m.rotation.x = rx;
-    m.castShadow = true;
-    m.receiveShadow = true;
-    g.add(m);
-  };
-
+  const ironParts: GeoPartSpec[] = [];
   for (const lx of [-0.68, 0.68]) {
-    add(new T.BoxGeometry(0.07, 0.44, 0.46), ironMat, lx, 0.22, 0);
-    add(new T.BoxGeometry(0.07, 0.46, 0.07), ironMat, lx, 0.64, -0.2, -0.18);
-    add(new T.BoxGeometry(0.06, 0.04, 0.44), ironMat, lx, 0.56, 0.01);
+    ironParts.push({ geo: new T.BoxGeometry(0.07, 0.44, 0.46), x: lx, y: 0.22 });
+    ironParts.push({ geo: new T.BoxGeometry(0.07, 0.46, 0.07), x: lx, y: 0.64, z: -0.2, rx: -0.18 });
+    ironParts.push({ geo: new T.BoxGeometry(0.06, 0.04, 0.44), x: lx, y: 0.56, z: 0.01 });
   }
+  const woodParts: GeoPartSpec[] = [];
   for (const sz of [-0.14, 0, 0.14]) {
-    add(new T.BoxGeometry(1.62, 0.04, 0.11), woodMat, 0, 0.44, sz);
+    woodParts.push({ geo: new T.BoxGeometry(1.64, 0.042, 0.11), y: 0.44, z: sz });
   }
   for (const by of [0.62, 0.76]) {
-    add(new T.BoxGeometry(1.62, 0.1, 0.04), woodMat, 0, by, -0.21, -0.18);
+    woodParts.push({ geo: new T.BoxGeometry(1.64, 0.1, 0.042), y: by, z: -0.21, rx: -0.18 });
   }
+  const iMesh = new T.Mesh(track(mergePartsToGeometry(ironParts)), ironMat);
+  iMesh.castShadow = true;
+  iMesh.receiveShadow = true;
+  const wMesh = new T.Mesh(track(mergePartsToGeometry(woodParts)), woodMat);
+  wMesh.castShadow = true;
+  wMesh.receiveShadow = true;
+  g.add(iMesh, wMesh);
   scene.add(g);
+
   if (solid) {
     const rot = Math.abs(Math.sin(ry)) > 0.7;
     const hw = rot ? 0.34 : 0.85;
@@ -212,34 +284,40 @@ export function buildPottedPlant(
   const g = new T.Group();
   g.position.set(x, y, z);
   g.scale.setScalar(scale);
-  const potMat = createMaterial({ color: potHex, roughness: 0.75 });
+  const potMat = createMaterial({ color: potHex, roughness: 0.74 });
   const soilMat = createMaterial({ color: 0x3b2c20, roughness: 1 });
-  const leafMat1 = createMaterial({ color: 0x457840, roughness: 0.82 });
-  const leafMat2 = createMaterial({ color: 0x598c4c, roughness: 0.8 });
+  const leafMat = createMaterial({ color: 0x4b7e42, roughness: 0.8 });
 
-  const pot = new T.Mesh(track(new T.CylinderGeometry(0.24, 0.18, 0.34, 12)), potMat);
-  pot.position.y = 0.17;
-  pot.castShadow = true;
-  const rim = new T.Mesh(track(new T.TorusGeometry(0.24, 0.025, 6, 16)), potMat);
-  rim.rotation.x = Math.PI / 2;
-  rim.position.y = 0.34;
+  const potParts: GeoPartSpec[] = [
+    { geo: new T.CylinderGeometry(0.24, 0.18, 0.34, 14), y: 0.17 },
+    { geo: new T.TorusGeometry(0.24, 0.025, 8, 18), y: 0.34, rx: Math.PI / 2 },
+  ];
+  const potMesh = new T.Mesh(track(mergePartsToGeometry(potParts)), potMat);
+  potMesh.castShadow = true;
+  potMesh.receiveShadow = true;
+
   const soil = new T.Mesh(track(new T.CylinderGeometry(0.22, 0.22, 0.03, 12)), soilMat);
   soil.position.y = 0.33;
-  g.add(pot, rim, soil);
 
-  const lGeo = track(new T.IcosahedronGeometry(0.18, 2));
+  const leafParts: GeoPartSpec[] = [
+    { geo: new T.IcosahedronGeometry(0.19, 1), y: 0.65, sx: 1.15, sy: 1.3, sz: 1.15 },
+  ];
   for (let i = 0; i < 6; i++) {
     const a = (i * Math.PI * 2) / 6;
-    const leaf = new T.Mesh(lGeo, i % 2 ? leafMat1 : leafMat2);
-    leaf.position.set(Math.cos(a) * 0.14, 0.48 + (i % 2) * 0.1, Math.sin(a) * 0.14);
-    leaf.scale.set(0.95, 1.3, 0.95);
-    leaf.castShadow = true;
-    g.add(leaf);
+    leafParts.push({
+      geo: new T.IcosahedronGeometry(0.18, 1),
+      x: Math.cos(a) * 0.14,
+      y: 0.48 + (i % 2) * 0.1,
+      z: Math.sin(a) * 0.14,
+      sx: 0.95,
+      sy: 1.3,
+      sz: 0.95,
+    });
   }
-  const topLeaf = new T.Mesh(lGeo, leafMat2);
-  topLeaf.position.set(0, 0.65, 0);
-  topLeaf.scale.set(1.1, 1.25, 1.1);
-  g.add(topLeaf);
+  const leafMesh = new T.Mesh(track(mergePartsToGeometry(leafParts)), leafMat);
+  leafMesh.castShadow = true;
+
+  g.add(potMesh, soil, leafMesh);
   scene.add(g);
   return g;
 }
@@ -274,28 +352,29 @@ export function buildCamphorGrove(
     };
   }
   const { T, scene, tex, track, createMaterial, colliders } = ctx;
-  const barkMat = createMaterial({ map: tex.wood('#5e4835', '#3d2e20', 'bark'), roughness: 0.92 });
-  const leafMat = createMaterial({ color: 0xffffff, roughness: 0.87 });
+  const barkMat = createMaterial({
+    map: tex.wood('#5e4835', '#3d2e20', 'bark'),
+    normalMap: tex.concreteNormal('bark_n', 2.4),
+    roughness: 0.92,
+  });
+  const leafMat = createMaterial({ color: 0xffffff, roughness: 0.84 });
 
-  const trunkGeo = track(new T.CylinderGeometry(0.2, 0.34, 2.8, 10));
-  const boughGeo = track(new T.CylinderGeometry(0.08, 0.15, 1.4, 8));
-  const crownGeo = track(new T.SphereGeometry(1.42, 14, 10));
+  const treeTrunkParts: GeoPartSpec[] = [
+    { geo: new T.CylinderGeometry(0.19, 0.36, 2.8, 10), y: 1.4 },
+    { geo: new T.CylinderGeometry(0.08, 0.15, 1.4, 8), x: -0.4, y: 2.9, z: 0.25, rx: 0.4, rz: 0.5 },
+    { geo: new T.CylinderGeometry(0.08, 0.15, 1.4, 8), x: 0.45, y: 3.0, z: -0.2, rx: -0.35, rz: -0.5 },
+    { geo: new T.CylinderGeometry(0.08, 0.15, 1.4, 8), x: 0.1, y: 3.1, z: 0.42, rx: 0.5, rz: -0.15 },
+  ];
+  const trunkGeo = track(mergePartsToGeometry(treeTrunkParts));
+  const crownGeo = track(new T.IcosahedronGeometry(1.42, 2));
 
   const trunkInst = new T.InstancedMesh(trunkGeo, barkMat, specs.length);
-  const boughInst = new T.InstancedMesh(boughGeo, barkMat, specs.length * 3);
   const crownInst = new T.InstancedMesh(crownGeo, leafMat, specs.length * 5);
   trunkInst.castShadow = cast;
   trunkInst.receiveShadow = true;
-  boughInst.castShadow = cast;
-  boughInst.receiveShadow = true;
   crownInst.castShadow = cast;
   crownInst.receiveShadow = true;
 
-  const boughDefs: [number, number, number, number, number][] = [
-    [-0.4, 2.9, 0.25, 0.4, 0.5],
-    [0.45, 3.0, -0.2, -0.35, -0.5],
-    [0.1, 3.1, 0.42, 0.5, -0.15],
-  ];
   const crownDefs: [number, number, number, number, number][] = [
     [0, 4.35, 0, 1.15, 0x45753d],
     [-1.05, 3.65, 0.55, 0.86, 0x568846],
@@ -321,7 +400,6 @@ export function buildCamphorGrove(
     phase: number;
   }[] = [];
 
-  let bIdx = 0;
   let cIdx = 0;
 
   for (let i = 0; i < specs.length; i++) {
@@ -332,28 +410,13 @@ export function buildCamphorGrove(
     rootObj.rotation.set(0, ry, 0);
     rootObj.scale.setScalar(sc);
     rootObj.updateMatrix();
-
-    partObj.position.set(0, 1.4, 0);
-    partObj.rotation.set(0, 0, 0);
-    partObj.scale.set(1, 1, 1);
-    partObj.updateMatrix();
-    matWorld.multiplyMatrices(rootObj.matrix, partObj.matrix);
-    trunkInst.setMatrixAt(i, matWorld);
-
-    for (const [bx, by, bz, rx, rz] of boughDefs) {
-      partObj.position.set(bx, by, bz);
-      partObj.rotation.set(rx, 0, rz);
-      partObj.scale.set(1, 1, 1);
-      partObj.updateMatrix();
-      matWorld.multiplyMatrices(rootObj.matrix, partObj.matrix);
-      boughInst.setMatrixAt(bIdx++, matWorld);
-    }
+    trunkInst.setMatrixAt(i, rootObj.matrix);
 
     for (let l = 0; l < crownDefs.length; l++) {
       const [fx, fy, fz, fs, hex] = crownDefs[l];
       partObj.position.set(fx, fy, fz);
-      partObj.rotation.set(0, 0, 0);
-      partObj.scale.set(fs * 1.1, fs * 0.82, fs * 1.1);
+      partObj.rotation.set(0, l * 0.7, 0);
+      partObj.scale.set(fs * 1.12, fs * 0.82, fs * 1.12);
       partObj.updateMatrix();
       matWorld.multiplyMatrices(rootObj.matrix, partObj.matrix);
       crownInst.setMatrixAt(cIdx, matWorld);
@@ -388,18 +451,16 @@ export function buildCamphorGrove(
   }
 
   trunkInst.instanceMatrix.needsUpdate = true;
-  boughInst.instanceMatrix.needsUpdate = true;
   crownInst.instanceMatrix.needsUpdate = true;
   if (crownInst.instanceColor) {
     crownInst.instanceColor.needsUpdate = true;
   }
   trunkInst.computeBoundingSphere();
-  boughInst.computeBoundingSphere();
   crownInst.computeBoundingSphere();
-  scene.add(trunkInst, boughInst, crownInst);
+  scene.add(trunkInst, crownInst);
 
   const swayCrowns = (t: number, windBoost = 0) => {
-    const amp = 0.02 + windBoost * 0.05;
+    const amp = 0.018 + windBoost * 0.045;
     for (let k = 0; k < crownMeta.length; k++) {
       const m = crownMeta[k];
       rootObj.position.set(m.baseX, m.baseY, m.baseZ);
@@ -408,7 +469,7 @@ export function buildCamphorGrove(
       rootObj.updateMatrix();
       partObj.position.set(m.lx, m.ly, m.lz);
       partObj.rotation.set(0, 0, 0);
-      partObj.scale.set(m.fs * 1.1, m.fs * 0.82, m.fs * 1.1);
+      partObj.scale.set(m.fs * 1.12, m.fs * 0.82, m.fs * 1.12);
       partObj.updateMatrix();
       matWorld.multiplyMatrices(rootObj.matrix, partObj.matrix);
       crownInst.setMatrixAt(k, matWorld);
@@ -416,7 +477,7 @@ export function buildCamphorGrove(
     crownInst.instanceMatrix.needsUpdate = true;
   };
 
-  return { trunkInst, boughInst, crownInst, swayCrowns };
+  return { trunkInst, boughInst: null, crownInst, swayCrowns };
 }
 
 export function buildCamphorTree(
@@ -432,29 +493,30 @@ export function buildCamphorTree(
   g.position.set(x, y, z);
   g.scale.setScalar(scale);
 
-  const barkMat = createMaterial({ map: tex.wood('#5e4835', '#3d2e20', 'bark'), roughness: 0.92 });
-  const leafMatA = createMaterial({ color: 0x45753d, roughness: 0.88 });
-  const leafMatB = createMaterial({ color: 0x568846, roughness: 0.86 });
+  const barkMat = createMaterial({
+    map: tex.wood('#5e4835', '#3d2e20', 'bark'),
+    normalMap: tex.concreteNormal('bark_n', 2.4),
+    roughness: 0.92,
+  });
+  const leafMatA = createMaterial({ color: 0x45753d, roughness: 0.85 });
+  const leafMatB = createMaterial({ color: 0x568846, roughness: 0.83 });
 
-  const trunk = new T.Mesh(track(new T.CylinderGeometry(0.2, 0.34, 2.8, 10)), barkMat);
-  trunk.position.y = 1.4;
-  trunk.castShadow = true;
-  trunk.receiveShadow = true;
-  g.add(trunk);
+  const trunkMesh = new T.Mesh(
+    track(
+      mergePartsToGeometry([
+        { geo: new T.CylinderGeometry(0.19, 0.36, 2.8, 10), y: 1.4 },
+        { geo: new T.CylinderGeometry(0.08, 0.15, 1.4, 8), x: -0.4, y: 2.9, z: 0.25, rx: 0.4, rz: 0.5 },
+        { geo: new T.CylinderGeometry(0.08, 0.15, 1.4, 8), x: 0.45, y: 3.0, z: -0.2, rx: -0.35, rz: -0.5 },
+        { geo: new T.CylinderGeometry(0.08, 0.15, 1.4, 8), x: 0.1, y: 3.1, z: 0.42, rx: 0.5, rz: -0.15 },
+      ]),
+    ),
+    barkMat,
+  );
+  trunkMesh.castShadow = true;
+  trunkMesh.receiveShadow = true;
+  g.add(trunkMesh);
 
-  for (const [bx, by, bz, rx, rz] of [
-    [-0.4, 2.9, 0.25, 0.4, 0.5],
-    [0.45, 3.0, -0.2, -0.35, -0.5],
-    [0.1, 3.1, 0.42, 0.5, -0.15],
-  ]) {
-    const bough = new T.Mesh(track(new T.CylinderGeometry(0.08, 0.15, 1.4, 8)), barkMat);
-    bough.position.set(bx, by, bz);
-    bough.rotation.set(rx, 0, rz);
-    bough.castShadow = true;
-    g.add(bough);
-  }
-
-  const foliageGeo = track(new T.SphereGeometry(1.42, 16, 12));
+  const foliageGeo = track(new T.IcosahedronGeometry(1.42, 2));
   for (const [fx, fy, fz, fs, m] of [
     [0, 4.35, 0, 1.15, leafMatA],
     [-1.05, 3.65, 0.55, 0.86, leafMatB],
@@ -464,7 +526,7 @@ export function buildCamphorTree(
   ] as [number, number, number, number, THREE.MeshStandardMaterial][]) {
     const crown = new T.Mesh(foliageGeo, m);
     crown.position.set(fx, fy, fz);
-    crown.scale.set(fs * 1.1, fs * 0.82, fs * 1.1);
+    crown.scale.set(fs * 1.12, fs * 0.82, fs * 1.12);
     crown.castShadow = true;
     crown.receiveShadow = true;
     g.add(crown);
@@ -496,39 +558,47 @@ export function buildAcCondenser(
   const g = new T.Group();
   g.position.set(x, y, z);
   g.rotation.y = ry;
-  const bodyMat = createMaterial({ color: 0xd6dad8, roughness: 0.55, metalness: 0.25 });
-  const darkMat = createMaterial({ color: 0x262c32, roughness: 0.7 });
-  const fanMat = createMaterial({ color: 0x5c6670, metalness: 0.5, roughness: 0.35 });
+  const bodyMat = createMaterial({ color: 0xd6dad8, roughness: 0.52, metalness: 0.28 });
+  const darkMat = createMaterial({ color: 0x262c32, roughness: 0.68 });
+  const fanMat = createMaterial({ color: 0x5c6670, metalness: 0.55, roughness: 0.32 });
 
-  const box = new T.Mesh(track(new T.BoxGeometry(0.92, 0.68, 0.34)), bodyMat);
-  box.position.y = 0.36;
-  box.castShadow = true;
-  const topCap = new T.Mesh(track(new T.BoxGeometry(0.95, 0.04, 0.36)), bodyMat);
-  topCap.position.y = 0.71;
-  const grilleRing = new T.Mesh(track(new T.TorusGeometry(0.24, 0.025, 8, 20)), darkMat);
-  grilleRing.position.set(-0.14, 0.37, 0.175);
-  const recess = new T.Mesh(track(new T.CylinderGeometry(0.22, 0.22, 0.04, 16)), darkMat);
-  recess.rotation.x = Math.PI / 2;
-  recess.position.set(-0.14, 0.37, 0.155);
-  const louver = new T.Mesh(track(new T.BoxGeometry(0.24, 0.44, 0.03)), darkMat);
-  louver.position.set(0.28, 0.37, 0.16);
-  g.add(box, topCap, grilleRing, recess, louver);
+  const bodyMesh = new T.Mesh(
+    track(
+      mergePartsToGeometry([
+        { geo: new T.BoxGeometry(0.92, 0.68, 0.34), y: 0.36 },
+        { geo: new T.BoxGeometry(0.95, 0.04, 0.36), y: 0.71 },
+      ]),
+    ),
+    bodyMat,
+  );
+  bodyMesh.castShadow = true;
 
-  const rotor = new T.Group();
-  rotor.position.set(-0.14, 0.37, 0.17);
+  const darkMesh = new T.Mesh(
+    track(
+      mergePartsToGeometry([
+        { geo: new T.TorusGeometry(0.24, 0.025, 8, 20), x: -0.14, y: 0.37, z: 0.175 },
+        { geo: new T.CylinderGeometry(0.22, 0.22, 0.04, 16), x: -0.14, y: 0.37, z: 0.155, rx: Math.PI / 2 },
+        { geo: new T.BoxGeometry(0.24, 0.44, 0.03), x: 0.28, y: 0.37, z: 0.16 },
+        { geo: new T.BoxGeometry(0.08, 0.04, 0.38), x: -0.36, y: 0.02 },
+        { geo: new T.BoxGeometry(0.08, 0.04, 0.38), x: 0.36, y: 0.02 },
+      ]),
+    ),
+    darkMat,
+  );
+
+  const rotorParts: GeoPartSpec[] = [];
   for (let i = 0; i < 3; i++) {
-    const bl = new T.Mesh(track(new T.BoxGeometry(0.08, 0.19, 0.012)), fanMat);
     const a = (i * Math.PI * 2) / 3;
-    bl.position.set(Math.cos(a) * 0.1, Math.sin(a) * 0.1, 0);
-    bl.rotation.z = a + 1.2;
-    rotor.add(bl);
+    rotorParts.push({
+      geo: new T.BoxGeometry(0.08, 0.19, 0.012),
+      x: -0.14 + Math.cos(a) * 0.1,
+      y: 0.37 + Math.sin(a) * 0.1,
+      z: 0.17,
+      rz: a + 1.2,
+    });
   }
-  g.add(rotor);
-  for (const fx of [-0.36, 0.36]) {
-    const foot = new T.Mesh(track(new T.BoxGeometry(0.08, 0.04, 0.38)), darkMat);
-    foot.position.set(fx, 0.02, 0);
-    g.add(foot);
-  }
+  const rotorMesh = new T.Mesh(track(mergePartsToGeometry(rotorParts)), fanMat);
+  g.add(bodyMesh, darkMesh, rotorMesh);
   scene.add(g);
   return g;
 }
@@ -546,8 +616,8 @@ export function buildVendingMachine(
   const g = new T.Group();
   g.position.set(x, y, z);
   g.rotation.y = ry;
-  const bodyMat = createMaterial({ color: accentHex, roughness: 0.4, metalness: 0.25 });
-  const trimMat = createMaterial({ color: 0x23282e, metalness: 0.5, roughness: 0.4 });
+  const bodyMat = createMaterial({ color: accentHex, roughness: 0.36, metalness: 0.3 });
+  const trimMat = createMaterial({ color: 0x23282e, metalness: 0.55, roughness: 0.38 });
   const glowMat = createMaterial({
     color: 0xeaf6ff,
     emissive: 0xc2e6ff,
@@ -555,29 +625,44 @@ export function buildVendingMachine(
     roughness: 0.2,
   });
 
-  const add = (geo: THREE.BufferGeometry, mat: THREE.Material, px: number, py: number, pz: number) => {
-    const m = new T.Mesh(track(geo), mat);
-    m.position.set(px, py, pz);
-    m.castShadow = true;
-    g.add(m);
-    return m;
-  };
-  add(new T.BoxGeometry(1.04, 1.92, 0.78), bodyMat, 0, 0.96, 0);
-  add(new T.BoxGeometry(0.68, 1.05, 0.04), glowMat, -0.1, 1.24, 0.38);
-  const canMats = [0xd9483b, 0x3b8c5e, 0xe8b538, 0x3a72b8].map((col) =>
-    createMaterial({ color: col, roughness: 0.3 }),
+  const bodyMesh = new T.Mesh(track(new T.BoxGeometry(1.04, 1.92, 0.78)), bodyMat);
+  bodyMesh.position.set(0, 0.96, 0);
+  bodyMesh.castShadow = true;
+  const trimMesh = new T.Mesh(
+    track(
+      mergePartsToGeometry([
+        { geo: new T.BoxGeometry(0.18, 0.48, 0.05), x: 0.35, y: 1.24, z: 0.38 },
+        { geo: new T.BoxGeometry(0.66, 0.24, 0.06), x: -0.1, y: 0.36, z: 0.39 },
+      ]),
+    ),
+    trimMat,
   );
-  const canGeo = track(new T.CylinderGeometry(0.03, 0.03, 0.1, 8));
-  for (let row = 0; row < 4; row++) {
-    for (let col = 0; col < 5; col++) {
-      const m = new T.Mesh(canGeo, canMats[(row + col) % 4]);
-      m.position.set(-0.34 + col * 0.12, 0.85 + row * 0.24, 0.39);
-      m.castShadow = true;
-      g.add(m);
+  const glowMesh = new T.Mesh(track(new T.BoxGeometry(0.68, 1.05, 0.04)), glowMat);
+  glowMesh.position.set(-0.1, 1.24, 0.38);
+  g.add(bodyMesh, trimMesh, glowMesh);
+
+  const canMats = [0xd9483b, 0x3b8c5e, 0xe8b538, 0x3a72b8].map((col) =>
+    createMaterial({ color: col, roughness: 0.28, metalness: 0.25 }),
+  );
+  for (let colorIdx = 0; colorIdx < 4; colorIdx++) {
+    const canParts: GeoPartSpec[] = [];
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 5; col++) {
+        if ((row + col) % 4 === colorIdx) {
+          canParts.push({
+            geo: new T.CylinderGeometry(0.03, 0.03, 0.1, 8),
+            x: -0.34 + col * 0.12,
+            y: 0.85 + row * 0.24,
+            z: 0.39,
+          });
+        }
+      }
+    }
+    if (canParts.length > 0) {
+      g.add(new T.Mesh(track(mergePartsToGeometry(canParts)), canMats[colorIdx]));
     }
   }
-  add(new T.BoxGeometry(0.18, 0.48, 0.05), trimMat, 0.35, 1.24, 0.38);
-  add(new T.BoxGeometry(0.66, 0.24, 0.06), trimMat, -0.1, 0.36, 0.39);
+
   scene.add(g);
   if (solid) {
     colliders.push({
@@ -610,97 +695,112 @@ export function buildSedanCar(
   const paintMat = track(
     new T.MeshPhysicalMaterial({
       color: colorHex,
-      metalness: 0.48,
-      roughness: 0.22,
-      clearcoat: 0.85,
-      clearcoatRoughness: 0.12,
+      metalness: 0.5,
+      roughness: 0.2,
+      clearcoat: 0.9,
+      clearcoatRoughness: 0.1,
     }),
   );
-  const darkMat = createMaterial({ color: 0x1a1d21, roughness: 0.85, metalness: 0.15 });
-  const alloyMat = createMaterial({ color: 0xc2c9cf, metalness: 0.78, roughness: 0.24 });
+  const darkMat = createMaterial({ color: 0x181b1f, roughness: 0.82, metalness: 0.18 });
+  const alloyMat = createMaterial({ color: 0xc5ccd4, metalness: 0.82, roughness: 0.22 });
   const glassMat = track(
     new T.MeshPhysicalMaterial({
-      color: 0x1a2c38,
+      color: 0x162632,
       transparent: true,
       opacity: 0.58,
-      metalness: 0.15,
+      metalness: 0.18,
       roughness: 0.06,
       clearcoat: 1.0,
-      clearcoatRoughness: 0.05,
+      clearcoatRoughness: 0.04,
       ior: 1.52,
     }),
   );
-  const headLightMat = createMaterial({ color: 0xfff4d4, emissive: 0xffe4a0, emissiveIntensity: 0.05 });
-  const tailMat = createMaterial({ color: 0xb8241e, emissive: 0x70100c, emissiveIntensity: 0.35 });
+  const headLightMat = createMaterial({ color: 0xfff4d4, emissive: 0xffe4a0, emissiveIntensity: 0.08 });
+  const tailMat = createMaterial({ color: 0xb8241e, emissive: 0x7a120d, emissiveIntensity: 0.42 });
 
   const shape = new THREE.Shape();
-  shape.moveTo(-2.15, 0.28);
-  shape.lineTo(2.1, 0.28);
-  shape.lineTo(2.14, 0.62);
-  shape.lineTo(1.96, 0.84);
-  shape.lineTo(1.08, 0.92);
-  shape.lineTo(0.45, 1.38);
-  shape.lineTo(-0.88, 1.38);
-  shape.lineTo(-1.55, 0.92);
-  shape.lineTo(-2.12, 0.82);
+  shape.moveTo(-2.18, 0.26);
+  shape.lineTo(2.12, 0.26);
+  shape.lineTo(2.16, 0.62);
+  shape.lineTo(1.98, 0.85);
+  shape.lineTo(1.06, 0.93);
+  shape.lineTo(0.46, 1.4);
+  shape.lineTo(-0.88, 1.4);
+  shape.lineTo(-1.58, 0.93);
+  shape.lineTo(-2.14, 0.83);
   shape.closePath();
 
-  const bodyGeo = track(
-    new THREE.ExtrudeGeometry(shape, {
-      depth: 1.72,
-      bevelEnabled: true,
-      bevelThickness: 0.06,
-      bevelSize: 0.05,
-      bevelSegments: 2,
-    }),
-  );
-  const body = new THREE.Mesh(bodyGeo, paintMat);
-  body.rotation.y = Math.PI / 2;
-  body.position.set(-0.86, 0, 0);
+  const bodyGeo = new THREE.ExtrudeGeometry(shape, {
+    depth: 1.72,
+    bevelEnabled: true,
+    bevelThickness: 0.065,
+    bevelSize: 0.05,
+    bevelSegments: 2,
+  });
+  const paintParts: GeoPartSpec[] = [
+    { geo: bodyGeo, x: -0.86, ry: Math.PI / 2 },
+    { geo: new T.BoxGeometry(0.16, 0.09, 0.1), x: -0.94, y: 0.96, z: 0.52 },
+    { geo: new T.BoxGeometry(0.16, 0.09, 0.1), x: 0.94, y: 0.96, z: 0.52 },
+    { geo: new T.BoxGeometry(1.52, 0.05, 0.22), x: 0, y: 0.95, z: -1.96 },
+  ];
+  const body = new T.Mesh(track(mergePartsToGeometry(paintParts)), paintMat);
   body.castShadow = true;
   body.receiveShadow = true;
   g.add(body);
 
-  const windFront = new THREE.Mesh(track(new THREE.BoxGeometry(1.48, 0.56, 0.04)), glassMat);
-  windFront.position.set(0, 1.12, 0.74);
-  windFront.rotation.x = 0.78;
-  const windRear = new THREE.Mesh(track(new THREE.BoxGeometry(1.46, 0.54, 0.04)), glassMat);
-  windRear.position.set(0, 1.13, -1.18);
-  windRear.rotation.x = -0.82;
-  const sideGlass = new THREE.Mesh(track(new THREE.BoxGeometry(1.66, 0.38, 1.35)), glassMat);
-  sideGlass.position.set(0, 1.12, -0.22);
-  const grille = new THREE.Mesh(track(new THREE.BoxGeometry(1.1, 0.22, 0.06)), darkMat);
-  grille.position.set(0, 0.58, 2.16);
-  const bumpF = new THREE.Mesh(track(new THREE.BoxGeometry(1.8, 0.16, 0.14)), darkMat);
-  bumpF.position.set(0, 0.34, 2.14);
-  const bumpR = new THREE.Mesh(track(new THREE.BoxGeometry(1.8, 0.16, 0.14)), darkMat);
-  bumpR.position.set(0, 0.34, -2.14);
-  g.add(windFront, windRear, sideGlass, grille, bumpF, bumpR);
+  const glassMesh = new T.Mesh(
+    track(
+      mergePartsToGeometry([
+        { geo: new T.BoxGeometry(1.48, 0.56, 0.04), y: 1.12, z: 0.74, rx: 0.78 },
+        { geo: new T.BoxGeometry(1.46, 0.54, 0.04), y: 1.13, z: -1.18, rx: -0.82 },
+        { geo: new T.BoxGeometry(1.66, 0.38, 1.35), y: 1.12, z: -0.22 },
+      ]),
+    ),
+    glassMat,
+  );
 
-  for (const sx of [-0.68, 0.68]) {
-    const hl = new THREE.Mesh(track(new THREE.BoxGeometry(0.28, 0.12, 0.05)), headLightMat);
-    hl.position.set(sx, 0.68, 2.15);
-    const tl = new THREE.Mesh(track(new THREE.BoxGeometry(0.28, 0.11, 0.05)), tailMat);
-    tl.position.set(sx, 0.72, -2.14);
-    const mirror = new THREE.Mesh(track(new THREE.BoxGeometry(0.16, 0.09, 0.1)), paintMat);
-    mirror.position.set(sx * 1.38, 0.96, 0.52);
-    g.add(hl, tl, mirror);
-  }
-
-  const tGeo = track(new THREE.CylinderGeometry(0.32, 0.32, 0.22, 24));
-  tGeo.rotateZ(Math.PI / 2);
-  const rGeo = track(new THREE.CylinderGeometry(0.2, 0.2, 0.235, 16));
-  rGeo.rotateZ(Math.PI / 2);
+  const trimParts: GeoPartSpec[] = [
+    { geo: new T.BoxGeometry(1.16, 0.24, 0.06), y: 0.58, z: 2.17 },
+    { geo: new T.BoxGeometry(1.82, 0.16, 0.15), y: 0.33, z: 2.14 },
+    { geo: new T.BoxGeometry(1.82, 0.16, 0.15), y: 0.33, z: -2.14 },
+    { geo: new T.BoxGeometry(1.66, 0.08, 4.02), y: 0.24, z: 0 },
+  ];
   for (const [wx, wz] of [[-0.84, 1.34], [0.84, 1.34], [-0.84, -1.34], [0.84, -1.34]]) {
-    const tire = new THREE.Mesh(tGeo, darkMat);
-    tire.position.set(wx, 0.32, wz);
-    tire.castShadow = true;
-    const rim = new THREE.Mesh(rGeo, alloyMat);
-    rim.position.set(wx, 0.32, wz);
-    g.add(tire, rim);
+    trimParts.push({ geo: new T.CylinderGeometry(0.32, 0.32, 0.22, 22), x: wx, y: 0.32, z: wz, rz: Math.PI / 2 });
   }
+  const trimMesh = new T.Mesh(track(mergePartsToGeometry(trimParts)), darkMat);
+  trimMesh.castShadow = true;
 
+  const rimParts: GeoPartSpec[] = [
+    { geo: new T.BoxGeometry(1.12, 0.03, 0.07), y: 0.58, z: 2.18 },
+  ];
+  for (const [wx, wz] of [[-0.84, 1.34], [0.84, 1.34], [-0.84, -1.34], [0.84, -1.34]]) {
+    rimParts.push({ geo: new T.CylinderGeometry(0.2, 0.2, 0.235, 16), x: wx, y: 0.32, z: wz, rz: Math.PI / 2 });
+  }
+  const rimMesh = new T.Mesh(track(mergePartsToGeometry(rimParts)), alloyMat);
+
+  const hlMesh = new T.Mesh(
+    track(
+      mergePartsToGeometry([
+        { geo: new T.BoxGeometry(0.3, 0.12, 0.05), x: -0.68, y: 0.68, z: 2.16 },
+        { geo: new T.BoxGeometry(0.3, 0.12, 0.05), x: 0.68, y: 0.68, z: 2.16 },
+      ]),
+    ),
+    headLightMat,
+  );
+  const tlMesh = new T.Mesh(
+    track(
+      mergePartsToGeometry([
+        { geo: new T.BoxGeometry(0.32, 0.11, 0.05), x: -0.68, y: 0.72, z: -2.15 },
+        { geo: new T.BoxGeometry(0.32, 0.11, 0.05), x: 0.68, y: 0.72, z: -2.15 },
+      ]),
+    ),
+    tailMat,
+  );
+
+  g.add(glassMesh, trimMesh, rimMesh, hlMesh, tlMesh);
   scene.add(g);
+
   if (solid) {
     const swapped = Math.abs(Math.sin(ry)) > 0.7;
     const hw = swapped ? 2.15 : 0.95;
@@ -730,27 +830,31 @@ export function buildHospitalBed(
   const g = new T.Group();
   g.position.set(x, y, z);
   g.rotation.y = ry;
-  const steelMat = createMaterial({ color: 0xc2cad0, metalness: 0.65, roughness: 0.3 });
+  const steelMat = createMaterial({ color: 0xc2cad0, metalness: 0.68, roughness: 0.28 });
   const sheetMat = createMaterial({ color: 0xf4f5f0, roughness: 0.85 });
   const blanketMat = createMaterial({ color: 0xa4c8ba, roughness: 0.9 });
 
-  const add = (geo: THREE.BufferGeometry, mat: THREE.Material, px: number, py: number, pz: number) => {
-    const m = new T.Mesh(track(geo), mat);
-    m.position.set(px, py, pz);
-    m.castShadow = true;
-    m.receiveShadow = true;
-    g.add(m);
-  };
+  const steelParts: GeoPartSpec[] = [
+    { geo: new T.BoxGeometry(1.94, 0.06, 0.98), y: 0.42 },
+    { geo: new T.BoxGeometry(0.05, 0.58, 0.96), x: 0.96, y: 0.68 },
+    { geo: new T.BoxGeometry(0.05, 0.44, 0.96), x: -0.96, y: 0.6 },
+  ];
   for (const [lx, lz] of [[-0.92, -0.46], [0.92, -0.46], [-0.92, 0.46], [0.92, 0.46]]) {
-    add(new T.CylinderGeometry(0.025, 0.025, 0.44, 8), steelMat, lx, 0.22, lz);
+    steelParts.push({ geo: new T.CylinderGeometry(0.025, 0.025, 0.44, 8), x: lx, y: 0.22, z: lz });
   }
-  add(new T.BoxGeometry(1.94, 0.06, 0.98), steelMat, 0, 0.42, 0);
-  add(new T.BoxGeometry(1.88, 0.16, 0.92), sheetMat, 0, 0.52, 0);
-  add(new T.BoxGeometry(1.15, 0.175, 0.94), blanketMat, -0.34, 0.525, 0);
-  add(new T.BoxGeometry(0.36, 0.11, 0.64), sheetMat, 0.72, 0.64, 0);
-  add(new T.BoxGeometry(0.05, 0.58, 0.96), steelMat, 0.96, 0.68, 0);
-  add(new T.BoxGeometry(0.05, 0.44, 0.96), steelMat, -0.96, 0.6, 0);
+  const sheetParts: GeoPartSpec[] = [
+    { geo: new T.BoxGeometry(1.88, 0.16, 0.92), y: 0.52 },
+    { geo: new T.BoxGeometry(0.36, 0.11, 0.64), x: 0.72, y: 0.64 },
+  ];
+  const steelMesh = new T.Mesh(track(mergePartsToGeometry(steelParts)), steelMat);
+  steelMesh.castShadow = true;
+  const sheetMesh = new T.Mesh(track(mergePartsToGeometry(sheetParts)), sheetMat);
+  sheetMesh.castShadow = true;
+  const blanketMesh = new T.Mesh(track(new T.BoxGeometry(1.15, 0.175, 0.94)), blanketMat);
+  blanketMesh.position.set(-0.34, 0.525, 0);
+  g.add(steelMesh, sheetMesh, blanketMesh);
   scene.add(g);
+
   if (solid) {
     const swapped = Math.abs(Math.sin(ry)) > 0.7;
     const hw = swapped ? 0.52 : 1.0;
@@ -780,25 +884,29 @@ export function buildStreetLamp(
   const g = new T.Group();
   g.position.set(x, y, z);
   g.rotation.y = ry;
-  const poleMat = createMaterial({ color: 0x31373e, metalness: 0.65, roughness: 0.35 });
+  const poleMat = createMaterial({ color: 0x31373e, metalness: 0.68, roughness: 0.34 });
   const bulbMat = createMaterial({
     color: 0xfff5d6,
     emissive: 0xffc66e,
     emissiveIntensity: lit ? 1.4 : 0.1,
   });
 
-  const base = new T.Mesh(track(new T.CylinderGeometry(0.12, 0.18, 0.45, 10)), poleMat);
-  base.position.y = 0.225;
-  const pole = new T.Mesh(track(new T.CylinderGeometry(0.055, 0.09, 4.3, 10)), poleMat);
-  pole.position.y = 2.4;
-  pole.castShadow = true;
-  const arm = new T.Mesh(track(new T.BoxGeometry(1.05, 0.06, 0.06)), poleMat);
-  arm.position.set(0.48, 4.48, 0);
-  const head = new T.Mesh(track(new T.BoxGeometry(0.42, 0.08, 0.22)), poleMat);
-  head.position.set(0.95, 4.45, 0);
+  const poleMesh = new T.Mesh(
+    track(
+      mergePartsToGeometry([
+        { geo: new T.CylinderGeometry(0.12, 0.18, 0.45, 10), y: 0.225 },
+        { geo: new T.CylinderGeometry(0.055, 0.09, 4.3, 10), y: 2.4 },
+        { geo: new T.BoxGeometry(1.05, 0.06, 0.06), x: 0.48, y: 4.48 },
+        { geo: new T.BoxGeometry(0.42, 0.08, 0.22), x: 0.95, y: 4.45 },
+      ]),
+    ),
+    poleMat,
+  );
+  poleMesh.castShadow = true;
+
   const lens = new T.Mesh(track(new T.BoxGeometry(0.34, 0.04, 0.16)), bulbMat);
   lens.position.set(0.95, 4.4, 0);
-  g.add(base, pole, arm, head, lens);
+  g.add(poleMesh, lens);
   scene.add(g);
   return g;
 }

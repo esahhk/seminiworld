@@ -6,10 +6,17 @@ import {
   selectBestInteractable,
   easeInOutQuad,
   createSlopedColliderSegments,
+  createSpatialColliderGrid,
 } from './physics';
 import { SCENES_META, sceneIdxById } from '../data/scenesMeta';
 import { BOOKS } from '../data/books';
-import { CITY_LANDMARKS } from '../scenes/city';
+import {
+  CITY_AVENUES,
+  CITY_BOUNDS,
+  CITY_CANAL_Z,
+  CITY_LANDMARKS,
+  cityGroundHeightAt,
+} from '../scenes/city';
 
 test('resolveMove clamps player inside bounds', () => {
   const bounds = { minX: -7.2, maxX: 7.2, minZ: -7.2, maxZ: 7.2 };
@@ -34,6 +41,27 @@ test('resolveMove pushes player out of active AABB collider along minimum penetr
   const [x, z] = resolveMove(-1.1, 0, 1.65, 1.65, bounds, colliders);
   assert.ok(x <= -1.349);
   assert.equal(z, 0);
+});
+
+test('resolveMove with SpatialColliderGrid matches brute-force collider resolution', () => {
+  const bounds = { minX: -340, maxX: 340, minZ: -340, maxZ: 340 };
+  const colliders = [
+    { minX: -2, maxX: 2, minZ: -2, maxZ: 2, minY: 0, maxY: 4, active: true },
+    { minX: 40, maxX: 48, minZ: -12, maxZ: -4, minY: 0, maxY: 5, active: true },
+    { minX: -120, maxX: -110, minZ: 85, maxZ: 95, minY: 0, maxY: 6, active: false },
+  ];
+  const grid = createSpatialColliderGrid(colliders, 18);
+  const probes: [number, number][] = [
+    [-1.1, 0],
+    [40.2, -8],
+    [-115, 90],
+    [0, 0],
+  ];
+  for (const [px, pz] of probes) {
+    const a = resolveMove(px, pz, 1.65, 1.65, bounds, colliders);
+    const b = resolveMove(px, pz, 1.65, 1.65, bounds, colliders, grid);
+    assert.deepEqual(b, a);
+  }
 });
 
 test('resolveMove allows stepping onto low obstacles below step threshold', () => {
@@ -99,13 +127,23 @@ test('SCENES_META contains all 17 scenes with unique IDs and collectibles', () =
   }
 });
 
-test('CITY_LANDMARKS maps all 17 scenes inside the miniature city grid', () => {
+test('CITY_LANDMARKS maps all 17 scenes inside expanded CITY_BOUNDS and bridges span canal', () => {
   assert.equal(CITY_LANDMARKS.length, 17);
+  assert.ok(CITY_BOUNDS.maxX - CITY_BOUNDS.minX >= 680);
+  assert.ok(CITY_BOUNDS.maxZ - CITY_BOUNDS.minZ >= 680);
   const lmIds = new Set(CITY_LANDMARKS.map((l) => l.id));
   assert.equal(lmIds.size, 17);
   for (const meta of SCENES_META) {
     assert.ok(lmIds.has(meta.id));
   }
+  for (const lm of CITY_LANDMARKS) {
+    assert.ok(lm.x > CITY_BOUNDS.minX + 20 && lm.x < CITY_BOUNDS.maxX - 20);
+    assert.ok(lm.z > CITY_BOUNDS.minZ + 20 && lm.z < CITY_BOUNDS.maxZ - 20);
+  }
+  for (const av of CITY_AVENUES) {
+    assert.ok(cityGroundHeightAt(av, CITY_CANAL_Z) > 2.0);
+  }
+  assert.ok(cityGroundHeightAt(48, CITY_CANAL_Z) < 0.1);
 });
 
 test('BOOKS contains complete multi-page text for office, studio, and convenience', () => {
